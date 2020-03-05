@@ -41,7 +41,7 @@ Support Operating System
 * **Windows OS**
       Windows 10 64bit
 * **Linux OS**
-      TBD (Provide by end of Feb. 2020)
+      kernel 4.4 or above
 * **Yocto Linux**  
       TBD (Provide by end of Feb. 2020)
 * **VxWorks (by request)** 
