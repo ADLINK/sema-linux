@@ -54,7 +54,7 @@ Future changes
 * Host I2C will be enabled by April,2020.
 
 ## Developer's Guide: 
-* See [documentation](https://adlink-epm.github.io/sema-doc/#/source/Intro) for more details.
+* See [documentation](https://adlink-epm.github.io/sema-doc/#/) for more details.
    
 ## Other information:
 internal GitLab commit ID: 8e76b46abc466301fe473e69ec1ade1569febd65
