@@ -49,6 +49,11 @@ Support Operating System
 
 
 <br>
+Future changes
+----------------
+Host I2C will be enabled by April,2020.
+
+<br>
 
 ## Developer's Guide: 
 * See [documentation](https://adlink-epm.github.io/sema-doc/#/source/Intro) for more details.
