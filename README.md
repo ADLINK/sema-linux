@@ -43,7 +43,7 @@ Support Operating System
 * **Linux OS**
       kernel 4.4 or above
 * **Yocto Linux**  
-      TBD (Provide by end of Feb. 2020)
+      TBD (Provide by end of Mar. 2020)
 * **VxWorks (by request)** 
 * **QNX (by request)**
 
