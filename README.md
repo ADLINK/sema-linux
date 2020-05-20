@@ -28,7 +28,7 @@ SEMA® is designed to be:
 * Temperatures (CPU and Board)
 * Board Information (Serial Number, Part Number, Firmware Version...)
 * Fan Control
-* GPIO Control
+* GPIO Control (only support PCA9535 I/O Expander)
 * Watch Dog  
 
 
@@ -43,7 +43,7 @@ Support Operating System
 * **Linux OS**
       kernel 4.4 or above
 * **Yocto Linux**  
-      TBD (Provide by end of Mar. 2020)
+      TBD (Provide by end of May. 2020)
 * **VxWorks (by request)** 
 * **QNX (by request)**
 
@@ -51,7 +51,7 @@ Support Operating System
 
 Future changes
 --------------------------
-* Host I2C will be enabled by April,2020.
+* Host I2C will be enabled by May,2020.
 
 ## Developer's Guide: 
 * See [documentation](https://adlink-epm.github.io/sema-doc/#/) for more details.
