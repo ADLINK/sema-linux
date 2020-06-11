@@ -55,6 +55,9 @@ Future changes
 
 ## Developer's Guide: 
 * See [documentation](https://adlink-epm.github.io/sema-doc/#/) for more details.
+
+## Supported Hardware List:
+* see [List](https://adlink-epm.github.io/sema-doc/#/source/SupportedHardware) for more details
    
 ## Other information:
 internal GitLab commit ID: 8e76b46abc466301fe473e69ec1ade1569febd65
