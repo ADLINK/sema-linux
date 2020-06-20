@@ -42,8 +42,7 @@ Support Operating System
       Windows 10 64bit
 * **Linux OS**
       kernel 4.4 or above
-* **Yocto Linux**  
-      [meta-adlink-seam](https://github.com/ADLINK/meta-adlink-sema/tree/sema4.0)
+* **Yocto Linux**  [meta-adlink-seam](https://github.com/ADLINK/meta-adlink-sema/tree/sema4.0)
 * **VxWorks (by request)** 
 * **QNX (by request)**
 
