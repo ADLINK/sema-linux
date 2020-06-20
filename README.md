@@ -43,7 +43,7 @@ Support Operating System
 * **Linux OS**
       kernel 4.4 or above
 * **Yocto Linux**  
-      TBD (Provide by end of May. 2020)
+      [meta-adlink-seam](https://github.com/ADLINK/meta-adlink-sema/tree/sema4.0)
 * **VxWorks (by request)** 
 * **QNX (by request)**
 
