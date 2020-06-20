@@ -47,11 +47,6 @@ Support Operating System
 * **QNX (by request)**
 
 
-
-Future changes
---------------------------
-* Host I2C will be enabled by May,2020.
-
 ## How to install
 * see [documentation](https://adlink-epm.github.io/sema-doc/#/source/HowToInstallSEMA?id=ubuntu-linux) for more details
 
