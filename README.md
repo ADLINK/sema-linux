@@ -54,10 +54,10 @@ Future changes
 * Host I2C will be enabled by May,2020.
 
 ## How to install SEMA 4.0
-* see [document](https://adlink-epm.github.io/sema-doc/#/source/HowToInstallSEMA?id=ubuntu-linux) for more details
+* see [documentation](https://adlink-epm.github.io/sema-doc/#/source/HowToInstallSEMA?id=ubuntu-linux) for more details
 
 ## Supported Hardware List:
-* see [list](https://adlink-epm.github.io/sema-doc/#/source/SupportedHardware) for more details
+* see [the hardware list](https://adlink-epm.github.io/sema-doc/#/source/SupportedHardware) for more details
 
 ## Developer's Guide (how to use EAPI or Sysfs): 
 * See [documentation](https://adlink-epm.github.io/sema-doc/#/source/DeveloperGuide) for more details.
