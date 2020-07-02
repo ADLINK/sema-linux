@@ -1,3 +1,11 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Driver to extract board information from BMC
+ *
+ * Copyright (C) 2020 ADLINK Technology Inc.
+ *
+ */
+
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/init.h>
@@ -129,7 +137,7 @@ int get_voltage_value(unsigned char ch, int *pValue)
 			return -1;
 	}
 	else {
-		if(2 != adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_RD_AIN0 + (ch - 8), 0, (void *)buff))
+		if(2 != adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_RD_AIN8 + (ch - 8), 0, (void *)buff))
 			return -1;	
 	}
 

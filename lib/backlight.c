@@ -1,3 +1,11 @@
+// SPDX-License-Identifier: LGPL-2.0+
+/*
+ * SEMA Library APIs for backlight
+ *
+ * Copyright (C) 2020 ADLINK Technology Inc.
+ *
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,7 +26,6 @@ uint32_t EApiVgaGetBacklightEnable(uint32_t id, uint32_t *pEnable)
 	int ret;
 
 	if (id  != EAPI_ID_BACKLIGHT_1) {
-		printf("katha\n");
 		errno = EINVAL;
 		return EAPI_STATUS_UNSUPPORTED;
 	}
@@ -45,7 +52,7 @@ uint32_t EApiVgaSetBacklightEnable(uint32_t id, uint32_t Enable)
 	char sysfile[256];
 	int ret;
 
-	if(Enable != EAPI_BACKLIGHT_SET_ON && Enable != EAPI_BACKLIGHT_SET_OFF){
+	if(Enable != EAPI_BACKLIGHT_SET_ON && Enable != 1){
                 return EAPI_STATUS_INVALID_PARAMETER;
         }
 

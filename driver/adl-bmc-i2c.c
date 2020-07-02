@@ -1,4 +1,11 @@
-/* I2C bus inside of BMC , part of a mfd device */
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Driver for I2C bus inside of BMC , part of a mfd device
+ *
+ * Copyright (C) 2020 ADLINK Technology Inc.
+ *
+ */
+
 #define pr_fmt(fmt) "adlink-i2c: " fmt
 
 #include <linux/errno.h>
@@ -102,8 +109,11 @@ static int adlink_i2c_xfer_msg (struct i2c_msg msg)
 	if(msg.flags & I2C_M_RD)
 		ret = i2c_read(msg);
 
-	else if(msg.flags == 0)
+	else if(msg.flags == 0 || msg.flags == 0x200)
 		ret = i2c_write(msg);
+
+	else
+		printk("Unsupported xfer %x %x\n", msg.flags, msg.len);
 
 	return ret;
 }

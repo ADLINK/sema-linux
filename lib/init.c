@@ -1,3 +1,11 @@
+// SPDX-License-Identifier: LGPL-2.0+
+/*
+ * SEMA Library APIs for initialization
+ *
+ * Copyright (C) 2020 ADLINK Technology Inc.
+ *
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <errorcodes.h>

@@ -1,4 +1,11 @@
-/* Backlight inside of BMC , part of a mfd device */
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Driver for backlight inside of BMC , part of a mfd device
+ *
+ * Copyright (C) 2020 ADLINK Technology Inc.
+ *
+ */
+
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/platform_device.h>

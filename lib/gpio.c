@@ -1,3 +1,11 @@
+// SPDX-License-Identifier: LGPL-2.0+
+/*
+ * SEMA Library APIs for GPIO
+ *
+ * Copyright (C) 2020 ADLINK Technology Inc.
+ *
+ */
+
 #include <stdio.h> 
 #include <stdlib.h>
 #include <stdint.h>
@@ -42,7 +50,7 @@ static int get_gpio_base(int *gpiobase, int *ngpio)
 		if(strncmp(de->d_name, "gpiochip", strlen("gpiochip")) == 0) {
 			char sysfile[278];
 			char value[256];
-			sprintf(sysfile, "/sys/class/gpio/%s/label", de->d_name);
+			sprintf(sysfile, "/sys/class/gpio/%s/device/name", de->d_name);
 			if(read_sysfs_file(sysfile, value, sizeof(value)) != 0) {
 				continue;
 			}

@@ -1,3 +1,11 @@
+// SPDX-License-Identifier: LGPL-2.0+
+/*
+ * SEMA Library APIs for board information
+ *
+ * Copyright (C) 2020 ADLINK Technology Inc.
+ *
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
@@ -9,7 +17,10 @@
 #include <common.h>
 #include <unistd.h>
 
+#ifdef tempconvert
 #define KELVINS_OfFSET 2731
+#endif
+
 
 #define PLATFORMS_NUMBER 2
 
@@ -18,14 +29,15 @@ char *Board[PLATFORMS_NUMBER] = {
 	"Q7-AL"
 };
 
-
+#ifdef tempconvert
 static int encode_celcius(uint32_t temp)
 {
 	uint32_t tmp;
 	tmp = temp / 1000;
-        tmp = tmp * 10 + KELVINS_OfFSET;
+         tmp = tmp * 10 + KELVINS_OfFSET;
         return tmp;
 }
+#endif
 
 uint32_t IsFileExist(char *sysf)
 {
@@ -115,8 +127,14 @@ uint32_t EApiBoardGetValue(uint32_t Id, uint32_t *pValue)
 	int ret;
 	uint32_t status = EAPI_STATUS_SUCCESS;
 
+	int hwmon_number;
+	hwmon_number = get_hwmon_num();
+
+
+
+
 	switch (Id)
-	{
+	{	
 		case 1:
 			*pValue = (EAPI_VERSION);
 			break;
@@ -127,10 +145,10 @@ uint32_t EApiBoardGetValue(uint32_t Id, uint32_t *pValue)
 			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/total_up_time");
 			break;
 		case 4:
-			*pValue = EAPI_VER_CREATE(4, 0, 0);
+			*pValue = EAPI_VER_CREATE(4,0, 0);
 			break;
 		case 5:
-			sprintf(sysfile, "/sys/class/hwmon/hwmon2/device/cpu_cur_temp");
+			sprintf(sysfile, "/sys/class/hwmon/hwmon%d/device/cpu_cur_temp",hwmon_number);
 			ret = IsFileExist(sysfile);
 			if (ret){
 				sprintf(sysfile, "/sys/class/thermal/thermal_zone1/temp");
@@ -138,7 +156,7 @@ uint32_t EApiBoardGetValue(uint32_t Id, uint32_t *pValue)
 		
 			break;
 		case 6:
-			sprintf(sysfile, "/sys/class/hwmon/hwmon2/device/sys1_cur_temp");
+			sprintf(sysfile, "/sys/class/hwmon/hwmon%d/device/sys1_cur_temp",hwmon_number);
 			break;
 		case 7:
 			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/voltage_vcore");
@@ -162,10 +180,10 @@ uint32_t EApiBoardGetValue(uint32_t Id, uint32_t *pValue)
 			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/voltage_12v");
 			break;
 		case 14:
-			sprintf(sysfile, "/sys/class/hwmon/hwmon2/device/cpu_fan_speed");
+			sprintf(sysfile, "/sys/class/hwmon/hwmon%d/device/cpu_fan_speed",hwmon_number);
 			break;
 		case 15:
-			sprintf(sysfile, "/sys/class/hwmon/hwmon2/device/sys1_fan_speed");
+			sprintf(sysfile, "/sys/class/hwmon/hwmon%d/device/sys1_fan_speed",hwmon_number);
 			break;
 		case 16:
 			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/power_up_time");
@@ -180,22 +198,22 @@ uint32_t EApiBoardGetValue(uint32_t Id, uint32_t *pValue)
 			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/capabilities_ext");
 			break;
 		case 20:
-			sprintf(sysfile, "/sys/class/hwmon/hwmon2/device/sys1_min_temp");
+			sprintf(sysfile, "/sys/class/hwmon/hwmon%d/device/sys1_min_temp",hwmon_number);
 			break;
 		case 21:
-			sprintf(sysfile, "/sys/class/hwmon/hwmon2/device/sys1_max_temp");
+			sprintf(sysfile, "/sys/class/hwmon/hwmon%d/device/sys1_max_temp",hwmon_number);
 			break;
 		case 22:
-			sprintf(sysfile, "/sys/class/hwmon/hwmon2/device/sys1_startup_temp");
+			sprintf(sysfile, "/sys/class/hwmon/hwmon%d/device/sys1_startup_temp",hwmon_number);
 			break;
 		case 23:
-			sprintf(sysfile, "/sys/class/hwmon/hwmon2/device/cpu_min_temp");
+			sprintf(sysfile, "/sys/class/hwmon/hwmon%d/device/cpu_min_temp",hwmon_number);
 			break;
 		case 24:
-			sprintf(sysfile, "/sys/class/hwmon/hwmon2/device/cpu_max_temp");
+			sprintf(sysfile, "/sys/class/hwmon/hwmon%d/device/cpu_max_temp",hwmon_number);
 			break;
 		case 25:
-			sprintf(sysfile, "/sys/class/hwmon/hwmon2/device/cpu_startup_temp");
+			sprintf(sysfile, "/sys/class/hwmon/hwmon%d/device/cpu_startup_temp",hwmon_number);
 			break;
 		case 26:
 			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/main_current");
@@ -213,22 +231,22 @@ uint32_t EApiBoardGetValue(uint32_t Id, uint32_t *pValue)
 			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/voltage_vin");
 			break;
 		case 31:
-			sprintf(sysfile, "/sys/class/hwmon/hwmon2/device/sys2_fan_speed");
+			sprintf(sysfile, "/sys/class/hwmon/hwmon%d/device/sys2_fan_speed", hwmon_number);
 			break;
-		case 32:
-			sprintf(sysfile, "/sys/class/hwmon/hwmon2/device/sys3_fan_speed");
+		case 32: 
+			sprintf(sysfile, "/sys/class/hwmon/hwmon%d/device/sys3_fan_speed", hwmon_number);
 			break;
 		case 33:
-			sprintf(sysfile, "/sys/class/hwmon/hwmon2/device/sys2_cur_temp");
+			sprintf(sysfile, "/sys/class/hwmon/hwmon%d/device/sys2_cur_temp",hwmon_number);
 			break;
 		case 34:
-			sprintf(sysfile, "/sys/class/hwmon/hwmon2/device/sys2_min_temp");
+			sprintf(sysfile, "/sys/class/hwmon/hwmon%d/device/sys2_min_temp", hwmon_number);
 			break;
 		case 35:
-			sprintf(sysfile, "/sys/class/hwmon/hwmon2/device/sys2_max_temp");
+			sprintf(sysfile, "/sys/class/hwmon/hwmon%d/device/sys2_max_temp", hwmon_number);
 			break;
 		case 36:
-			sprintf(sysfile, "/sys/class/hwmon/hwmon2/device/sys2_startup_temp");
+			sprintf(sysfile, "/sys/class/hwmon/hwmon%d/device/sys2_startup_temp", hwmon_number);
 			break;
 		case 37:
 			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/power_cycles");
@@ -252,7 +270,6 @@ uint32_t EApiBoardGetValue(uint32_t Id, uint32_t *pValue)
 
 	if (ret == 0)
 		status = EAPI_STATUS_SUCCESS;
-	printf("ret is: %d\n", ret);
 	
 	if (strlen(res) == 0 || ret == -1){
 		return EAPI_STATUS_UNSUPPORTED;
@@ -261,7 +278,7 @@ uint32_t EApiBoardGetValue(uint32_t Id, uint32_t *pValue)
 	if (Id == 5)
 	{
 		*pValue = atoi(res);
-		*pValue = encode_celcius(*pValue);
+	//	*pValue = encode_celcius(*pValue);
 		return 0;
 	}
 
@@ -273,55 +290,41 @@ uint32_t EApiBoardGetValue(uint32_t Id, uint32_t *pValue)
 }
 static int get_regulator_voltage(int id, uint32_t *mVolts, char *buf, uint32_t size)
 {
-	struct dirent *de;  // Pointer for directory entry 
-	char regulator[64];
+        char sysfilename[128],sysfilevolt[128];
+	char pbuf[32];char value[256];
+	int ret;
 
-	// opendir() returns a pointer of DIR type.  
-	DIR *dr = opendir("/sys/class/regulator/"); 
 
-	if (dr == NULL)  // opendir returns NULL if couldn't open directory 
-	{ 
-		printf("Could not open current directory" ); 
-		return 0; 
-	} 
+	memset(pbuf, 0, sizeof(pbuf));
+	sprintf(pbuf, "%u", id);
 
-	sprintf(regulator, "adl_bmc_reg%d", id);
-	
 
-	// Refer http://pubs.opengroup.org/onlinepubs/7990989775/xsh/readdir.html 
-	// for readdir() 
-	while ((de = readdir(dr)) != NULL) {
-		if(strncmp(de->d_name, "regulator", strlen("regulator")) == 0) {
-			char sysfile_volt[288];
-			char sysfile_desc[282];
-			char value[256];
-			
-			sprintf(sysfile_volt, "/sys/class/regulator/%s/name", de->d_name);	
-			if(read_sysfs_file(sysfile_volt, value, sizeof(value)) != 0) {
-				continue;
-			}
-			
-			if(strncmp(value, regulator, strlen(regulator)) != 0) {
-				continue;
-			}
-			
-			sprintf(sysfile_volt, "/sys/class/regulator/%s/microvolts", de->d_name);
-			sprintf(sysfile_desc, "/sys/class/regulator/%s/name", de->d_name);
-			if(read_sysfs_file(sysfile_volt, value, sizeof(value)) != 0) {
-				return -1;
-			}
-			if(read_sysfs_file(sysfile_desc, buf, size) != 0) {
-				return -1;
-			}
-			*mVolts = atoi(value);
-			closedir(dr);     
-			return 0;
-		}
+	sprintf(sysfilename, "/sys/bus/platform/devices/adl-bmc-vm/Info/voltage_info");
+
+	sprintf(sysfilevolt, "/sys/bus/platform/devices/adl-bmc-vm/Info/voltage_log");
+
+	ret = write_sysfs_file(sysfilename, pbuf, sizeof(pbuf));
+	if(ret < 0) {
+		return EAPI_STATUS_UNSUPPORTED;
+	}	
+	ret = read_sysfs_file(sysfilename, buf, size);
+	if(ret < 0) {
+		return EAPI_STATUS_UNSUPPORTED;
+	}	
+
+	ret = write_sysfs_file(sysfilevolt, pbuf, sizeof(buf));
+	if(ret < 0) {
+		return EAPI_STATUS_UNSUPPORTED;
 	}
 
-	errno = EINVAL;
-	closedir(dr);     
-	return -1;
+	ret = read_sysfs_file(sysfilevolt, value, size);
+	if(ret < 0) {
+		return EAPI_STATUS_UNSUPPORTED;
+	}      
+
+	*mVolts = atoi(value); 
+
+	return ret;
 }
 
 uint32_t EApiBoardGetVoltageMonitor(uint32_t id, uint32_t *mVolts, char *buf, uint32_t size)
@@ -456,6 +459,7 @@ uint32_t EApiBoardGetErrorNumDesc(uint32_t Pos, char *pBuf, uint32_t Size)
 	if(ret < 0) {
 		return EAPI_STATUS_UNSUPPORTED;
 	}	
+
 	ret = read_sysfs_file(sysfile, pBuf, Size);
 	if(ret < 0) {
 		return EAPI_STATUS_UNSUPPORTED;
@@ -482,10 +486,6 @@ uint32_t EApiBoardGetExcepDesc(uint32_t exc_code, char *exc_desc, uint32_t size)
 	sprintf(buf, "%u", exc_code);
 	sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/exc_des");
 
-	ret = write_sysfs_file(sysfile, buf, size);
-	if(ret < 0) {
-		return -1;
-	}	
 
 	ret = read_sysfs_file(sysfile, exc_desc, size);
 	if(ret < 0) {

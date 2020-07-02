@@ -1,3 +1,11 @@
+// SPDX-License-Identifier: LGPL-2.0+
+/*
+ * SEMA Library APIs for fan
+ *
+ * Copyright (C) 2020 ADLINK Technology Inc.
+ *
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -379,38 +387,3 @@ uint32_t EApiSmartFanSetTempSrc(int id, int Tempsrc)
 }
 
 
-int get_hwmon_num(void)
-{
-	DIR *dir;
-	uint32_t max_hwmon;
-	char fan_sysfile[512];
-	int fan_no;
-
-	for (max_hwmon=0;;max_hwmon++)
-	{
-		sprintf(fan_sysfile, "/sys/class/hwmon/hwmon%u", max_hwmon);
-		dir = opendir(fan_sysfile);
-		if(dir)
-			closedir(dir);
-		else
-			break;
-
-	}
-
-
-	for (fan_no=0;fan_no <= max_hwmon; fan_no++)
-	{
-		sprintf(fan_sysfile, "/sys/class/hwmon/hwmon%d/device/driver/adl-bmc-fan/", fan_no);
-		dir = opendir(fan_sysfile);
-		if(dir)
-		{
-			closedir(dir);
-			return fan_no;
-		}
-		
-			
-	}
-
-	return -1;
-
-}

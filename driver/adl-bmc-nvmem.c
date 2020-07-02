@@ -1,3 +1,11 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Driver for non volatile memory inside BMC, part of a mfd device
+ *
+ * Copyright (C) 2020 ADLINK Technology Inc.
+ *
+ */
+
 #include <linux/kernel.h>
 #include <linux/io.h>
 #include <linux/slab.h>

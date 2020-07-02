@@ -1,3 +1,11 @@
+// SPDX-License-Identifier: LGPL-2.0+
+/*
+ * Application front end to interact with SEMA
+ *
+ * Copyright (C) 2020 ADLINK Technology Inc.
+ *
+ */
+
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -38,10 +46,10 @@ void ShowHelp(int condition)
 	{
 		printf("- Watch Dog:\n");
 		printf("  1. semautil /w get_cap\n");
-		printf("  2. semautil /w start <sec> \n");
+		printf("  2. semautil /w start <sec (1-65535> \n");
 		printf("  3. semautil /w trigger\n");
 		printf("  4. semautil /w stop\n");
-		printf("  5. semautil /w pwrup_enable\n");
+		printf("  5. semautil /w pwrup_enable <sec (24-65535> \n");
 		printf("  6. semautil /w pwrup_disable\n\n");
 	}
 	if (condition == 2 || condition == 0)
@@ -49,9 +57,9 @@ void ShowHelp(int condition)
 		printf("Storage:\n");
 		printf("  1. semautil /s get_cap\n");
 		printf("  2. semautil /s read  <Address> <Length> \n");
-		printf("       Note: Address and Length should be  4Bytes aligned \n");
+		printf("       Note: Address <0 - 248> and Length should be  4Bytes aligned \n");
 		printf("  3. semautil /s write <Address> <string/value> <Length> \n");
-		printf("       Note: Address and Length should be  4Bytes aligned \n\n");
+		printf("       Note: Address <0 - 248> and Length should be  4Bytes aligned \n\n");
 	}
 	if (condition == 3 || condition == 0)
 	{
@@ -102,8 +110,7 @@ void ShowHelp(int condition)
 	if (condition == 6 || condition == 0)
 	{
 		printf("Error log:\n");
-		printf("  1. semautil /e get_error_log       <Position>\n");
-		printf("       Position 0-31\n");
+		printf("  1. semautil /e get_error_log <Position (0-31)>\n");
 		printf("  2. semautil /e get_cur_error_log\n");
 		printf("  3. semautil /e get_bmc_error_code\n");
 	}
@@ -300,7 +307,6 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 	}
 	if (GetStringA)
 	{
-		printf("test\n");
 		if (argc != 4) {
 			printf("Wrong arguments GetStringA\n");
 			exit(-1);
@@ -323,13 +329,13 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 	}
 	if (SetWatchdog)
 	{
-		if (argc != 6) {
+		if (argc != 4) {
 			printf("Wrong arguments SetWatchdog\n");
 			exit(-1);
 		}
-		delay = atoi(argv[3]);
-		EventTimeout = atoi(argv[4]);
-		ResetTimeout = atoi(argv[5]);
+		delay = 0;
+		EventTimeout = 0;
+		ResetTimeout = atoi(argv[3]);
 		ret = EApiWDogStart(delay, EventTimeout, ResetTimeout);
 		if (ret == EAPI_STATUS_RUNNING)
 		{
@@ -369,6 +375,22 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 		}
 		printf("Watchdog Stop Success\n");
 	}
+
+	if (IsPwrUpWDogStart)				
+	{
+		if (argc != 4) {
+			printf("Wrong arguments\n");
+			exit(-1);
+		}
+		ResetTimeout = atoi(argv[3]);
+		ret = EApiPwrUpWDogStart(ResetTimeout);
+		if (ret) {
+			printf("get eapi information failed\n");
+			errno_exit("EApiPwrUpWDogStart");
+		}
+		printf("Watchdog Tiggered\n");
+	}
+
 
 	if (IsPwrUpWDogStop)				 
 	{
@@ -602,10 +624,12 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 	if (GPIOGetDirection)
 	{
 		uint32_t bitmask=0, dir;
-		if((strncmp(argv[2], "0x", 2) != 0) || !Conv_HexString2DWord(argv[2], &bitmask)) {
-			printf("Invalid GPIO Bitmask input\n");
-			exit(1);
-		}
+	//	if((strncmp(argv[2], "0x", 2) != 0) || !Conv_HexString2DWord(argv[2], &bitmask)) {
+	//		printf("Invalid GPIO Bitmask input\n");
+	//		exit(1);
+	//	}
+
+                 bitmask = atoi(argv[3]);
 		ret = EApiGPIOGetDirection(0, bitmask, &dir);
 		if (ret) {
 			printf("get eapi information failed\n");
@@ -618,17 +642,9 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 	if (GPIOSetDirection)
 	{
 		uint32_t bitmask=0, dir=0;
-		if((strncmp(argv[2], "0x", 2) != 0) || !Conv_HexString2DWord(argv[2], &bitmask)) {
-			printf("Invalid GPIO Bitmask input\n");
-			exit(1);
-		}
 
-		if((strncmp(argv[3], "0x", 2) != 0) || !Conv_HexString2DWord(argv[3], &dir)) {
-			printf("Invalid GPIO Direction Input\n");
-			exit(1);
-		}
-
-
+                bitmask = atoi(argv[3]);
+                dir = atoi(argv[4]);
 		ret = EApiGPIOSetDirection(0, bitmask, dir);
 		if (ret) {
 			printf("get eapi information failed\n");
@@ -639,10 +655,8 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 	if (GPIOGetLevel)
 	{
 		uint32_t bitmask=0, val=0;
-		if((strncmp(argv[2], "0x", 2) != 0) || !Conv_HexString2DWord(argv[2], &bitmask)) {
-			printf("Invalid GPIO Bitmask input\n");
-			exit(1);
-		}
+
+                bitmask = atoi(argv[3]);
 
 		ret = EApiGPIOGetLevel(0, bitmask, &val);
 		if (ret) {
@@ -656,16 +670,9 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 	if (GPIOSetLevel)
 	{
 		uint32_t bitmask=0, val=0;
-		if((strncmp(argv[2], "0x", 2) != 0) || !Conv_HexString2DWord(argv[2], &bitmask)) {
-			printf("Invalid GPIO Bitmask input\n");
-			exit(1);
-		}
 
-		if((strncmp(argv[3], "0x", 2) != 0) || !Conv_HexString2DWord(argv[3], &val)) {
-			printf("Invalid GPIO Direction Input\n");
-			exit(1);
-		}
-
+                bitmask = atoi(argv[3]);
+                val = atoi(argv[4]);
 		ret = EApiGPIOSetLevel(0, bitmask, val);
 		if (ret) {
 			printf("get eapi information failed\n");
@@ -694,12 +701,12 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 
 	if (GetErrorNumberDescription)
 	{
-		if (argc != 3) {
+		if (argc != 4) {
 			printf("Wrong arguments\n");
 			exit(-1);
 		}
 		Size = sizeof(ExcepDesc);
-		Pos = atoi(argv[2]);
+		Pos = atoi(argv[3]);
 		ret = EApiBoardGetErrorNumDesc(Pos, ExcepDesc, Size);
 		if (ret) {
 			printf("get eapi information failed\n");
@@ -780,7 +787,7 @@ signed int ParseArgs(int argc, char* argv[])
 		{
 			WatchDogCap = TRUE;
 		}
-		else if (argc == 6 && strcasecmp(argv[2], "start") == 0)
+		else if (argc == 4 && strcasecmp(argv[2], "start") == 0)
 		{
 			SetWatchdog = TRUE;
 		}
@@ -868,7 +875,6 @@ signed int ParseArgs(int argc, char* argv[])
 		if (argc == 4 && (strcasecmp(argv[2], "get_bd_info") == 0))
 		{
 			GetStringA = TRUE;
-			printf("getStringA enabled\n");
 		}
 		else
 		{
@@ -896,7 +902,7 @@ signed int ParseArgs(int argc, char* argv[])
 		{
 			GetCurrentPosErrorLog = TRUE;
 		}
-		else if (argc == 3 && (strcasecmp(argv[2], "get_bmc_error_code") == 0))
+		else if (argc == 4 && (strcasecmp(argv[2], "get_bmc_error_code") == 0))
 		{
 			GetErrorNumberDescription = TRUE;
 		}

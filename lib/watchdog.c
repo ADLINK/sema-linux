@@ -1,3 +1,11 @@
+// SPDX-License-Identifier: LGPL-2.0+
+/*
+ * SEMA Library APIs for watchdog
+ *
+ * Copyright (C) 2020 ADLINK Technology Inc.
+ *
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -88,18 +96,11 @@ uint32_t EApiWDogStart(uint32_t Delay, uint32_t EventTimeout, uint32_t ResetTime
                 return EAPI_STATUS_INVALID_PARAMETER;
         }
 
-        if(ResetTimeout>UINT16_MAX*1000){
+        if(ResetTimeout>UINT16_MAX){
                 return EAPI_STATUS_INVALID_PARAMETER;
         }
 
 
-	if (ResetTimeout < 1000)
-		return EAPI_STATUS_INVALID_PARAMETER;
-
-
-        if (ResetTimeout % 1000 != 0){
-        	return EAPI_STATUS_INVALID_PARAMETER;
-        }
 
 
 	WDOG_INIT();
@@ -127,7 +128,7 @@ uint32_t EApiWDogStart(uint32_t Delay, uint32_t EventTimeout, uint32_t ResetTime
 		return fd;
 	}
 
-	flags = ResetTimeout / 1000; 
+	flags = ResetTimeout;
 
 	ret = ioctl(fd, WDIOC_SETTIMEOUT, &flags);
 	if (!ret){
