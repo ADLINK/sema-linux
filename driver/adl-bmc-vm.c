@@ -204,7 +204,7 @@ static int adl_bmc_vm_probe(struct platform_device *pdev)
 		ret = adl_bmc_i2c_read_device(vm_data->adl_dev, ADL_BMC_CMD_EXT_HW_DESC, 16, data);
 		if (ret < 0)
 			debug_printk("return failed in read i=%d\n", i);
-		printk("Buffer is %s\n", data +4);
+		//printk("Buffer is %s\n", data +4);
 
 
 		data[15] = 0;
