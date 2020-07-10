@@ -40,7 +40,7 @@ Support Operating System
 --------------------------
 * **Windows OS**
 
-      Windows 10 64bit
+Windows 10 64bit
       
 * **Linux OS**
 
