@@ -44,8 +44,6 @@ Support Operating System
   
 * **Yocto Linux ([meta-adlink-seam](https://github.com/ADLINK/meta-adlink-sema/tree/sema4.0))**  
 
-   
-
 * **VxWorks (by request)** 
 * **QNX (by request)**
 
