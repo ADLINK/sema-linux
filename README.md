@@ -38,17 +38,13 @@ Detailed forensic information is available after system or module failures. The 
 
 Support Operating System
 --------------------------
-* **Windows OS**
+* **Windows 10 64bit**
 
-   Windows 10 64bit
-      
-* **Linux OS**
+* **Linux (kernel 4.4 or above)**
   
-   kernel 4.4 or above
+* **Yocto Linux ([meta-adlink-seam](https://github.com/ADLINK/meta-adlink-sema/tree/sema4.0))**  
 
-* **Yocto Linux**  
-
-   [meta-adlink-seam](https://github.com/ADLINK/meta-adlink-sema/tree/sema4.0)
+   
 
 * **VxWorks (by request)** 
 * **QNX (by request)**
