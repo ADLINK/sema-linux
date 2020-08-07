@@ -40,7 +40,7 @@ Support Operating System
 --------------------------
 * **Windows 10 64bit**
 
-* **Linux (kernel 4.4 or above)**
+* **Linux (kernel 4.15 or above)**
   
 * **Yocto Linux ([meta-adlink-seam](https://github.com/ADLINK/meta-adlink-sema/tree/sema4.0))**  
 
