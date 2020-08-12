@@ -18,6 +18,7 @@
 #include <linux/string.h>
 #include <linux/sysfs.h>
 #include <linux/device.h>
+#include <linux/delay.h>
 
 
 #include "adl-bmc.h"
@@ -32,12 +33,13 @@ struct adl_bmc_vm_data {
 	struct regulator_dev *adl_bmc_vm_rdev[16];
 	struct adl_bmc_dev *adl_dev;
 	char name_arr[16][256];
+	char adlink_name[16][256];
 	int cnt;
 
 };
 
-static int voltagenum=0;
-unsigned int voltagevalue[32];
+static int voltagenum = 0;
+unsigned int voltagevalue[32] = {0};
 
 int converttoint(char *buf)
 {
@@ -88,6 +90,7 @@ static int adl_bmc_vm_get_voltage(struct regulator_dev *rdev)
 	if(ret != 2)
 		return -EINVAL;
 
+	msleep(30);
 	/*read the gain value*/
         ret = adl_bmc_i2c_read_device(vm_data->adl_dev, ADL_BMC_CMD_GET_ADC_SCALE, 32, buff_gain);
 	if (ret < 0)
@@ -115,11 +118,14 @@ static struct regulator_ops adl_bmc_vm_ops = {
 
 static ssize_t sysfs_show_voltage_log(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
-        int temp;
-        temp  = voltagenum;
-        voltagenum = temp + voltagenum;
-        return sprintf(buf,"%u\n",voltagevalue[voltagenum]);
-         
+#if defined(__x86_64__) || defined(__i386__)
+	int temp;
+	temp  = voltagenum;
+	voltagenum = temp + voltagenum;
+#endif
+
+	return sprintf(buf,"%u\n",voltagevalue[voltagenum]);
+        
 }
 
 static ssize_t sysfs_store_voltage_log(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
@@ -196,11 +202,13 @@ static int adl_bmc_vm_probe(struct platform_device *pdev)
 	for (i = 0; i < 16; i++)
 	{
 		memset(vm_data->name_arr[i], 0, 256);
+		memset(vm_data->adlink_name[i], 0, 256);
 
 		data[0] = (unsigned char)i;
 		ret = adl_bmc_i2c_write_device(vm_data->adl_dev, ADL_BMC_CMD_EXT_HW_DESC, 1, data);
 		if (ret < 0)
 			debug_printk("return failed  in write i=%d\n", i);
+		msleep(30);
 		ret = adl_bmc_i2c_read_device(vm_data->adl_dev, ADL_BMC_CMD_EXT_HW_DESC, 16, data);
 		if (ret < 0)
 			debug_printk("return failed in read i=%d\n", i);

@@ -88,37 +88,40 @@ uint32_t EApiStorageAreaRead(uint32_t Id, uint32_t Offset, void *pBuffer, uint32
 	int ret = 0;
 	NVMEM_INIT();
 	int fd;
-       	uint32_t i;
 	if (Id != EAPI_ID_STORAGE_STD)
 		return EAPI_STATUS_UNSUPPORTED;
 
 	if (pBuffer == NULL || Bytecnt == 0 || BufLen == 0)
 		return EAPI_STATUS_INVALID_PARAMETER;
 
+	if (Offset + Bytecnt > BufLen)
+		return EAPI_STATUS_INVALID_BLOCK_LENGTH;
+
 	if (Bytecnt > BufLen)
-		return -1;
+		return EAPI_STATUS_MORE_DATA;
+
 	fd = open(NVMEM_DEVICE, O_RDONLY);
 	if (fd < 0)
 		return -1;
 
-	ret = read(fd, pBuffer, Offset + Bytecnt);
-	for(i = Offset;  i < Offset + Bytecnt; i++)
-		((char*)pBuffer)[i - Offset] = ((char*)pBuffer)[i];
-	((char*)pBuffer)[i - Offset] = 0;
+	lseek(fd, Offset, SEEK_SET);
+
+	ret = read(fd, pBuffer, Bytecnt);
+
 	if (ret)
 		close(fd);
 	else {
 		close(fd);
-		return -1;
+		return EAPI_STATUS_READ_ERROR;
 	}
-	
+
 	return status;
 }
 
-uint32_t EApiStorageAreaWrite(uint32_t Id, unsigned short Offset, char* Buf, unsigned short Len)
+uint32_t EApiStorageAreaWrite(uint32_t Id, unsigned short Offset, char* Buf, uint32_t Bytecnt)
 {
 	uint32_t status = EAPI_STATUS_SUCCESS;
-	int ret;
+	int ret, fd;
 	uint32_t pBlockLength = SMC_FLASH_ALIGNMENT;
 	NVMEM_INIT();
 
@@ -128,9 +131,18 @@ uint32_t EApiStorageAreaWrite(uint32_t Id, unsigned short Offset, char* Buf, uns
 	if ((Offset % pBlockLength) != 0)
 		return EAPI_STATUS_INVALID_BLOCK_ALIGNMENT;
 
-	ret = write_sysfs_file(NVMEM_DEVICE, Buf, Len);
-	if (ret)
-		return EAPI_STATUS_WRITE_ERROR;
+	fd = open(NVMEM_DEVICE, O_WRONLY);
+	if (fd < 0)
+		return -1;
 
+	lseek(fd, Offset, SEEK_SET);
+	ret = write(fd, Buf, Bytecnt);
+	if (ret)
+		close(fd);
+	else {
+		close(fd);
+		return -1;
+	}
+	
 	return status;
 }

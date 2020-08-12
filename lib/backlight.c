@@ -15,6 +15,8 @@
 #include <eapi.h>
 #include <common.h>
 
+#define DEFAULT_BRIGHTNESS 200
+
 uint32_t EApiVgaGetBacklightEnable(uint32_t id, uint32_t *pEnable)
 {
 
@@ -37,7 +39,7 @@ uint32_t EApiVgaGetBacklightEnable(uint32_t id, uint32_t *pEnable)
 	}	
 
 	Enable = atoi(value);
-	if (Enable)
+	if (!Enable)
 		*pEnable = EAPI_BACKLIGHT_SET_ON;
 	else
 		*pEnable = EAPI_BACKLIGHT_SET_OFF;
@@ -48,7 +50,8 @@ uint32_t EApiVgaGetBacklightEnable(uint32_t id, uint32_t *pEnable)
 uint32_t EApiVgaSetBacklightEnable(uint32_t id, uint32_t Enable)
 {
         uint32_t status = EAPI_STATUS_SUCCESS;
-        char value[256];
+        uint32_t Brightness = DEFAULT_BRIGHTNESS;
+	char value[256];
 	char sysfile[256];
 	int ret;
 
@@ -61,6 +64,10 @@ uint32_t EApiVgaSetBacklightEnable(uint32_t id, uint32_t Enable)
 		return EAPI_STATUS_UNSUPPORTED;
 	}
 
+	if (Enable == 0)
+		Enable = 4;
+	else
+		Enable = 0;
 
 	sprintf(sysfile, "/sys/class/backlight/adl-bmc-bklight/bl_power");
 	sprintf(value, "%u", Enable);
@@ -69,7 +76,17 @@ uint32_t EApiVgaSetBacklightEnable(uint32_t id, uint32_t Enable)
 	if(ret < 0) {
 		return EAPI_STATUS_WRITE_ERROR;
 	}
-	
+
+	if (!Enable) {
+		sprintf(sysfile, "/sys/class/backlight/adl-bmc-bklight/brightness");
+		sprintf(value, "%u", Brightness);
+
+		ret = write_sysfs_file(sysfile, value, sizeof(value));
+		if(ret < 0) {
+			return EAPI_STATUS_WRITE_ERROR;
+		}
+	}
+
 	return status;
 }
 
@@ -115,6 +132,14 @@ uint32_t EApiVgaSetBacklightBrightness(uint32_t id, uint32_t Brightness)
 		errno = EINVAL;
 		return EAPI_STATUS_UNSUPPORTED;
 	}
+
+	sprintf(sysfile, "/sys/class/backlight/adl-bmc-bklight/bl_power");
+	sprintf(value, "%u", 0);
+	ret = write_sysfs_file(sysfile, value, sizeof(value));
+	if(ret < 0) {
+		return EAPI_STATUS_WRITE_ERROR;
+	}
+
 	sprintf(sysfile, "/sys/class/backlight/adl-bmc-bklight/brightness");
 	sprintf(value, "%u", Brightness);
 

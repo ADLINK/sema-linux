@@ -71,7 +71,7 @@ static ssize_t show_fan_enable_temp_src(struct device *dev, struct device_attrib
 	int fn = sensor_attr_2->nr;
 	int fan_num = sensor_attr_2->index;
 	debug_printk("%s\n", __func__);
-	size = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_SYSCFG, 32, conf_data);
+	size = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_SYSCFG, 4, conf_data);
 	for (i=0;i<32;i++)
 	{
 		debug_printk("read_data i=%d, val=%x\n", i, conf_data[i]);
@@ -172,7 +172,7 @@ static ssize_t set_fan_enable_temp_src(struct device *dev, struct device_attribu
 
 	mutex_lock(&hwmon_data->update_lock);
 	/*read the config register*/
-	size = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_SYSCFG, 32, conf_data);
+	size = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_SYSCFG, 4, conf_data);
 	if (size < 0)
 	{
 		goto Exit;
@@ -341,7 +341,7 @@ static ssize_t show_fan_auto_point_temp(struct device *dev,
 
 
 	/*read the default temperature values*/
-	size = adl_bmc_i2c_read_device(hwmon_data->adl_dev, cmd, 32, trig_temp);
+	size = adl_bmc_i2c_read_device(hwmon_data->adl_dev, cmd, 4, trig_temp);
 	if (size < 0)
 		return size;
 
@@ -420,7 +420,7 @@ static ssize_t set_fan_auto_point_temp(struct device *dev,
 
 	mutex_lock(&hwmon_data->update_lock);
 	/*read the temparature values*/
-	size = adl_bmc_i2c_read_device(hwmon_data->adl_dev, cmd, 32, trig_temp);
+	size = adl_bmc_i2c_read_device(hwmon_data->adl_dev, cmd, 4, trig_temp);
 	if (size < 0)
 	{
 		debug_printk("Invalid size\n");
@@ -496,7 +496,7 @@ static ssize_t show_fan_auto_point_pwm(struct device *dev,
 
 
 	/*read the default temperature values*/
-	size = adl_bmc_i2c_read_device(hwmon_data->adl_dev, cmd, 32, trig_pwm);
+	size = adl_bmc_i2c_read_device(hwmon_data->adl_dev, cmd, 4, trig_pwm);
 	if (size < 0)
 		return size;
 
@@ -566,7 +566,7 @@ static ssize_t set_fan_auto_point_pwm(struct device *dev,
 
 	mutex_lock(&hwmon_data->update_lock);
 	/*read the pwm values*/
-	size = adl_bmc_i2c_read_device(hwmon_data->adl_dev, cmd, 32, trig_pwm);
+	size = adl_bmc_i2c_read_device(hwmon_data->adl_dev, cmd, 4, trig_pwm);
 	if (size < 0) {
 		goto Exit;
 	}
@@ -662,10 +662,10 @@ static struct sensor_device_attribute_2 adl_bmc_sysfs_sys_fan3_pwm[] = {
 
 
 
-static int encode_celcius(char temp)
+static int encode_celcius(signed char temp)
 {
-	int tem;
-	tem = temp * 10 + KELVINS_OfFSET;
+	uint32_t tem;
+	tem = (uint32_t)((temp * 10) + KELVINS_OfFSET);
 	return tem;
 }
 
@@ -685,40 +685,40 @@ static ssize_t show_fan_input(struct device *dev, struct device_attribute *attr,
 	switch(ix) 
 	{
 		case 0:
-			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_CPU_FAN, 0, buff);
+			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_CPU_FAN, 2, buff);
 			if(ret < 0)
 				return ret;
 			msleep(40);
-			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_CPU_FAN, 0, buff);
+			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_CPU_FAN, 2, buff);
 			if(ret < 0)
 				return ret;
 
 			break;
 		case 1:
-			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_SYSTEM_FAN_1, 0, buff);
+			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_SYSTEM_FAN_1, 2, buff);
 			if(ret < 0)
 				return ret;
 			msleep(40);
-			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_SYSTEM_FAN_1, 0, buff);
+			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_SYSTEM_FAN_1, 2, buff);
 			if(ret < 0)
 				return ret;
 			break;
 		case 2:
-			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_SYSTEM_FAN_2, 0, buff);
+			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_SYSTEM_FAN_2, 2, buff);
 			if(ret < 0)
 				return ret;
 			msleep(40);
-			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_SYSTEM_FAN_2, 0, buff);
+			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_SYSTEM_FAN_2, 2, buff);
 			if(ret < 0)
 				return ret;
 			break;
 
 		case 3:
-			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_SYSTEM_FAN_3, 0, buff);
+			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_SYSTEM_FAN_3, 2, buff);
 			if(ret < 0)
 				return ret;
 			msleep(40);
-			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_SYSTEM_FAN_3, 0, buff);
+			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_SYSTEM_FAN_3, 2, buff);
 			if(ret < 0)
 				return ret;
 			break;
@@ -735,7 +735,7 @@ static ssize_t show_temp_input(struct device *dev, struct device_attribute *attr
 {
 	
 	int ret;
-	char buff[32];
+	signed char buff[32];
 
 	struct adl_bmc_hwmon_data *hwmon_data = dev_get_drvdata(dev);
 	struct sensor_device_attribute_2 *sensor_attr_2 = to_sensor_dev_attr_2(attr);
@@ -747,7 +747,7 @@ static ssize_t show_temp_input(struct device *dev, struct device_attribute *attr
 	switch(ix) 
 	{
 		case 0:
-			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_CPU_TEMP, 2, buff);
+			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_CPU_TEMP, 2, (char *)buff);
 			debug_printk("return value buf: %d ret: %d\n", buff[0], ret);
 			if(ret < 0)
 				return ret;
@@ -755,13 +755,13 @@ static ssize_t show_temp_input(struct device *dev, struct device_attribute *attr
 			temper = encode_celcius(buff[0]);
 			break;
 		case 1:
-			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_SYSTEM_TEMP, 1, buff);
+			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_SYSTEM_TEMP, 1, (char *)buff);
 			if(ret < 0)
 				return ret;
 			temper = encode_celcius(buff[0]);
 			break;
 		case 2:
-			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_SYSTEM2_TEMP, 1, buff);
+			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_SYSTEM2_TEMP, 1, (char *)buff);
 			if(ret < 0)
 				return ret;
 			temper = encode_celcius(buff[0]);
@@ -784,7 +784,7 @@ static ssize_t show_temp_min(struct device *dev, struct device_attribute *attr, 
 	int ix = sensor_attr_2->index;
 	int ret;
 	unsigned short temper = 0;
-	char buff[32];
+	signed char buff[32];
 
 	memset(buff, 0, sizeof(buff)); 
 	switch(ix) 
@@ -792,19 +792,19 @@ static ssize_t show_temp_min(struct device *dev, struct device_attribute *attr, 
 		case 0:
 			if(DtsTemp)
 				return -EINVAL;
-			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_MINMAX_TEMP, 1, buff);
+			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_MINMAX_TEMP, 4, (char *)buff);
 			if(ret < 0)
 				return ret;
 			temper = encode_celcius(buff[1]);
 			break;
 		case 1:
-			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_MINMAX_TEMP, 1, buff);
+			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_MINMAX_TEMP, 4, (char *)buff);
 			if(ret < 0)
 				return ret;
 			temper = encode_celcius(buff[3]);
 			break;
 		case 2:
-			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_SYSTEM2_MINMAX_TEMP, 1, buff);
+			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_SYSTEM2_MINMAX_TEMP, 4, (char *)buff);
 			if(ret < 0)
 				return ret;
 			temper = encode_celcius(buff[3]);
@@ -828,7 +828,7 @@ static ssize_t show_temp_max(struct device *dev, struct device_attribute *attr, 
 	int ix = sensor_attr_2->index;
 	int ret;
 	unsigned short temper = 0;
-	char buff[32];
+	signed char buff[32];
 
 	memset(buff, 0, sizeof(buff)); 
 	switch(ix) 
@@ -836,19 +836,19 @@ static ssize_t show_temp_max(struct device *dev, struct device_attribute *attr, 
 		case 0:
 			if(DtsTemp)
 				return -EINVAL;
-			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_MINMAX_TEMP, 1, buff);
+			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_MINMAX_TEMP, 4, (char *)buff);
 			if(ret < 0)
 				return ret;
 			temper = encode_celcius(buff[0]);
 			break;
 		case 1:
-			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_MINMAX_TEMP, 1, buff);
+			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_MINMAX_TEMP, 4, (char *)buff);
 			if(ret < 0)
 				return ret;
 			temper = encode_celcius(buff[2]);
 			break;
 		case 2:
-			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_SYSTEM2_MINMAX_TEMP, 1, buff);
+			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_SYSTEM2_MINMAX_TEMP, 4, (char *)buff);
 			if(ret < 0)
 				return ret;
 			temper = encode_celcius(buff[2]);
@@ -873,26 +873,26 @@ static ssize_t show_temp_startup(struct device *dev, struct device_attribute *at
 	int ix = sensor_attr_2->index;
 	int ret;
 	unsigned int temper = 0;
-	char buff[32];
+	signed char buff[32];
 	memset(buff, 0, sizeof(buff)); 
 	switch(ix) 
 	{
 		case 0:
 			if(DtsTemp)
 				return -EINVAL;
-			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_STARTUP_TEMP, 1, buff);
+			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_STARTUP_TEMP, 2, (char *)buff);
 			if(ret < 0)
 				return ret;
 			temper = encode_celcius(buff[0]);
 			break;
 		case 1:
-			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_STARTUP_TEMP, 1, buff);
+			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_STARTUP_TEMP, 2, (char *)buff);
 			if(ret < 0)
 				return ret;
 			temper = encode_celcius(buff[1]);
 			break;
 		case 2:
-			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_SYSTEM2_STARTUP_TEMP, 1, buff);
+			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_SYSTEM2_STARTUP_TEMP, 2, (char *)buff);
 			if(ret < 0)
 				return ret;
 			temper = encode_celcius(buff[1]);
@@ -1161,7 +1161,7 @@ static int adl_bmc_hwmon_probe(struct platform_device *pdev)
 		int ret;
 		/* Test for CPU Temperature*/
 		memset(buff, 0, sizeof(buff));
-		ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_CPU_TEMP, 1, buff);
+		ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_CPU_TEMP, 2, buff);
 		if(ret < 0)
 			return ret;
 		if (ret == 2) {

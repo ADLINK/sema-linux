@@ -17,6 +17,7 @@
 #include <linux/sysfs.h>
 #include <linux/device.h>
 #include <linux/string.h>
+#include <linux/delay.h>
 
 #include "adl-bmc.h"
 
@@ -59,7 +60,7 @@ unsigned short get_voltage_id(unsigned char ch)
 		return id;
 
 	memset(buff, 0, sizeof(buff));
-	ret = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_GET_VOLT_DESC, 0, (void *)buff);
+	ret = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_GET_VOLT_DESC, 32, (void *)buff);
 	if (ret < 0)
 		return ret;
 
@@ -106,7 +107,7 @@ unsigned short get_scale_factor(unsigned char ch)
 	{
 		unsigned char ret, i, buff[32];
 		memset(buff, 0, sizeof(buff));
-		ret = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_GET_ADC_SCALE, 0, (void *)buff);
+		ret = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_GET_ADC_SCALE, 32, (void *)buff);
 		if ((ret < 16) && (buff[0] == 0xf0))
 			return 0;
 
@@ -133,11 +134,11 @@ int get_voltage_value(unsigned char ch, int *pValue)
 		return -1;
 
 	if (ch < 8) {
-		if(2 != adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_RD_AIN0 + ch, 0, (void *)buff))
+		if(2 != adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_RD_AIN0 + ch, 2, (void *)buff))
 			return -1;
 	}
 	else {
-		if(2 != adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_RD_AIN8 + (ch - 8), 0, (void *)buff))
+		if(2 != adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_RD_AIN8 + (ch - 8), 2, (void *)buff))
 			return -1;	
 	}
 
@@ -161,7 +162,7 @@ int get_voltage_description(unsigned char Ch, char *Buffer)
 	int length;
 	if (Ch >= 16)
 		return -1;	
-	length = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_GET_VOLT_DESC, 0, buf);
+	length = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_GET_VOLT_DESC, 32, buf);
 	if (length <= 0) return -1;
 	if (length < 16)
 		return -1;	
@@ -219,7 +220,7 @@ int get_voltage_description_ext(unsigned char Ch , char *Buffer , bool truncate)
 			unsigned char len;
 			int ret;
 			memset(buf, 0, sizeof(buf));
-			ret = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_EXT_HW_DESC, 0, buf);
+			ret = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_EXT_HW_DESC, 16, buf);
 			if (ret <= 0 && i == 15)
 				return -1;
 			if (ret != 16){
@@ -270,7 +271,6 @@ int get_voltage(char ch,int stsize, const char **cmp, uint32_t* pValue)
 				j--;                                     
 		}
 		buffer[j] = 0;
-		printk("%s\n", buffer);		
 	}
 	else
 	{
@@ -297,7 +297,7 @@ static ssize_t board_name_show(struct kobject *kobj, struct kobj_attribute *attr
 	char buff[32];
 	memset(buff, 0, sizeof(buff));
 	
-        ret = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_RD_VERSION1, 4, (void *)buff);
+        ret = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_RD_VERSION1, 32, (void *)buff);
 	if (ret < 0)
 		return ret;
 
@@ -361,8 +361,8 @@ static ssize_t cur_pos_error_log_show(struct kobject *kobj, struct kobj_attribut
 static ssize_t sysfs_show_err_num_des(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
 	int cnt, ret; 
-	unsigned char buff[33];
-	unsigned char buffer[33];
+	unsigned char buff[33] = {0};
+	unsigned char buffer[33] = {0};
 	unsigned char temp[6];
 	char errcode;
 	debug_printk(KERN_INFO "%s:Sysfs - Read!!!\n", __func__);
@@ -372,6 +372,9 @@ static ssize_t sysfs_show_err_num_des(struct kobject *kobj, struct kobj_attribut
 	ret = adl_bmc_i2c_write_device(NULL, ADL_BMC_CMD_GET_BOARDERRLOG, 1, (void *)buff);	
 	if (ret < 0)
 		return ret;
+
+	msleep(30);
+
 	for (cnt = 0; cnt < 32; cnt ++)
 	{
 		unsigned short errnumcv;
@@ -391,7 +394,9 @@ static ssize_t sysfs_show_err_num_des(struct kobject *kobj, struct kobj_attribut
 			ret = adl_bmc_i2c_write_device(NULL, ADL_BMC_CMD_EXC_CODE_TABLE, 1, (void *)temp);	
 			if (ret < 0)
 				return ret;
-	
+
+			msleep(30);
+
 			ret = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_EXC_CODE_TABLE, 18, (void *)buffer);	
 			if (ret < 0)
 				return ret;
@@ -442,11 +447,11 @@ static ssize_t sysfs_store_exc_des(struct kobject *kobj, struct kobj_attribute *
 static ssize_t serial_number_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
         int ret;
-	char buff[32];
+	unsigned char buff[32];
 
 	memset(buff, 0, sizeof(buff));
 	
-        ret = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_RD_MF_DATA_SR_NO, 4, (void *)buff);
+        ret = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_RD_MF_DATA_SR_NO, 16, (void *)buff);
 	if (ret < 0)
 		return ret;
 
@@ -472,7 +477,7 @@ static ssize_t platform_id_show(struct kobject *kobj, struct kobj_attribute *att
 	char buff[32];
 	memset(buff, 0, sizeof(buff));
 	
-        ret = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_RD_MF_DATA_PLATFORM_ID, 4, (void *)buff);
+        ret = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_RD_MF_DATA_PLATFORM_ID, 16, (void *)buff);
 	if (ret < 0)
 		return ret;
 
@@ -482,10 +487,10 @@ static ssize_t platform_id_show(struct kobject *kobj, struct kobj_attribute *att
 static ssize_t hw_rev_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
         int ret;
-	char buff[32];
+	unsigned char buff[32];
 	memset(buff, 0, sizeof(buff));
 	
-        ret = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_RD_MF_DATA_HW_REV, 4, (void *)buff);
+        ret = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_RD_MF_DATA_HW_REV, 16, (void *)buff);
 	if (ret < 0)
 		return ret;
 
@@ -501,10 +506,10 @@ static ssize_t bmc_application_version_show(struct kobject *kobj, struct kobj_at
 	char buff[64], *ptr;
 	memset(buff, 0, sizeof(buff));
 	
-        ret = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_RD_VERSION1, 4, (void *)buff);
+        ret = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_RD_VERSION1, 32, (void *)buff);
 	if (ret < 0)
 		return ret;
-        ret = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_RD_VERSION2, 4, (void *)(buff + strlen(buff)));
+        ret = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_RD_VERSION2, 32, (void *)(buff + strlen(buff)));
 	if (ret < 0)
 		return ret;
 	if ((ptr = (char*)strchr((char*)buff, '(')))
@@ -523,7 +528,7 @@ static ssize_t last_repair_date_show(struct kobject *kobj, struct kobj_attribute
 	char buff[32];
 	memset(buff, 0, sizeof(buff));
 	
-        ret = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_RD_MF_DATA_LR_DATA, 4, (void *)buff);
+        ret = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_RD_MF_DATA_LR_DATA, 16, (void *)buff);
 	if (ret < 0)
 		return ret;
 	if (((ret == 1) && (buff[0] == 0xf0)) || (buff[0] == 0xffffffff) || (buff[0] == ' '))
@@ -538,7 +543,7 @@ static ssize_t manufactured_date_show(struct kobject *kobj, struct kobj_attribut
 	char buff[32];
 	memset(buff, 0, sizeof(buff));
 	
-        ret = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_RD_MF_DATA_MF_DATE, 4, (void *)buff);
+        ret = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_RD_MF_DATA_MF_DATE, 16, (void *)buff);
 	if (ret < 0)
 		return ret;
 
@@ -554,7 +559,7 @@ static ssize_t mac_address_show(struct kobject *kobj, struct kobj_attribute *att
 	char buff[32];
 	memset(buff, 0, sizeof(buff));
 	
-        ret = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_RD_MF_DATA_MAC_ID, 4, (void *)buff);
+        ret = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_RD_MF_DATA_MAC_ID, 16, (void *)buff);
 	if (ret < 0)
 		return ret;
 	if (((ret == 1) && (buff[0] == 0xf0)) || (buff[0] == 0xffffffff) || (buff[0] == ' '))
@@ -569,7 +574,7 @@ static ssize_t second_hw_rev_show(struct kobject *kobj, struct kobj_attribute *a
 	char buff[32];
 	memset(buff, 0, sizeof(buff));
 	
-        ret = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_RD_MF_DATA_2HW_REV, 4, (void *)buff);
+        ret = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_RD_MF_DATA_2HW_REV, 16, (void *)buff);
 	if (ret < 0)
 		return ret;
 
@@ -585,7 +590,7 @@ static ssize_t second_ser_num_show(struct kobject *kobj, struct kobj_attribute *
 	char buff[32];
 	memset(buff, 0, sizeof(buff));
 	
-        ret = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_RD_MF_DATA_2SR_NO, 4, (void *)buff);
+        ret = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_RD_MF_DATA_2SR_NO, 16, (void *)buff);
 	if (ret < 0)
 		return ret;
 
@@ -673,7 +678,7 @@ static ssize_t capabilities_show(struct kobject *kobj, struct kobj_attribute *at
 	memset(buff, 0, sizeof(buff));
 	memset(val, 0, sizeof(val));
 
-        ret = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_CAPABILITIES, 6, (void *)buff);
+        ret = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_CAPABILITIES, 32, (void *)buff);
 	if (ret < 0)
 		return ret;
 
@@ -691,7 +696,7 @@ static ssize_t capabilities_ext_show(struct kobject *kobj, struct kobj_attribute
 	memset(buff, 0, sizeof(buff));
 	memset(val, 0, sizeof(val));
 
-        ret = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_CAPABILITIES, 4, (void *)buff);
+        ret = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_CAPABILITIES, 32, (void *)buff);
 	if (ret < 0)
 		return ret;
 
@@ -804,18 +809,18 @@ static ssize_t bmc_boot_version_show(struct kobject *kobj, struct kobj_attribute
 {
         int ret, tmp;
 	unsigned char buff[128];
-	unsigned char buffer[32];
+	unsigned char buffer[64];
 	
 	memset(buff, 0, sizeof(buff));
 	memset(buffer, 0, sizeof(buffer));
 
-        ret = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_RD_BLVERSION, 0, (void *)buff);
+        ret = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_RD_BLVERSION, 32, (void *)buff);
 	if (ret < 0)
 		return ret;
 
 	buff[ret] = 0;
  
-        tmp = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_RD_BLVERSION, 0, (void *)buffer);
+        tmp = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_RD_BLVERSION, 32, (void *)buffer);
 	if (tmp < 0)
 		return tmp;
 

@@ -2,6 +2,7 @@
 CONFIG_MODULE_SIG=n
 
 SEMA_OBJS = $(patsubst %.c,%.o,$(wildcard lib/*.c))
+WDOG_OBJS = $(patsubst %.c,%.o,$(wildcard watchdogtest/*.c))
 APP_OBJS = $(patsubst %.c,%.o,$(wildcard app/*.c))
 obj-m := driver/adl-bmc.o \
 	 driver/adl-bmc-bklight.o \
@@ -13,7 +14,7 @@ obj-m := driver/adl-bmc.o \
  	 driver/adl-bmc-hwmon.o 
 	 
 
-all: libsema.so semautil modules
+all: libsema.so semautil wdogtest modules
 
 driver: modules
 
@@ -36,17 +37,19 @@ driver_install:
 
 app_install:
 	@cp lib/libsema.so /usr/lib
-	@cp semautil /usr/bin
+	@cp wdogtest semautil /usr/bin
 
 driver_clean:
 	make -C /lib/modules/`uname -r`/build M=`pwd` clean
 
 app_clean:
-	rm -f semautil app/*.o lib/*.o lib/*.so
+	rm -f semautil wdogtest app/*.o lib/*.o lib/*.so
 
 semautil: $(APP_OBJS)
 	gcc -g -o $@ $^ -Llib -lsema
 
+wdogtest: $(WDOG_OBJS)
+	gcc $^ -g -o $@
 
 %.o: %.c
 	gcc -Wall -I lib -g -fPIC -c $^ -o $@

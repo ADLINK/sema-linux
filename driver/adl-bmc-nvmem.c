@@ -33,21 +33,37 @@ static int adl_bmc_nvmem_read(void *context, unsigned int offset, void *val, siz
 	unsigned char buf[32];
 	unsigned short addr;
 
+	int cnt = bytes, i;
 	debug_printk("Func :%s offset: %d bytes: %lu\n", __func__, offset, bytes);
-	if(offset+bytes > 1024) {
-		return -EINVAL;	
-	}
-
-	addr = offset;
-	for(addr = offset; addr < (offset + bytes); addr += 32) {
+	
+	addr = (unsigned short)offset;
+	for(addr = offset, i = 0; addr < (offset + bytes); addr += 32, i ++) {
 		int ret;
 		buf[0] = addr >> 8;
 		buf[1] = addr & 0x00ff;
-		if(bytes > 32)
-			buf[2] = 32;
-		else
-			buf[2] = (unsigned char) bytes;
+		
+		if (bytes <= MAX_BUFFER_SIZE) {
+		       buf[2] = bytes;
+		       cnt = bytes;
+		      }
 
+		else if (bytes > MAX_BUFFER_SIZE && i == 0) {
+			buf[2] = MAX_BUFFER_SIZE;
+			cnt = MAX_BUFFER_SIZE;
+		}
+
+		else if (bytes > MAX_BUFFER_SIZE && bytes%MAX_BUFFER_SIZE == 0) {
+			buf[2] = MAX_BUFFER_SIZE;
+			cnt = MAX_BUFFER_SIZE;
+		}
+
+		else {
+			cnt = offset + bytes - addr ;
+			if (cnt > 32) {
+				cnt = 32;
+				buf[2] = 32;
+			}
+		}
 
 		debug_printk("buf[0]: 0x%02x 0x%02x 0x%02x offset: %d no of bytes %lu\n", buf[0], buf[1], buf[2], offset, bytes);
 
@@ -57,12 +73,20 @@ static int adl_bmc_nvmem_read(void *context, unsigned int offset, void *val, siz
 
 		//sleep for 30 ms
 		msleep(30);
+	
+			
+		if (bytes > 32) {
+		ret  = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_READ_DATA, cnt, &((unsigned char *)val)[addr - offset]);
+		}
 		
-		ret  = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_READ_DATA, 0, &((unsigned char *)val)[addr]);
+		else {
+			ret  = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_READ_DATA, cnt, &((unsigned char *)val)[0]);
+		}
+
+
 		if (ret < 0)
 			return ret;
 	}
-
 
 	return bytes;
 
@@ -76,6 +100,7 @@ static int adl_bmc_nvmem_write(void *context, unsigned int offset, void *val, si
 	unsigned short addr;
 	unsigned short size;
 
+	memset(buf, 0, sizeof(buf));
 	debug_printk("Func :%s offset: %d bytes: %lu\n", __func__, offset, bytes);
 	debug_printk("Written value: %s\n", (char *)val);
 
@@ -98,15 +123,18 @@ static int adl_bmc_nvmem_write(void *context, unsigned int offset, void *val, si
 
 		debug_printk("buf[0]: 0x%02x 0x%02x 0x%02x offset: %d no of bytes %lu\n", buf[0], buf[1], buf[2], offset, bytes);
 
-		msleep(30);
+		msleep(250);
 		ret  = adl_bmc_i2c_write_device(NULL, ADL_BMC_CMD_SET_ADDRESS, 3, buf);
 		if (ret < 0)
+		{
+			printk("set address failed\n");
 			return ret;
+		}
 
 		//sleep for 30 ms
 		msleep(30);
 
-		ret  = adl_bmc_i2c_write_device(NULL, ADL_BMC_CMD_WRITE_DATA, buf[2], &((unsigned char *)val)[addr]);
+		ret  = adl_bmc_i2c_write_device(NULL, ADL_BMC_CMD_WRITE_DATA, buf[2], &((unsigned char *)val)[addr - offset]);
 		if (ret < 0)
 			return ret;
 	}

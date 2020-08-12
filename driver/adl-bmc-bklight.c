@@ -17,7 +17,6 @@
 #define ADL_BMC_MIN_BRIGHT 0
 #define ADL_BMC_MAX_BRIGHT 255
 
-static int Backlight_count;
 
 struct adl_bmc_bklight {
 	int brightness;
@@ -47,25 +46,9 @@ static int adl_bmc_update_brightness(struct backlight_device *bl, int brightness
 static int adl_bmc_bklight_update_status(struct backlight_device *bl)
 {
 
-	unsigned char buff[32];
 	int brightness = 0, ret;
 
-	//Increment Count
-	Backlight_count++;
-
-	if (Backlight_count == 2) {
-		memset(buff, 0, sizeof(buff));
-		ret = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_GET_BKLITE, 0,  buff);
-		if (ret < 0) {
-			debug_printk("i2c read error: %d\n", ret);
-			return ret;
-		}
-
-
-		brightness = buff[0];
-	}
-	else
-		brightness = bl->props.brightness;
+	brightness = bl->props.brightness;
 
 	printk("brightness: %d\n", brightness);
 

@@ -17,7 +17,6 @@
 #define	CAPABILITY_BYTE_UNIT	4
 #define	ONE_BYTE		1
 #define	ZERO_BYTE		0
-#define	MAX_BUFFER_SIZE		32
 #define	CAPABILITY_INDEX( COUNT )	( unsigned char )( COUNT - 1 )
 #define	SHIFT( NUMBER )			( unsigned char )NUMBER
 #define	SHIFT_INDEX( DATA_COUNT )	( unsigned char )( 4 - ( DATA_COUNT % 4 ? DATA_COUNT % 4 : 4 ) )
@@ -77,7 +76,49 @@ void CollectCapabilities(unsigned int *Capabilities, unsigned DataCount, unsigne
 
 EXPORT_SYMBOL_GPL (CollectCapabilities);
 
+static int bmc_read_reg(struct i2c_client *client, u8 reg, u8 len, u8 *res)
+{
+	struct i2c_msg msg[2];
+	u8 buf[64];
+	int ret;
 
+	msg[0].addr = client->addr;
+	msg[0].flags = client->flags;
+	msg[0].buf = &reg;
+	msg[0].len = sizeof(reg);
+
+	msg[1].addr = client->addr;
+	msg[1].flags = client->flags | I2C_M_RD;
+	msg[1].buf = buf;
+	msg[1].len = len + 1;
+
+	ret = i2c_transfer(client->adapter, msg, 2);
+	if (ret < 0) {
+		dev_err(&client->dev, "%s: error: reg=%x\n",
+				__func__, reg);
+		return ret;
+	}
+
+	memcpy(res, &buf[1], buf[0]);
+	return buf[0];
+}
+
+static int bmc_write_reg(struct i2c_client *client, u8 reg, u8 len, u8 *res)
+{
+    struct i2c_msg msg;
+    u8 buf[64];
+
+    msg.addr = client->addr;
+    msg.flags = client->flags;
+    msg.buf = buf;
+    msg.len = len + 2;
+
+    buf[0] = reg;
+    buf[1] = len;
+    memcpy(&buf[2], res, buf[1]);
+
+    return i2c_transfer(client->adapter, &msg, 1);
+}
 
 int adl_bmc_i2c_read_device(struct adl_bmc_dev *adl_bmc, char reg,
                                   int bytes, void *dest)
@@ -85,9 +126,14 @@ int adl_bmc_i2c_read_device(struct adl_bmc_dev *adl_bmc, char reg,
         struct i2c_client *i2c = (adl_bmc == NULL) ? adl_bmc_dev->i2c_client : adl_bmc->i2c_client;
         int ret;
 
+#if defined(__x86_64__) || defined(__i386__)
 	ret = i2c_smbus_read_block_data(i2c, reg, dest);
+#else
+	ret = bmc_read_reg(i2c, reg, bytes,dest);
+#endif
+
 	if (ret < 0)
-		debug_printk("return value is  %d\n", ret);
+		debug_printk("Read Failed: return value is  %d\n", ret);
 
 
         return ret;
@@ -101,10 +147,14 @@ int adl_bmc_i2c_write_device(struct adl_bmc_dev *adl_bmc, int reg,
 
         struct i2c_client *i2c = (adl_bmc == NULL) ? adl_bmc_dev->i2c_client : adl_bmc->i2c_client;
         int ret;
-
+		
+#if defined(__x86_64__) || defined(__i386__)
 	ret = i2c_smbus_write_block_data(i2c, reg, bytes , src);
+#else
+	ret = bmc_write_reg(i2c, reg, bytes, src);
+#endif
 	if (ret < 0)
-		debug_printk("return value is  %d\n", ret);
+        	debug_printk("Written Failed: return value is  %d\n", ret);
 
 
         return ret;
@@ -117,9 +167,7 @@ static const unsigned short bmc_address_list[] = { 0x28, I2C_CLIENT_END };
 
 static int adl_bmc_detect ( struct i2c_client *client, struct i2c_board_info *info ) 
 {
-
 	struct i2c_adapter *adapter = client->adapter;
-	int man_id;
 
 	debug_printk("Detect of device address %x \n", client->addr); 
 
@@ -128,11 +176,6 @@ static int adl_bmc_detect ( struct i2c_client *client, struct i2c_board_info *in
                 //return -ENODEV;
 		debug_printk("Weird problems: adapter not supported \n");
 	}
-
-	//TODO check if this is a BMC , somehow 
-	//i2cdump <bus> 0x28 s 0x31 , first 3 characters are BMC 
-	man_id = i2c_smbus_read_byte_data(client, 0x00);
-	debug_printk("Manufacturer ID: %x \n", man_id);
 
 	/* This really determines the device is found, and then calls .probe */
 	strlcpy(info->type, "adl-bmc", I2C_NAME_SIZE);
@@ -161,7 +204,12 @@ static int adl_bmc_probe ( struct i2c_client *client, const struct i2c_device_id
         adl_bmc_dev->i2c_client = client;
 
 	memset(buf, 0, sizeof(buf));
-        ret = i2c_smbus_read_block_data(client, ADL_BMC_CMD_CAPABILITIES, buf);
+	
+#if defined(__x86_64__) || defined(__i386__)
+	ret = i2c_smbus_read_block_data(client, ADL_BMC_CMD_CAPABILITIES, buf);
+#else
+	ret = bmc_read_reg(client, ADL_BMC_CMD_CAPABILITIES, 32,buf);
+#endif
 	if (ret < 0)
 		return ret;
 

@@ -17,9 +17,7 @@
 #include <common.h>
 #include <unistd.h>
 
-#ifdef tempconvert
 #define KELVINS_OfFSET 2731
-#endif
 
 
 #define PLATFORMS_NUMBER 2
@@ -29,7 +27,6 @@ char *Board[PLATFORMS_NUMBER] = {
 	"Q7-AL"
 };
 
-#ifdef tempconvert
 static int encode_celcius(uint32_t temp)
 {
 	uint32_t tmp;
@@ -37,7 +34,6 @@ static int encode_celcius(uint32_t temp)
          tmp = tmp * 10 + KELVINS_OfFSET;
         return tmp;
 }
-#endif
 
 uint32_t IsFileExist(char *sysf)
 {
@@ -72,7 +68,12 @@ uint32_t EApiBoardGetStringA(uint32_t Id, char *pBuffer, uint32_t *pBufLen)
 			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/serial_number");
 			break;
 		case 4:
+#if defined(__x86_64__) || defined(__i386__)
 			sprintf(sysfile, "/sys/class/dmi/id/bios_version");
+#else
+			printf("PX-30 is not BIOS design\n");
+			return status;
+#endif			
 			break;
 		case 5:
 			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/bmc_boot_version");
@@ -259,6 +260,7 @@ uint32_t EApiBoardGetValue(uint32_t Id, uint32_t *pValue)
 			break;
 		default:
 			status = EAPI_STATUS_UNSUPPORTED;
+			return status;
 	}
 
 	if (strlen(sysfile) == 0)
@@ -278,7 +280,7 @@ uint32_t EApiBoardGetValue(uint32_t Id, uint32_t *pValue)
 	if (Id == 5)
 	{
 		*pValue = atoi(res);
-	//	*pValue = encode_celcius(*pValue);
+		*pValue = encode_celcius(*pValue);
 		return 0;
 	}
 
@@ -288,7 +290,7 @@ uint32_t EApiBoardGetValue(uint32_t Id, uint32_t *pValue)
 	return status;
 
 }
-static int get_regulator_voltage(int id, uint32_t *mVolts, char *buf, uint32_t size)
+static int get_regulator_voltage(uint32_t id, uint32_t *mVolts, char *buf, uint32_t size)
 {
         char sysfilename[128],sysfilevolt[128];
 	char pbuf[32];char value[256];
@@ -309,6 +311,10 @@ static int get_regulator_voltage(int id, uint32_t *mVolts, char *buf, uint32_t s
 	}	
 	ret = read_sysfs_file(sysfilename, buf, size);
 	if(ret < 0) {
+		return EAPI_STATUS_UNSUPPORTED;
+	}	
+
+	if(strstr(buf, "Main") || strstr(buf, "Mian") || strstr(buf, "Input")) {
 		return EAPI_STATUS_UNSUPPORTED;
 	}	
 
@@ -360,6 +366,9 @@ uint32_t EApiBoardGetErrorLog (uint32_t Pos, uint32_t *ErrorNumber, uint8_t  *Fl
 	if(ret < 0) {
 		return EAPI_STATUS_UNSUPPORTED;
 	}	
+	
+	sleep(1);
+
 	ret = read_sysfs_file(sysfile, pBuffer, sizeof(pBuffer));
 	if(ret < 0) {
 		return EAPI_STATUS_UNSUPPORTED;
@@ -460,6 +469,8 @@ uint32_t EApiBoardGetErrorNumDesc(uint32_t Pos, char *pBuf, uint32_t Size)
 		return EAPI_STATUS_UNSUPPORTED;
 	}	
 
+	sleep(1);
+
 	ret = read_sysfs_file(sysfile, pBuf, Size);
 	if(ret < 0) {
 		return EAPI_STATUS_UNSUPPORTED;
@@ -485,6 +496,13 @@ uint32_t EApiBoardGetExcepDesc(uint32_t exc_code, char *exc_desc, uint32_t size)
 	/*store exception number to buf*/
 	sprintf(buf, "%u", exc_code);
 	sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/exc_des");
+
+	ret = write_sysfs_file(sysfile, buf, sizeof(buf));
+	if(ret < 0) {
+		return EAPI_STATUS_UNSUPPORTED;
+	}	
+
+	sleep(1);
 
 
 	ret = read_sysfs_file(sysfile, exc_desc, size);

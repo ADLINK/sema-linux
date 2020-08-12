@@ -1,6 +1,9 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: LGPL-2.0+
 /*
  * Watchdog Driver Test Program
+ *
+ * Copyright (C) 2020 ADLINK Technology Inc.
+ *
  */
 
 #include <errno.h>

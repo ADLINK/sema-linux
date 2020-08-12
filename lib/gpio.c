@@ -48,7 +48,7 @@ static int get_gpio_base(int *gpiobase, int *ngpio)
 	// for readdir() 
 	while ((de = readdir(dr)) != NULL) {
 		if(strncmp(de->d_name, "gpiochip", strlen("gpiochip")) == 0) {
-			char sysfile[278];
+			char sysfile[1024];
 			char value[256];
 			sprintf(sysfile, "/sys/class/gpio/%s/device/name", de->d_name);
 			if(read_sysfs_file(sysfile, value, sizeof(value)) != 0) {

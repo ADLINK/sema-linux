@@ -27,7 +27,7 @@
 #define ADL_BMC_SYS_FAN3_CAP            (1 << 27)
 #define ADL_BMC_CAP_GPIOS               (1 << 28)
 
-
+#define MAX_BUFFER_SIZE 32
 
 #define ADL_BMC_CAP_TEMP_1                   (1 << 0)
 #define ADL_BMC_ERR_LOG_CAP 		     (1 << 3)	

@@ -208,7 +208,7 @@ uint32_t EApiStorageAreaRead(uint32_t Id, uint32_t Offset, void *pBuffer, uint32
  * @param Length Number of bytes to write.
  * @return 0 on success -1 on failure
  */
-uint32_t EApiStorageAreaWrite(uint32_t Id, unsigned short Offset, char *pBuf, unsigned short Length);
+uint32_t EApiStorageAreaWrite(uint32_t Id, unsigned short Offset, char *pBuf, uint32_t Bytecnt);
 
 /*
  *

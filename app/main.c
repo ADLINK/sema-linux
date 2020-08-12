@@ -46,21 +46,35 @@ void ShowHelp(int condition)
 	{
 		printf("- Watch Dog:\n");
 		printf("  1. semautil /w get_cap\n");
-		printf("  2. semautil /w start <sec (1-65535> \n");
+		printf("  2. semautil /w start <sec> \n");
+		printf("       sec 0 - 65535\n");
 		printf("  3. semautil /w trigger\n");
 		printf("  4. semautil /w stop\n");
-		printf("  5. semautil /w pwrup_enable <sec (24-65535> \n");
+		printf("  5. semautil /w pwrup_enable <sec (24-65535)> \n");
 		printf("  6. semautil /w pwrup_disable\n\n");
 	}
 	if (condition == 2 || condition == 0)
 	{
+		uint32_t BlockLength, StorageSize;
 		printf("Storage:\n");
 		printf("  1. semautil /s get_cap\n");
 		printf("  2. semautil /s read  <Address> <Length> \n");
-		printf("       Note: Address <0 - 248> and Length should be  4Bytes aligned \n");
 		printf("  3. semautil /s write <Address> <string/value> <Length> \n");
-		printf("       Note: Address <0 - 248> and Length should be  4Bytes aligned \n\n");
-	}
+		if (EApiStorageCap(0, &StorageSize, &BlockLength) == 0)
+		{
+			if (StorageSize == 1024)
+			{
+				printf("       Note: Address <0 - 1020> and Length should be  4 Bytes aligned\n\n");
+			}
+			else
+			{
+				printf("       Note: Address <0 - 508> and Length should be  4 Bytes aligned\n\n");
+			}
+		}
+		printf("			Example : semautil /s write 1020 Aaaa 4\n");
+		printf("				It will be written to 1020, 1021, 1022, 1023\n\n");
+		printf("       Note: Hexa decimal values are not valid\n\n");
+}
 	if (condition == 3 || condition == 0)
 	{
 		printf("- Smart FAN control:\n");
@@ -112,7 +126,7 @@ void ShowHelp(int condition)
 		printf("Error log:\n");
 		printf("  1. semautil /e get_error_log <Position (0-31)>\n");
 		printf("  2. semautil /e get_cur_error_log\n");
-		printf("  3. semautil /e get_bmc_error_code\n");
+		printf("  3. semautil /e get_bmc_error_code <Error Number>\n");
 	}
 	if (condition == 7 || condition == 0)
 	{
@@ -133,52 +147,52 @@ void ShowHelp(int condition)
 	}
 	if (condition == 9 || condition == 0)
 	{
-		printf("Board values:\n");
+		printf("- Board values:\n");
 		printf("  1. semautil /d  get_value <EAPI ID> \n");
-		printf("       1	:  Spec version\n");
-		printf("       2	:  Boot counter value\n");
-		printf("       3	:  Running time meter value\n");
-		printf("       4	:  library version\n");
-		printf("       5	:  hwmon CPU temp source\n");
-		printf("       6	:  hwmon System temp source\n");
-		printf("       7	:  hwmon voltage vcore\n");
-		printf("       8	:  hwmon voltage 2v5\n");
-		printf("       9	:  hwmon voltage 3v3\n");
-		printf("       10	:  hwmon voltage vbat\n");
-		printf("       11	:  hwmon voltage 5v\n");
-		printf("       12	:  hwmon voltage 5vSB\n");
-		printf("       13	:  hwmon voltage 12v\n");
-		printf("       14	:  hwmon CPU Fan\n");   /// not working
-		printf("       15	:  hwmon system Fan 1\n");
-		printf("       16	:  Board powerup time\n"); /// not working
-		printf("       17	:  Board restart event\n");
-		printf("       18	:  Board capabilities\n");
-		printf("       19	:  Board capabilities Ex\n");
-		printf("       20	:  Board system minimum temperature\n");
-		printf("       21	:  Board system maximum temperature\n");
-		printf("       22	:  Board system start up temperature\n");
-		printf("       23	:  Board CPU minimum temperature\n");
-		printf("       24	:  Board CPU maximum temperature\n");
-		printf("       25	:  Board CPU start up temperature\n");
-		printf("       26	:  Board main current\n");
-		printf("       27	:  hwmon voltage GFX vcore\n");
-		printf("       28	:  hwmon voltage 1v05\n");
-		printf("       29	:  hwmon voltage 1v5\n");
-		printf("       30	:  hwmon voltage vin\n");
-		printf("       31	:  hwmon system Fan 2\n");
-		printf("       32	:  hwmon system Fan 3\n");
-		printf("       33	:  Board 2nd system temperature\n");
-		printf("       34	:  Board 2nd system minimum temperature\n");
-		printf("       35	:  Board 2nd system maximum temperature\n");
-		printf("       36	:  Board 2nd system start up temperature\n");
-		printf("       37	:  Board power cycle\n");
-		printf("       38	:  Board BMC flag\n");
-		printf("       39	:  Board BMC status\n");
-		printf("       40	:  Board IO current\n");
+		printf("       1	:  EAPI Specification Version \n");		
+		printf("       2	:  Boot Counter\n");	
+		printf("       3	:  Running Time Meter\n");	
+		printf("       4	:  Vendor Specific Library Version\n");	
+		printf("       5	:  CPU Temperature\n");	
+		printf("       6	:  System Temperature\n");	
+		printf("       7	:  CPU Core Voltage\n");	
+		printf("       8	:  2.5V Voltage\n");	
+		printf("       9	:  3.3V Voltage\n");	
+		printf("       10	:  Battery Voltage\n");	
+		printf("       11	:  5V Voltage\n");	
+		printf("       12	:  5V Standby Voltage\n");	
+		printf("       13	:  12V Voltage\n");	
+		printf("       14	:  CPU Fan\n");   /// not working	
+		printf("       15	:  System Fan 1\n");	
+		printf("       16	:  Get power uptime\n"); /// not working	
+		printf("       17	:  Get restart event\n");	
+		printf("       18	:  Get BMC capabilities\n");	
+		printf("       19	:  Get extended BMC capabilities\n");	
+		printf("       20	:  Board Min Temperature\n");	
+		printf("       21	:  Board Max Temperature\n");	
+		printf("       22	:  Board Startup Temperature\n");	
+		printf("       23	:  CPU Min Temperature\n");	
+		printf("       24	:  CPU Max Temperature\n");	
+		printf("       25	:  CPU Startup Temperature\n");	
+		printf("       26	:  Get main power current\n");	
+		printf("       27	:  GFX Voltage\n");		
+		printf("       28	:  1.05V Voltage\n");	
+		printf("       29	:  1.5V Voltage\n");	
+		printf("       30	:  Vin Voltage\n");	
+		printf("       31	:  System Fan 2\n");	
+		printf("       32	:  System Fan 3\n");	
+		printf("       33	:  Board 2nd Current Temperature\n");	
+		printf("       34	:  Board 2nd Min temperature\n");	
+		printf("       35	:  Board 2nd Max Temperature\n");	
+		printf("       36	:  Board 2nd Startup Temperature\n");	
+		printf("       37	:  Get Power cycle counter\n");	
+		printf("       38	:  Get Board BMC Flag\n");	
+		printf("       39	:  Get Board BMC Status\n");	
+		printf("       40	:  IO Current\n\n");
 	}
 	if (condition == 10 || condition == 0)
 	{
-		printf("LVDS Backlight control:\n");
+		printf(" -LVDS Backlight control:\n");
 		printf("  1. semautil /b  set_bkl_value   [Id] [Level (0-255)]\n");
 		printf("  2. semautil /b  set_bkl_enable  [Id] [0 or 1]\n");
 		printf("  3. semautil /b  get_bkl_value   [Id]\n");
@@ -188,7 +202,31 @@ void ShowHelp(int condition)
 		printf("        1    EAPI_ID_BACKLIGHT_2\n");
 		printf("        2    EAPI_ID_BACKLIGHT_3\n");
 	}
-}
+	if (condition == 11 || condition == 0)
+	{
+		printf("\n- Generic I2C Read/Write:\n");
+		printf("  1. semautil /i2c  bus_cap\n");
+		printf("  2. semautil /i2c  probe_device [bus id]\n");
+		printf("  3. semautil /i2c  write_raw	 [bus id] [address] [length] byte0 byte1 byte2 ...\n");
+		printf("  3. semautil /i2c  read_raw	 [bus id] [address] [length]\n");
+		printf("  4. semautil /i2c  read_xfer	 [bus id] [address] [cmd type] [cmd] [length]\n");
+		printf("  5. semautil /i2c  write_xfer	 [bus id] [address] [cmd type] [cmd] [length] byte0 byte1 byte2 ...\n");
+		printf("  6. semautil /i2c  get_status\n");
+
+		printf("  \n[Bus Id]:\n");
+		printf("    ID\tSEMA EAPI ID\t\t\tDescription\n");
+		printf("    1\tEAPI_ID_I2C_EXTERNAL\t\tBaseboard I2C Interface\n");
+		printf("    2\tEAPI_ID_I2C_LVDS_1\t\tLVDS \\ EDP 1 Interface\n");
+		printf("    3\tEAPI_ID_I2C_LVDS_2\t\tLVDS \\ EDP 2 Interface\n");
+		printf("    4\tSEMA_EAPI_EAPI_ID_I2C_EXTERNAL\t2nd External I2C Interface\n");
+		printf("    5\tSEMA_EAPI_EAPI_ID_I2C_EXTERNAL\t3rd External I2C Interface\n");
+
+		printf("  [Command type]:\n");
+		printf("    ID\tENCODED CMD ID\t\tDescription\n");
+		printf("    1\tEAPI_I2C_NO_CMD\t\tSpecify no command/index is used\n");
+		printf("    2\tEAPI_I2C_ENC_STD_CMD\tExtended standard 8 bits CMD\n");
+		printf("    3\tEAPI_I2C_ENC_EXT_CMD\tExtended standard 16 bits CMD\n");
+	}}
 
 
 int DispatchCMDToSEMA(int argc,char *argv[])
@@ -303,7 +341,7 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 			printf("get eapi information failed\n");
 			errno_exit("EApiBoardGetValue");
 		}
-		printf("Value: %u\n", Value);
+		printf("%u\n", Value);
 	}
 	if (GetStringA)
 	{
@@ -560,7 +598,7 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 			printf("get eapi information failed\n");
 			errno_exit("EApiStorageCap");
 		}
-		printf("Sorage Capabilities:\nStorage Size: %u\nBlock Length: %u\n", Storagesize, BlockLength);
+		printf("Storage Size: %u\nBlock Length: %u\n", Storagesize, BlockLength);
 	}
 
 
@@ -580,26 +618,27 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 			printf("get eapi information failed\n");
 			errno_exit("EApiStorageAreaRead");
 		}
-		printf("Read Buffer: %s\n", memcap);
+		printf("%s\n", memcap);
 	}
 
 
 	if (StorageAreaWrite)
 	{
-		if (argc != 5) {
+		if (argc != 6) {
 			printf("Wrong arguments\n");
 			exit(-1);
 		}
 		Id = EAPI_ID_STORAGE_STD;
 		Offset = atoi(argv[3]);
 		Buffer = argv[4];
-		ByteCnt = strlen(Buffer);
+		ByteCnt = atoi(argv[5]);
 		ret = EApiStorageAreaWrite(Id, Offset, Buffer, ByteCnt);
 		if (ret) {
 			printf("get eapi information failed\n");
 			errno_exit("EApiStorageAreaWrite");
 		}
-		printf("Write buffer: %s\n", Buffer);
+		else 
+			printf("succeeded\n");
 	}
 
 
@@ -738,13 +777,16 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 			exit(-1);
 		}
 		Size = sizeof(ExcepDesc);
-		ExceptionCode = atoi(argv[2]);
+		for (ExceptionCode = 0; ExceptionCode < 32; ExceptionCode++) 
+		{
 		ret = EApiBoardGetExcepDesc(ExceptionCode, ExcepDesc, Size);
 		if (ret) {
 			printf("get eapi information failed\n");
 			errno_exit("EApiBoardGetExcepDesc");
 		}
-		printf("Exception description: %s", ExcepDesc);
+	
+		printf("%02u -> %s", ExceptionCode, ExcepDesc);
+		}
 	}
 
 	if (GetVoltageMonitor)
@@ -754,6 +796,10 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 			exit(-1);
 		}
 		Vid = atoi(argv[3]);
+		if (Vid < 0 || Vid > 15) {
+                       printf("Invalid Channel. Please enter channel in between 0 - 15.\n");
+                       exit(-1);
+                }
 		Size = sizeof(Vmbuf);
 		ret = EApiBoardGetVoltageMonitor(Vid, &Voltage, Vmbuf, Size);
 		if (ret) {
@@ -822,7 +868,7 @@ signed int ParseArgs(int argc, char* argv[])
 		{
 			StorageAreaRead = TRUE;
 		}
-		else if (argc == 5 && (strcasecmp(argv[2], "write") == 0))
+		else if (argc == 6 && (strcasecmp(argv[2], "write") == 0))
 		{
 			StorageAreaWrite = TRUE;
 		}
