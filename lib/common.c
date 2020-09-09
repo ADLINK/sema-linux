@@ -27,7 +27,7 @@ int read_sysfs_file(char *sysfile, char *value, unsigned short size)
 		return -1;
 
 	ret = read(fd, value, size);	
-	if (ret)
+	if (ret > 0)
 		close(fd);
 	else {
 		close(fd);

@@ -14,6 +14,7 @@
 #include <linux/platform_device.h>
 #include "adl-bmc.h"
 
+static int wdt_timeout;
 
 #define WDT_TIMEOUT   		10
 #define WDT_MIN_TIMEOUT   	1
@@ -56,8 +57,11 @@ static int adl_bmc_wdt_set_timeout(struct watchdog_device *wdt, unsigned int tim
 {
 	debug_printk("set timeout.................\n");
         wdt->timeout = timeout;
- 
-	return adl_bmc_wdt_write(wdt, timeout);
+	
+        if (timeout)	
+		return adl_bmc_wdt_write(wdt, timeout);
+	else
+		return 0;
 }
 
 static unsigned int adl_bmc_wdt_get_timeleft(struct watchdog_device *wdt)
@@ -82,7 +86,10 @@ static unsigned int adl_bmc_wdt_get_timeleft(struct watchdog_device *wdt)
 static int adl_bmc_wdt_start(struct watchdog_device *wdt)
 {
 	debug_printk("start.................\n");
-	return adl_bmc_wdt_write(wdt, wdt->timeout);	
+	if (wdt->timeout)	
+		return adl_bmc_wdt_write(wdt, wdt->timeout);
+	else
+		return 0;
 }
 
 static int adl_bmc_wdt_ping(struct watchdog_device *wdt)
@@ -171,8 +178,6 @@ static ssize_t sysfs_show_timeout(struct kobject *kobj, struct kobj_attribute *a
 	unsigned char buff[32];
 	memset(buff, 0, 32);
 
-	printk("sysfs_show_timeout called\n");
-
 	ret = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_SET_WD, 2,  (void *)buff);
 	if (ret < 0) {
 		debug_printk("i2c write error: %d\n", ret);
@@ -188,18 +193,16 @@ static ssize_t sysfs_show_timeout(struct kobject *kobj, struct kobj_attribute *a
 static ssize_t sysfs_store_timeout(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
 {
 	unsigned char buff[32];
-	int ret;
-        int timeout;
-
-	printk("sysfs_store_timeout called\n");
+	int ret, timeout;
 
 	sscanf(buf, "%d", &timeout);
+
+	wdt_timeout = timeout;
 
 	if(timeout > 65535) {
 		return -EINVAL;	
 	}
 
-	debug_printk("value: %u\n", timeout);
 	buff[0] = timeout >> 8;
 	buff[1] = timeout & 0xFF;
 
@@ -211,13 +214,31 @@ static ssize_t sysfs_store_timeout(struct kobject *kobj, struct kobj_attribute *
 }
 
 
+static ssize_t trigger_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	unsigned char buff[32];
+	int ret, value;
+
+
+	sscanf(buf, "%d", &value);
+
+	if (value) {
+	buff[0] = wdt_timeout >> 8;
+	buff[1] = wdt_timeout & 0xFF;
+
+        ret = adl_bmc_i2c_write_device(NULL, ADL_BMC_CMD_SET_WD, 2, (void *)buff);	
+	if (ret < 0)
+		return ret;
+	}
+
+	return count;
+}
 
 struct kobj_attribute attr0 = __ATTR_RO(wdt_min_timeout);
 struct kobj_attribute attr1 = __ATTR_RO(wdt_max_timeout);
 struct kobj_attribute attr2 = __ATTR(PwrUpWDog, 0660, sysfs_show_PwrUpWDog, sysfs_store_PwrUpWDog);
-#if !defined(__x86_64__) || !defined(__i386__)
-	struct kobj_attribute attr3= __ATTR(timeout, 0660, sysfs_show_timeout, sysfs_store_timeout);
-#endif
+struct kobj_attribute attr3 = __ATTR(timeout, 0660, sysfs_show_timeout, sysfs_store_timeout);
+struct kobj_attribute attr4 = __ATTR_WO(trigger);
 
 static int adl_bmc_wdt_probe(struct platform_device *pdev)
 {
@@ -277,12 +298,16 @@ static int adl_bmc_wdt_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-#if !defined(__x86_64__) || !defined(__i386__)
 	if((ret = sysfs_create_file(awdt->kobj_ref, &attr3.attr))) {
 		debug_printk(KERN_ERR "Error sysfs attr3\n");
 		return ret;
 	}
-#endif
+
+	if((ret = sysfs_create_file(awdt->kobj_ref, &attr4.attr))) {
+		debug_printk(KERN_ERR "Error sysfs attr4\n");
+		return ret;
+	}
+
 
         return 0;
 }
@@ -294,9 +319,9 @@ static int adl_bmc_wdt_remove(struct platform_device *pdev)
         sysfs_remove_file(kernel_kobj, &attr0.attr);
         sysfs_remove_file(kernel_kobj, &attr1.attr);
         sysfs_remove_file(kernel_kobj, &attr2.attr);
-#if !defined(__x86_64__) || !defined(__i386__)
 	sysfs_remove_file(kernel_kobj, &attr3.attr);
-#endif
+	sysfs_remove_file(kernel_kobj, &attr4.attr);
+
 	kobject_put(awdt->kobj_ref);
 
 	debug_printk(" %s called.......\n", __func__);

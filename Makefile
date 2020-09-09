@@ -1,6 +1,3 @@
-
-CONFIG_MODULE_SIG=n
-
 SEMA_OBJS = $(patsubst %.c,%.o,$(wildcard lib/*.c))
 WDOG_OBJS = $(patsubst %.c,%.o,$(wildcard watchdogtest/*.c))
 APP_OBJS = $(patsubst %.c,%.o,$(wildcard app/*.c))

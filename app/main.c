@@ -16,6 +16,7 @@
 #include <eapi.h>
 #include <conv.h>
 #include <eapi.h>
+#include <ctype.h>
 
 
 char*			ExeName;
@@ -618,7 +619,16 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 			printf("get eapi information failed\n");
 			errno_exit("EApiStorageAreaRead");
 		}
-		printf("%s\n", memcap);
+
+		for (int i = 0; i < ByteCnt; i++)
+		{
+		  if (isprint(memcap[i])) {
+			printf("%c", memcap[i]);
+		  }
+		  else
+			  printf(" ");
+		}
+		printf("\n");
 	}
 
 

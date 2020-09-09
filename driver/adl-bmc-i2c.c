@@ -27,35 +27,6 @@ struct adlink_i2c_dev {
 	struct i2c_adapter 	adapter;
 };
 
-static unsigned char wlen = 3, wcmd = 0xc2;
-
-static void adl_check_i2c_capability (void)
-{
-        int ret, i;
-        unsigned char buf[32];
-	unsigned long ext_capability;
-
-	memset(buf, 0, sizeof(buf));
-
-        ret = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_CAPABILITIES, 6, (void *)buf);
-        if (ret < 0)
-                return;
-
-	for(i = 0, ext_capability = 0; i < ret; i++)
-	{
-		ext_capability <<= 8;
-		ext_capability |= buf[i];
-	}
-
-	if((ext_capability >> 41) & 1)
-	{
-		wlen = 2;
-		wcmd = 0xb2;
-	}
-
-	printk("ext_capability = %lx, wcmd = %x, wlen = %x\n", ext_capability, wcmd, wlen);
-}
-
 static int i2c_write (struct i2c_msg msg)
 {
 	int i, ret;
@@ -66,9 +37,9 @@ static int i2c_write (struct i2c_msg msg)
 	buf[2] = 0x00;
 
 	for(i=0; i<msg.len; i++)
-		buf[i + wlen] = msg.buf[i];
+		buf[i+3] = msg.buf[i];
 
-	ret = adl_bmc_i2c_write_device(NULL, wcmd, msg.len + wlen, buf);
+	ret = adl_bmc_i2c_write_device(NULL, 0xC2, msg.len + 3, buf);
 	if (ret < 0) {
 		printk("i2c write error: %d\n", ret);
 		return -ENODEV;
@@ -194,7 +165,6 @@ static int adl_bmc_i2c_probe(struct platform_device *pdev)
 	adap->class = I2C_CLASS_DEPRECATED;
 	strlcpy(adap->name, "ADLINK BMC I2C adapter", sizeof(adap->name));
 	adap->algo = &adlink_i2c_algo;
-	adl_check_i2c_capability();
 
 	return i2c_add_adapter(adap);
 }

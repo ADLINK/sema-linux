@@ -118,13 +118,43 @@ static struct regulator_ops adl_bmc_vm_ops = {
 
 static ssize_t sysfs_show_voltage_log(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
-#if defined(__x86_64__) || defined(__i386__)
-	int temp;
-	temp  = voltagenum;
-	voltagenum = temp + voltagenum;
-#endif
+	int ret = 0;
+	unsigned char buff_hm[32] = {0};
+	unsigned char buff_gain[32] = {0};
+	unsigned char cmd_hm;
+	u64 vol_val, vol_val_fl;
+	unsigned short gain;
 
-	return sprintf(buf,"%u\n",voltagevalue[voltagenum]);
+	debug_printk("%s id: %d \n", __FUNCTION__, voltagenum);
+	
+	if (voltagenum < 8) {
+		cmd_hm = ADL_BMC_CMD_RD_AIN0 + voltagenum;
+	}
+	else if (voltagenum >= 8 && voltagenum < 16) {
+		cmd_hm = ADL_BMC_CMD_RD_AIN8 + (voltagenum - 8);
+	}
+	else
+		return -EINVAL;
+
+	debug_printk("I2C commmand: 0x%x\n", cmd_hm);
+
+	
+	/*read the hwmon register for voltage*/
+        ret = adl_bmc_i2c_read_device(vm_data->adl_dev, cmd_hm, 2, buff_hm);
+	if(ret != 2)
+		return -EINVAL;
+
+	msleep(30);
+	/*read the gain value*/
+        ret = adl_bmc_i2c_read_device(vm_data->adl_dev, ADL_BMC_CMD_GET_ADC_SCALE, 32, buff_gain);
+	if (ret < 0)
+		return ret;
+	gain = (buff_gain[voltagenum * 2] << 8) | buff_gain[(voltagenum * 2) + 1];
+	vol_val_fl = 3223 * gain;
+	vol_val = vol_val_fl * (buff_hm[0] << 8 | buff_hm[1]);
+	vol_val = vol_val / 1000000;
+
+	return sprintf(buf,"%llu\n", vol_val);
         
 }
 
@@ -136,7 +166,11 @@ static ssize_t sysfs_store_voltage_log(struct kobject *kobj, struct kobj_attribu
 
 static ssize_t sysfs_show_voltage_info(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
-        return sprintf(buf,"%s\n",vm_data->adl_bmc_vm_desc[voltagenum].name);
+
+	if (voltagenum >= vm_data->cnt) 
+		return -EINVAL;
+
+	return sprintf(buf,"%s\n",vm_data->adl_bmc_vm_desc[voltagenum].name);
 }
 
 static ssize_t sysfs_store_voltage_info(struct kobject *kobj, struct kobj_attribute *attr, const char *buf,size_t count)

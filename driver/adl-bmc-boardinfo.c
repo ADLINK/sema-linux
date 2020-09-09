@@ -455,8 +455,9 @@ static ssize_t serial_number_show(struct kobject *kobj, struct kobj_attribute *a
 	if (ret < 0)
 		return ret;
 
+
 	if (((ret == 1) && (buff[0] == 0xf0)) || (buff[0] == 0xff) || (buff[0] == ' '))
-		return -EINVAL;
+		memset(buff, 0, sizeof(buff));
 
         return sprintf(buf, "%s\n", buff);
 }
@@ -495,8 +496,9 @@ static ssize_t hw_rev_show(struct kobject *kobj, struct kobj_attribute *attr, ch
 		return ret;
 
 	if (((ret == 1) && (buff[0] == 0xf0)) || (buff[0] == 0xff) || (buff[0] == ' '))
-		return -EINVAL;
-        return sprintf(buf, "%s\n", buff);
+		memset(buff, 0, sizeof(buff));
+
+	return sprintf(buf, "%s\n", buff);
 }
 
 
@@ -532,7 +534,7 @@ static ssize_t last_repair_date_show(struct kobject *kobj, struct kobj_attribute
 	if (ret < 0)
 		return ret;
 	if (((ret == 1) && (buff[0] == 0xf0)) || (buff[0] == 0xffffffff) || (buff[0] == ' '))
-		return -EINVAL;
+		memset(buff, 0, sizeof(buff));
 
         return sprintf(buf, "%s\n", buff);
 }
@@ -548,7 +550,7 @@ static ssize_t manufactured_date_show(struct kobject *kobj, struct kobj_attribut
 		return ret;
 
 	if (((ret == 1) && (buff[0] == 0xf0)) || (buff[0] == 0xffffffff) || (buff[0] == ' '))
-		return -EINVAL;
+		memset(buff, 0, sizeof(buff));
 
         return sprintf(buf, "%s\n", buff);
 }
@@ -563,7 +565,7 @@ static ssize_t mac_address_show(struct kobject *kobj, struct kobj_attribute *att
 	if (ret < 0)
 		return ret;
 	if (((ret == 1) && (buff[0] == 0xf0)) || (buff[0] == 0xffffffff) || (buff[0] == ' '))
-		return -EINVAL;
+		memset(buff, 0, sizeof(buff));
         
 	return sprintf(buf, "%s\n", buff);
 }
@@ -579,7 +581,7 @@ static ssize_t second_hw_rev_show(struct kobject *kobj, struct kobj_attribute *a
 		return ret;
 
 	if (((ret == 1) && (buff[0] == 0xf0)) || (buff[0] == 0xffffffff) || (buff[0] == ' '))
-		return -EINVAL;
+		memset(buff, 0, sizeof(buff));
 
         return sprintf(buf, "%s\n", buff);
 }
@@ -595,7 +597,7 @@ static ssize_t second_ser_num_show(struct kobject *kobj, struct kobj_attribute *
 		return ret;
 
 	if (((ret == 1) && (buff[0] == 0xf0)) || (buff[0] == 0xffffffff) || (buff[0] == ' '))
-		return -EINVAL;
+		memset(buff, 0, sizeof(buff));
 
         return sprintf(buf, "%s\n", buff);
 }
