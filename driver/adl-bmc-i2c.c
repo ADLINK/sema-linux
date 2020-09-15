@@ -27,6 +27,8 @@ struct adlink_i2c_dev {
 	struct i2c_adapter 	adapter;
 };
 
+static int delay;
+
 static int i2c_write (struct i2c_msg msg)
 {
 	int i, ret;
@@ -44,6 +46,8 @@ static int i2c_write (struct i2c_msg msg)
 		printk("i2c write error: %d\n", ret);
 		return -ENODEV;
 	}
+
+        udelay(delay);
 
 	ret = adl_bmc_i2c_read_device(NULL, 0xC4, 0, buf);
 	if (ret < 0) {
@@ -75,6 +79,8 @@ static int i2c_read (struct i2c_msg msg)
 			return -ENODEV;
 		}
 
+		udelay(delay);
+
 		ret = adl_bmc_i2c_read_device(NULL, 0xC4, 0, buf);
 		if (ret < 0) {
 			printk("i2c read error: %d\n", ret);
@@ -84,6 +90,9 @@ static int i2c_read (struct i2c_msg msg)
 
 		if(buf[0] & 0x04)
 			return -ENODEV;
+
+
+		udelay(delay);
 
 		ret = adl_bmc_i2c_read_device(NULL, 0xBF, 0, buf);
 		if (ret < 0) {
@@ -165,6 +174,18 @@ static int adl_bmc_i2c_probe(struct platform_device *pdev)
 	adap->class = I2C_CLASS_DEPRECATED;
 	strlcpy(adap->name, "ADLINK BMC I2C adapter", sizeof(adap->name));
 	adap->algo = &adlink_i2c_algo;
+
+	ret = adl_bmc_i2c_read_device(NULL, 0x30, 0, buf);
+	if (ret < 0) {
+
+		printk("i2c read error: %d\n", ret);
+		return -ENODEV;
+	}
+
+	if(strncmp("NanoX,cExp-BT/BT2 3v3", buf, strlen("NanoX,cExp-BT/BT2 3v3")) != 0)
+	{
+		delay = 300;
+	}
 
 	return i2c_add_adapter(adap);
 }
