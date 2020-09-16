@@ -34,6 +34,7 @@ static int i2c_write (struct i2c_msg msg)
 	int i, ret;
 	unsigned char buf[32];
 
+
 	buf[0] = SLAVE_ADDR(msg.addr);
 	buf[1] = msg.len;
 	buf[2] = 0x00;
@@ -159,6 +160,10 @@ static int adl_bmc_i2c_probe(struct platform_device *pdev)
 {
 	struct i2c_adapter *adap;
 	struct adlink_i2c_dev *adlink;
+
+	char buf[100] = { 0};
+	int ret;
+
 
 	adlink = devm_kzalloc(&pdev->dev, sizeof(struct adlink_i2c_dev), GFP_KERNEL);
 	if (!adlink)
