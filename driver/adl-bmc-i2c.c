@@ -20,6 +20,7 @@
 #include "adl-bmc.h"
 
 #define SLAVE_ADDR(x) ((x<<1) & 0xFE)
+#define BMC_DELAY(x)  udelay(delay * x)
 
 struct adlink_i2c_dev {
 	struct device 		*dev;
@@ -48,7 +49,7 @@ static int i2c_write (struct i2c_msg msg)
 		return -ENODEV;
 	}
 
-        udelay(delay);
+	BMC_DELAY(msg.len);
 
 	ret = adl_bmc_i2c_read_device(NULL, 0xC4, 0, buf);
 	if (ret < 0) {
@@ -80,7 +81,7 @@ static int i2c_read (struct i2c_msg msg)
 			return -ENODEV;
 		}
 
-		udelay(delay);
+		BMC_DELAY(msg.len);
 
 		ret = adl_bmc_i2c_read_device(NULL, 0xC4, 0, buf);
 		if (ret < 0) {
@@ -93,7 +94,7 @@ static int i2c_read (struct i2c_msg msg)
 			return -ENODEV;
 
 
-		udelay(delay);
+		BMC_DELAY(msg.len);
 
 		ret = adl_bmc_i2c_read_device(NULL, 0xBF, 0, buf);
 		if (ret < 0) {
