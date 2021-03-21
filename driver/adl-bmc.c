@@ -37,7 +37,6 @@ static const struct mfd_cell adl_bmc_devs[] = {
 	},
 	{ 
 		.name = "adl-bmc-bklight",
-		//low priority 
 	},
 	{ 
 		.name = "adl-bmc-vm",
