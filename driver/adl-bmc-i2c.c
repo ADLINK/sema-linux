@@ -40,6 +40,12 @@ static int i2c_write (struct i2c_msg msg)
 	buf[1] = msg.len;
 	buf[2] = 0x00;
 
+	/*Added for write length validation*/
+	if(msg.len>29)  {
+		printk("i2c write error: write length cannot exceed 28 bytes\n");
+		return -EINVAL;
+	}	
+
 	for(i=0; i<msg.len; i++)
 		buf[i+3] = msg.buf[i];
 
