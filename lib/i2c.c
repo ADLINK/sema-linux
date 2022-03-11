@@ -22,195 +22,508 @@
 #include <linux/i2c.h>
 #include <linux/i2c-dev.h>
 
-static int get_i2c_dev (char *i2c_dev)
+#define EAPI_TRXN 	_IOWR('a', 1, unsigned long)
+#define BMC_I2C_STS 	_IOWR('a', 2, unsigned long)
+#define PROBE_DEV       _IOWR('a', 3, unsigned long)
+
+#define I2CTIMEOUTSTATUS(x) (x)&0x80
+#define I2CADDACKSTATUS(x) (x)&0x04
+
+struct eapi_txn {
+	int Bus;
+	int Type;
+	int Length;
+	unsigned char tBuffer[50];
+};
+
+#define MAX_BLOCK 32
+
+#define SEMA_EXT_IIC_READ               0x01
+#define SEMA_EXT_IIC_BLOCK              0x02
+#define SEMA_EXT_IIC_EXT_COMMAND        0x10
+
+#define EAPI_I2C_STD_CMD          EAPI_UINT32_C(0x00)
+#define EAPI_I2C_NO_CMD           EAPI_UINT32_C(0x01)
+#define EAPI_I2C_EXT_CMD          EAPI_UINT32_C(0x02)
+#define EAPI_I2C_CMD_TYPE_MASK    EAPI_UINT32_C(0x03) 
+
+#define EAPI_CMD_TYPE(x)          ((EAPI_UINT32_C(x) >> 30) & (EAPI_I2C_CMD_TYPE_MASK))
+#define EAPI_I2C_IS_EXT_CMD(x)    (EAPI_UINT32_C(EAPI_CMD_TYPE((x))&(EAPI_I2C_CMD_TYPE_MASK))==EAPI_I2C_EXT_CMD)
+#define EAPI_I2C_IS_STD_CMD(x)    (EAPI_UINT32_C(EAPI_CMD_TYPE((x))&(EAPI_I2C_CMD_TYPE_MASK))==EAPI_I2C_STD_CMD)
+#define EAPI_I2C_IS_NO_CMD(x)     (EAPI_UINT32_C(EAPI_CMD_TYPE((x))&(EAPI_I2C_CMD_TYPE_MASK))==EAPI_I2C_NO_CMD)
+
+uint32_t EApiI2CReadTransfer(uint32_t Id, uint32_t Addr, uint32_t Cmd, void* pBuffer, uint32_t BufLen, uint32_t ByteCnt)
 {
-	struct dirent *de;
-	DIR *dr = opendir("/sys/class/i2c-adapter");
+	uint32_t i;
+	uint32_t MaxBlkSize;
+	int fd, ret;
+	uint8_t write_data[8];
 
-	if (dr == NULL)  // opendir returns NULL if couldn't open directory
-		return -1;
+	struct eapi_txn trxn;
 
-	while ((de = readdir(dr)) != NULL)
+
+ 	if (pBuffer == NULL || ByteCnt == 0 || BufLen == 0)
 	{
-		if(strncmp(de->d_name, "i2c", strlen("i2c")) == 0)
-		{
-			int fd;
-			char I2C_ADAPTER[512];
-			sprintf(I2C_ADAPTER, "/sys/class/i2c-adapter/%s/name", de->d_name);
-
-			if((fd = open(I2C_ADAPTER, O_RDONLY)) > 0)
-			{
-				if(read(fd, I2C_ADAPTER, sizeof(I2C_ADAPTER)) > 0)
-				{
-					if(strncmp(I2C_ADAPTER, "ADLINK BMC I2C adapter", strlen("ADLINK BMC I2C adapter")) == 0)
-					{
-						sprintf(i2c_dev, "/dev/%s", de->d_name);
-						close(fd);
-						closedir(dr);
-						return 0;
-					}
-				}
-				close(fd);
-			}
-		}
+		return EAPI_STATUS_INVALID_PARAMETER;
 	}
 
-	closedir(dr);
-	return -ENODEV;
-}
-
-static inline int i2c_smbus_access(int file, char read_write, unsigned char command,
-		int size, union i2c_smbus_data *data)
-{
-	struct i2c_smbus_ioctl_data args;
-
-	args.read_write = read_write;
-	args.command = command;
-	args.size = size;
-	args.data = data;
-	return ioctl(file,I2C_SMBUS,&args);
-}
-
-static inline int i2c_smbus_read_i2c_block_data(int file, unsigned char command,
-		unsigned char length, unsigned char *values)
-{
-	union i2c_smbus_data data;
-	int i;
-
-	if (length > 32)
-		length = 32;
-	data.block[0] = length;
-	if (i2c_smbus_access(file,I2C_SMBUS_READ,command,
-				length == 32 ? I2C_SMBUS_I2C_BLOCK_BROKEN :
-				I2C_SMBUS_I2C_BLOCK_DATA,&data)) {
-		return -1;
-	}
-	else {
-		for (i = 1; i <= data.block[0]; i++)
-			values[i-1] = data.block[i];
-		return data.block[0];
-	}
-}
-
-static inline int i2c_smbus_write_i2c_block_data(int file, unsigned char command,
-		unsigned char length, const unsigned char *values)
-{
-	union i2c_smbus_data data;
-	int i;
-	if (length > 32)
-		length = 32;
-	for (i = 1; i <= length; i++)
-		data.block[i] = values[i-1];
-	data.block[0] = length;
-	return i2c_smbus_access(file,I2C_SMBUS_WRITE,command,
-			I2C_SMBUS_I2C_BLOCK_BROKEN, &data);
-}
-
-static int open_i2c_dev (uint8_t address)
-{
-	int file, ret;
-	char i2c_dev[64];
-
-	if((ret = get_i2c_dev(i2c_dev)) < 0)
-		return ret;
-
-	if((file = open(i2c_dev, O_RDWR)) < 0)
-		return file;
-
-	if((ret = ioctl(file, I2C_SLAVE, address>>1)) < 0)
-		return ret;
-
-	return file;
-}
-
-#define MAX_BLOCK 29
-
-uint32_t EApiI2CWriteReadRaw(uint32_t Id, uint8_t Addr, void *pWBuffer, uint32_t WriteBCnt, void *pRBuffer, uint32_t RBufLen, uint32_t  ReadBCnt)
-{
-	static int file = 0;
-	static uint32_t sema_capability = 0;
-	uint32_t status = EAPI_STATUS_SUCCESS;
-
-	WriteBCnt = WriteBCnt?WriteBCnt-1:0;	// need to conform to specification
-	ReadBCnt = ReadBCnt?ReadBCnt-1:0;		// need to conform to specification
-
-	if(WriteBCnt > 1 && pWBuffer == NULL)
-		return EAPI_STATUS_INVALID_PARAMETER;
-
-	if(ReadBCnt > 1 && pRBuffer == NULL)
-		return EAPI_STATUS_INVALID_PARAMETER;
-
-	if(ReadBCnt > 1 && RBufLen == 0)
-		return EAPI_STATUS_INVALID_PARAMETER;
-
-	if(ReadBCnt>RBufLen)
-		return EAPI_STATUS_MORE_DATA;
-
-	if(WriteBCnt==0 && ReadBCnt == 0)
-		return EAPI_STATUS_INVALID_PARAMETER;
-
-	if(Id!= EAPI_ID_I2C_EXTERNAL && Id != EAPI_ID_I2C_LVDS_1)
-	{
-		static uint32_t id = 18;
-		if(sema_capability == 0)
-		{
-			if(EApiBoardGetValue(id, &sema_capability) < 0)
-				return EAPI_STATUS_UNSUPPORTED;
-		}
-
-		if( Id == (SEMA_EAPI_ID_I2C_EXTERNAL_2))		// I2C Bus 3
-		{
-			if (!(sema_capability & SEMA_C_I2C3))
-				return EAPI_STATUS_UNSUPPORTED;
-		}
-		else if(Id == (SEMA_EAPI_ID_I2C_EXTERNAL_3))	// I2C Bus 4
-		{
-			if (!(sema_capability & SEMA_C_I2C4))
-				return EAPI_STATUS_UNSUPPORTED;
-		}
-		else
-		{
-			return EAPI_STATUS_UNSUPPORTED;
-		}
+	if (EApiI2CGetBusCap(Id, &MaxBlkSize) != 0)
+       	{
+		return EAPI_STATUS_UNSUPPORTED;
 	}
 
-	if(WriteBCnt > MAX_BLOCK+1)
-		return EAPI_STATUS_INVALID_BLOCK_LENGTH;
+	if (EAPI_I2C_IS_10BIT_ADDR(Addr))
+       	{
+		return EAPI_STATUS_UNSUPPORTED;
+	}
 
-	if(ReadBCnt > MAX_BLOCK+1)
-		return EAPI_STATUS_INVALID_BLOCK_LENGTH;
+	if (ByteCnt > MAX_BLOCK)
+       	{
+		return EAPI_STATUS_INVALID_PARAMETER;
+	}
 
-	if(file < 0)
+	if (ByteCnt > BufLen)
+       	{
+		return EAPI_STATUS_INVALID_PARAMETER;
+	}
+
+	if (Id == EAPI_ID_I2C_EXTERNAL)
+       	{
+		trxn.Bus = 1;
+	}
+	else if (Id == EAPI_ID_I2C_LVDS_1)
+       	{
+		trxn.Bus = 2;
+	}
+	else if (Id == SEMA_EAPI_ID_I2C_EXTERNAL_2)
+        {
+                trxn.Bus = 3;
+        }
+	else
 		return EAPI_STATUS_UNSUPPORTED;
 
-	if(file == 0)
-		if((file = open_i2c_dev(Addr)) < 0)
-			return EAPI_STATUS_UNSUPPORTED;
-
+	if(EApiI2CProbeDevice(Id,Addr)!= EAPI_STATUS_SUCCESS) 
 	{
-		int ret;
-
-		if(WriteBCnt > 0)
-		{
-			unsigned char *buf = pWBuffer;
-			unsigned char addr = buf[0];
-			ret = i2c_smbus_write_i2c_block_data(file, addr, WriteBCnt - 1, &buf[1]);
-			if(ret < 0)
-				return EAPI_STATUS_WRITE_ERROR;
-		}
-
-		if(ReadBCnt > 0)
-		{
-			unsigned char *buf = pWBuffer;
-			if(WriteBCnt > 0)
-			{
-				unsigned char addr = buf[0];
-				ret = i2c_smbus_read_i2c_block_data(file, addr, ReadBCnt, pRBuffer);
-				if(ret < 0)
-					return EAPI_STATUS_READ_ERROR;
-			}
-		}
+		return EAPI_STATUS_READ_ERROR;
 	}
 
-	return status;
+
+	memset(trxn.tBuffer, 0, sizeof(unsigned char)*50);
+
+	if((fd = open("/dev/bmc-i2c-eapi", O_RDWR)) < 0)
+	{
+		return EAPI_STATUS_READ_ERROR;
+	}
+		trxn.Type = SEMA_EXT_IIC_BLOCK;
+
+#if 1   
+        //Check whether no command:
+	/*if(Cmd & (1 << 30))
+	{
+	    printf("read No command\n");
+	}*/
+	//check whether 2 byte command
+        if	(Cmd & (2 << 30))
+	{
+	    write_data[0] = Cmd & 0xff;
+	    write_data[1] = (Cmd >> 8) & 0xff;
+	    ret = EApiI2CWriteTransfer(Id, Addr, (1 << 30), write_data, 2);
+
+	}
+	//check whether 1 byte command
+	else 
+	{
+	    write_data[0] = Cmd & 0xff;
+	    ret = EApiI2CWriteTransfer(Id, Addr, (1 << 30), write_data, 1);
+	}
+
+	if(ret != EAPI_STATUS_SUCCESS)
+	{
+		return EAPI_STATUS_ERROR;
+	}
+		
+#endif
+#if 1 
+	memset(trxn.tBuffer, 0, sizeof(unsigned char) * 50);
+
+	trxn.tBuffer[0] = 0x4; //I/F type
+	trxn.tBuffer[1] = 0x1; //I2C read
+	trxn.tBuffer[2] = ByteCnt;//BufLen; //read buffer length
+	trxn.tBuffer[3] = trxn.Bus; 
+	trxn.tBuffer[4] = (Addr >> 8) & 0x7;
+	trxn.tBuffer[5] = (uint8_t)Addr;
+
+	trxn.Type = SEMA_EXT_IIC_READ;
+	trxn.Length = ByteCnt;//BufLen;
+
+	if(ioctl(fd, EAPI_TRXN, &trxn) < 0)
+	{
+		return EAPI_STATUS_UNSUPPORTED;
+	}
+
+	for (i = 0; i < ByteCnt; i++) {
+		((unsigned char*)pBuffer)[i] = trxn.tBuffer[i];
+	}
+#endif
+	return EAPI_STATUS_SUCCESS;
 }
+
+uint32_t EApiI2CWriteTransfer(uint32_t Id, uint32_t Addr, uint32_t Cmd, void *pBuffer, uint32_t ByteCnt)
+{
+	uint32_t MaxBlkSize;
+	int fd, i;
+	struct eapi_txn trxn;
+	unsigned char data_off;
+
+	if (pBuffer == NULL || ByteCnt == 0)
+	{
+		return EAPI_STATUS_INVALID_PARAMETER;
+	}
+
+	if (EApiI2CGetBusCap(Id, &MaxBlkSize) != 0) {
+		return EAPI_STATUS_INVALID_PARAMETER;
+	}
+
+	if (EAPI_I2C_IS_10BIT_ADDR(Addr)) {
+		return EAPI_STATUS_INVALID_PARAMETER;
+	}
+
+	if (ByteCnt > MAX_BLOCK) {
+		return EAPI_STATUS_INVALID_BLOCK_LENGTH;
+	}
+
+	if (Id == EAPI_ID_I2C_EXTERNAL) {
+		trxn.Bus = 1;
+	}
+	else if (Id == EAPI_ID_I2C_LVDS_1) {
+		trxn.Bus = 2;
+	}
+	else if (Id == SEMA_EAPI_ID_I2C_EXTERNAL_2)
+        {
+                trxn.Bus = 3;
+        }
+	else
+		return EAPI_STATUS_INVALID_PARAMETER;
+
+	if(EApiI2CProbeDevice(Id,Addr)!= EAPI_STATUS_SUCCESS) 
+	{
+		return EAPI_STATUS_WRITE_ERROR;
+	}
+
+	memset(trxn.tBuffer, 0, sizeof(unsigned char)*50);
+
+	if((fd = open("/dev/bmc-i2c-eapi", O_RDWR)) < 0)
+	{
+		return EAPI_STATUS_READ_ERROR;
+	}
+
+	trxn.tBuffer[0] = 0x4; 
+	trxn.tBuffer[1] = 0x2; 
+	trxn.tBuffer[2] = ByteCnt + 1;
+	trxn.tBuffer[3] = trxn.Bus;
+	trxn.tBuffer[4] = (Addr >> 8) & 0x7; 
+	trxn.tBuffer[5] = Addr;
+	if(Cmd & (2 << 30))
+	{
+	    trxn.tBuffer[2] = ByteCnt + 2;
+	    trxn.Length = ByteCnt + 2;
+	    trxn.tBuffer[6] = Cmd & 0xFF;
+	    trxn.tBuffer[7] = (Cmd >> 8) & 0xff;
+	    data_off = 8;
+	}
+	else if(Cmd & (1 << 30))
+	{
+	    trxn.tBuffer[2] = ByteCnt;
+	    trxn.Length = ByteCnt;
+	    data_off = 6;
+        }
+	else 
+	{
+	    trxn.tBuffer[2] = ByteCnt + 1;
+	    trxn.tBuffer[6] = Cmd & 0xFF;
+	    data_off = 7;
+	    trxn.Length = ByteCnt + 1;
+	}	
+
+	for (i = 0; i < ByteCnt; i++) {
+	   trxn.tBuffer[i+data_off] = ((unsigned char*)pBuffer)[i];
+	}    
+
+	
+	/*for (i = 0; i < ByteCnt; i++) {
+	   printf("%x ",trxn.tBuffer[data_off + i]);
+	}
+        printf("transaction write length %d", trxn.tBuffer[2]);	
+	*/
+	trxn.Type = SEMA_EXT_IIC_BLOCK;
+	//trxn.Length = ByteCnt + 1;
+
+	if(ioctl(fd, EAPI_TRXN, &trxn) < 0)
+	{
+		return EAPI_STATUS_UNSUPPORTED;
+	}
+
+	return EAPI_STATUS_SUCCESS;
+}
+
+uint32_t EApiI2CWriteReadRaw(uint32_t Id, uint8_t Addr, void *pWBuffer, uint32_t WriteBCnt, void *pRBuffer, uint32_t RBufLen, uint32_t ReadBCnt)
+{
+	uint32_t MaxBlkSize;
+	int fd;
+        uint32_t ret;
+	struct eapi_txn trxn;
+
+	WriteBCnt = WriteBCnt ? WriteBCnt - 1 : 0; // needed to conform to the specification
+	ReadBCnt = ReadBCnt ? ReadBCnt - 1 : 0; // needed to conform to the specification
+
+	if (WriteBCnt > 1 && pWBuffer == NULL) {
+		return EAPI_STATUS_INVALID_PARAMETER;
+	}
+
+
+	if (ReadBCnt > 1 && pRBuffer == NULL) {
+		return EAPI_STATUS_INVALID_PARAMETER;
+	}
+
+	if (ReadBCnt > 1 && RBufLen == 0) {
+		return EAPI_STATUS_INVALID_PARAMETER;
+	}
+
+	if (ReadBCnt > RBufLen) {
+		return EAPI_STATUS_MORE_DATA;
+	}
+
+	if (WriteBCnt == 0 && ReadBCnt == 0) {
+		return EAPI_STATUS_INVALID_PARAMETER;
+	}
+
+	if (EApiI2CGetBusCap(Id, &MaxBlkSize) != 0) {
+		return EAPI_STATUS_INVALID_PARAMETER;
+	}
+
+	if (WriteBCnt > MAX_BLOCK + 1) {
+		return EAPI_STATUS_INVALID_BLOCK_LENGTH;
+	}
+
+	if (ReadBCnt > MAX_BLOCK + 1) {
+		return EAPI_STATUS_INVALID_BLOCK_LENGTH;
+	}
+
+	if (Id == EAPI_ID_I2C_EXTERNAL) {
+		trxn.Bus = 1;
+	}
+
+	else if (Id == EAPI_ID_I2C_LVDS_1) {
+		trxn.Bus = 2;
+	}
+
+	else if (Id == SEMA_EAPI_ID_I2C_EXTERNAL_2)
+        {
+                trxn.Bus = 3;
+        }
+
+	else
+		return EAPI_STATUS_UNSUPPORTED;
+
+	if(EApiI2CProbeDevice(Id,Addr)!= EAPI_STATUS_SUCCESS) 
+	{
+		return EAPI_STATUS_WRITE_ERROR;
+	}
+
+	memset(trxn.tBuffer, 0, sizeof(unsigned char) * 50);
+
+	if((fd = open("/dev/bmc-i2c-eapi", O_RDWR)) < 0)
+	{
+		return EAPI_STATUS_READ_ERROR;
+	}
+
+	if (NULL != pWBuffer) 
+	{
+		ret = EApiI2CWriteTransfer(Id, Addr, (1 << 30), pWBuffer, WriteBCnt);
+#if 0
+		trxn.tBuffer[0] = 0x4;
+		trxn.tBuffer[1] = 0x2;
+		trxn.tBuffer[2] = WriteBCnt;
+		trxn.tBuffer[3] = trxn.Bus;
+		trxn.tBuffer[4] = (Addr >> 8) & 0x7;
+		trxn.tBuffer[5] = (uint8_t)Addr;
+
+		trxn.Type = SEMA_EXT_IIC_BLOCK;
+		trxn.Length = WriteBCnt; 
+
+		for (i = 0; i < WriteBCnt; i++) {
+			trxn.tBuffer[i + 6] = ((unsigned char*)pWBuffer)[i];
+		}
+
+		if(ioctl(fd, EAPI_TRXN, &trxn) < 0)
+		{
+			return -1;
+		}
+#endif
+	}
+
+	if (NULL != pRBuffer) 
+	{
+		ret = EApiI2CReadTransfer(Id, Addr, (1 << 30), pRBuffer, RBufLen,ReadBCnt);
+	   
+#if 0
+		trxn.tBuffer[0] = 0x4;
+		trxn.tBuffer[1] = 0x1;
+		trxn.tBuffer[2] = ReadBCnt;
+		trxn.tBuffer[3] = trxn.Bus;
+		trxn.tBuffer[4] = (Addr >> 8) & 0x7;
+		trxn.tBuffer[5] = (uint8_t)Addr;
+
+		trxn.Type = SEMA_EXT_IIC_READ;
+		trxn.Length = ReadBCnt; 
+
+		if(ioctl(fd, EAPI_TRXN, &trxn) < 0)
+		{
+			return -1;
+		}
+
+		for (i = 0; i < ReadBCnt; i++)
+		{
+			((unsigned char*)pRBuffer)[i] = trxn.tBuffer[i];
+		}
+#endif
+	}
+
+	return ret;
+}
+
+uint32_t EApiI2CGetBusCap(uint32_t Id, uint32_t *pMaxBlkLen)
+{
+	if (pMaxBlkLen == NULL)
+	{
+		return EAPI_STATUS_INVALID_PARAMETER;
+	}
+
+	*pMaxBlkLen = MAX_BLOCK;
+
+	int fd = open("/sys/bus/platform/devices/adl-bmc-boardinfo/information/capabilities", O_RDONLY);
+	if(fd < 0)
+	{
+		return EAPI_STATUS_READ_ERROR;
+	}
+
+	char buffer[10] = {0};
+
+
+	uint32_t m_nSemaCaps;
+	if(read(fd, buffer, 10) < 0)
+	{
+		return EAPI_STATUS_UNSUPPORTED;
+	}
+
+	m_nSemaCaps = atoi(buffer);
+
+	switch (Id)
+	{
+		case SEMA_EXT_IIC_BUS_1:
+			if (m_nSemaCaps & SEMA_C_I2C2)
+			{
+				return EAPI_STATUS_SUCCESS;
+			}
+			break;
+
+		case SEMA_EXT_IIC_BUS_2:
+			if (m_nSemaCaps & SEMA_C_I2C1)
+			{
+				return EAPI_STATUS_SUCCESS;
+			}
+			break;
+		
+		case SEMA_EXT_IIC_BUS_3:
+                        if (m_nSemaCaps & SEMA_C_I2C3)
+                        {
+                                return EAPI_STATUS_SUCCESS;
+                        }
+                        break;
+
+		default:
+			*pMaxBlkLen = 0;
+			return EAPI_STATUS_UNSUPPORTED;
+	}
+	*pMaxBlkLen = 0;
+	return EAPI_STATUS_UNSUPPORTED;
+}
+
+
+uint32_t EApiI2CGetBusSts(uint32_t Id, uint8_t *Bus_Sts)
+{
+	int fd;
+
+	struct eapi_txn trxn;
+
+	if(Bus_Sts == NULL)
+	{
+		return EAPI_STATUS_INVALID_PARAMETER;
+	}
+
+	if((fd = open("/dev/bmc-i2c-eapi", O_RDWR)) < 0)
+	{
+		return EAPI_STATUS_UNSUPPORTED;
+	}
+
+	if(ioctl(fd, BMC_I2C_STS, &trxn) < 0)
+	{
+		return EAPI_STATUS_UNSUPPORTED;
+	}
+
+	*Bus_Sts = trxn.tBuffer[0];
+	return EAPI_STATUS_SUCCESS;
+}
+
+uint32_t EApiI2CProbeDevice(uint32_t Id, uint32_t Addr)
+{
+	int fd;
+
+	struct eapi_txn trxn;
+
+	if (Id == EAPI_ID_I2C_EXTERNAL) {
+		trxn.Bus = 1;
+	}
+	else if (Id == EAPI_ID_I2C_LVDS_1) {
+		trxn.Bus = 2;
+	}
+	else if (Id == SEMA_EAPI_ID_I2C_EXTERNAL_2) {
+                trxn.Bus = 3;
+        }
+	else
+	{
+		return EAPI_STATUS_UNSUPPORTED;
+	}
+
+	if((fd = open("/dev/bmc-i2c-eapi", O_RDWR)) < 0)
+	{
+		return EAPI_STATUS_READ_ERROR;
+	}
+
+	trxn.tBuffer[0] = 0x4;
+	trxn.tBuffer[1] = 0x2;
+	trxn.tBuffer[2] = 0;
+	trxn.tBuffer[3] = trxn.Bus;
+	trxn.tBuffer[4] = (Addr >> 8) & 0x7;
+	trxn.tBuffer[5] = (uint8_t)Addr;
+
+	trxn.Type = SEMA_EXT_IIC_EXT_COMMAND;
+
+	trxn.Length = 0;
+
+	if(ioctl(fd, PROBE_DEV, &trxn) < 0)
+	{
+		return EAPI_STATUS_UNSUPPORTED;
+	}
+
+        if(trxn.tBuffer[1] & ~2)
+	{
+		return EAPI_STATUS_UNSUPPORTED;
+	}
+
+	if (trxn.tBuffer[0] != 0)
+		return EAPI_STATUS_UNSUPPORTED;
+
+	return EAPI_STATUS_SUCCESS;
+}
+

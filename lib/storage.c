@@ -1,11 +1,3 @@
-// SPDX-License-Identifier: LGPL-2.0+
-/*
- * SEMA Library APIs for storage area
- *
- * Copyright (C) 2020 ADLINK Technology Inc.
- *
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,12 +6,22 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <sys/ioctl.h>
 
 #include <common.h>
 
 #define SMC_FLASH_ALIGNMENT 4
 
+#define EAPI_STOR_LOCK       _IOWR('a', 1, unsigned long)
+#define EAPI_STOR_UNLOCK       _IOWR('a', 2, unsigned long)
+
+struct secure {
+        uint8_t Region;
+        uint8_t permission;
+        char passcode[32];
+};
 static char NVMEM_DEVICE[285];
+//static char NVMEM_SEC_DEVICE[285];
 
 static int initialize_nvmem()
 {
@@ -28,6 +30,7 @@ static int initialize_nvmem()
 
         if (dr == NULL)  // opendir returns NULL if couldn't open directory 
                 return -1;
+	
         
 	memset(NVMEM_DEVICE, 0, sizeof(NVMEM_DEVICE));
         while ((de = readdir(dr)) != NULL) {
@@ -42,9 +45,31 @@ static int initialize_nvmem()
         return -1;
 }
 
-#define NVMEM_INIT() if(initialize_nvmem() < 0) return -1;
+#define NVMEM_INIT() if(initialize_nvmem() < 0) return EAPI_STATUS_UNSUPPORTED;
+
+static int initialize_nvmem_sec()
+{
+        struct dirent *de;
+        DIR *dr = opendir("/sys/bus/platform/devices/adl-bmc-nvmem-sec");
+
+        if (dr == NULL)  // opendir returns NULL if couldn't open directory 
+                return -1;
 
 
+        memset(NVMEM_DEVICE, 0, sizeof(NVMEM_DEVICE));
+        while ((de = readdir(dr)) != NULL) {
+                if(strncmp(de->d_name, "nvmem-sec", strlen("nvmem-sec")) == 0) {
+                        sprintf(NVMEM_DEVICE, "/sys/bus/nvmem/devices/%s/nvmem", de->d_name);
+                        closedir(dr);
+                        return 0;
+                }
+        }
+        closedir(dr);
+
+        return -1;
+}
+
+#define NVMEM_SEC_INIT() if(initialize_nvmem_sec() < 0) return EAPI_STATUS_UNSUPPORTED;
 
 uint32_t EApiStorageCap(uint32_t Id, uint32_t *pStorageSize, uint32_t *pBlockLength)
 {
@@ -56,8 +81,8 @@ uint32_t EApiStorageCap(uint32_t Id, uint32_t *pStorageSize, uint32_t *pBlockLen
                 return EAPI_STATUS_INVALID_PARAMETER;
         }
 
-	if (Id != EAPI_ID_STORAGE_STD)
-		return EAPI_STATUS_UNSUPPORTED;
+	if(Id > 1 && Id < 0)
+                return EAPI_STATUS_UNSUPPORTED;
 
 	sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-nvmem/capabilities/nvmemcap");
 
@@ -82,67 +107,192 @@ uint32_t EApiStorageCap(uint32_t Id, uint32_t *pStorageSize, uint32_t *pBlockLen
 	return status;
 }
 
-uint32_t EApiStorageAreaRead(uint32_t Id, uint32_t Offset, void *pBuffer, uint32_t BufLen, uint32_t  Bytecnt)
+uint32_t EApiStorageAreaRead(uint32_t Id,uint32_t Region, uint32_t Offset, void *pBuffer, uint32_t BufLen, uint32_t  Bytecnt)
 {
 	uint32_t status = EAPI_STATUS_SUCCESS;
 	int ret = 0;
-	NVMEM_INIT();
 	int fd;
-	if (Id != EAPI_ID_STORAGE_STD)
-		return EAPI_STATUS_UNSUPPORTED;
-
-	if (pBuffer == NULL || Bytecnt == 0 || BufLen == 0)
+	uint32_t BytecntTemp=Bytecnt;
+        uint8_t pBufferTemp[(Bytecnt%4)?Bytecnt+4-(Bytecnt%4):Bytecnt];
+	
+	if(Region==1)
+	{
+		NVMEM_INIT();
+	}
+	else if(Region==2)
+	{
+		NVMEM_SEC_INIT();
+	}
+	else
+	{
 		return EAPI_STATUS_INVALID_PARAMETER;
+	}
 
-	if (Offset + Bytecnt > BufLen)
-		return EAPI_STATUS_INVALID_BLOCK_LENGTH;
-
+	if(Id > 1 && Id < 0)
+	{
+		return EAPI_STATUS_UNSUPPORTED;
+	}
+	if (pBuffer == NULL || Bytecnt == 0 || BufLen == 0)
+	{
+		return EAPI_STATUS_INVALID_PARAMETER;
+	}
 	if (Bytecnt > BufLen)
+	{
 		return EAPI_STATUS_MORE_DATA;
+	}
 
 	fd = open(NVMEM_DEVICE, O_RDONLY);
+	
 	if (fd < 0)
-		return -1;
+	{
+		return EAPI_STATUS_READ_ERROR;
+	}
 
-	lseek(fd, Offset, SEEK_SET);
-
-	ret = read(fd, pBuffer, Bytecnt);
-
-	if (ret)
+	
+	lseek(fd,Offset,SEEK_SET);
+	
+	if(Bytecnt % 4 != 0)
+	{
+		Bytecnt += 4 - (Bytecnt % 4);
+	}
+	pBufferTemp[sizeof(pBufferTemp)]='\0';
+	
+	ret = read(fd, pBufferTemp, Bytecnt);
+	
+	memcpy(pBuffer, pBufferTemp, BytecntTemp);
+	
+	if (ret > 0)
 		close(fd);
 	else {
 		close(fd);
 		return EAPI_STATUS_READ_ERROR;
 	}
+	
+	return status;
+}
+
+uint32_t EApiStorageAreaWrite(uint32_t Id,uint32_t Region, uint32_t Offset, char* Buf, uint32_t Len)
+{
+	uint32_t status = EAPI_STATUS_SUCCESS;
+	int ret,fd;
+	
+	if(Region==1)
+	{
+		NVMEM_INIT();
+	}
+	else if(Region==2)
+	{
+		NVMEM_SEC_INIT();
+	}
+	else
+	{
+		return EAPI_STATUS_INVALID_PARAMETER;
+	}
+
+	if(Id > 1 && Id < 0)
+	{
+		return EAPI_STATUS_UNSUPPORTED;
+	}
+	if(Offset + Len > 1024 )
+	{
+		return EAPI_STATUS_MORE_DATA;
+	}
+
+	unsigned char *buffer;
+
+	if((Len % 4) != 0)
+	{
+		int rem = 4 - (Len % 4);
+		Len = Len + rem;
+		buffer = calloc(Len, sizeof(char));
+		if(buffer == NULL)
+		{
+			return EAPI_STATUS_READ_ERROR;
+		}
+		memcpy(buffer, Buf, Len);
+		EApiStorageAreaRead(Id,Region, Offset + (Len - rem), buffer + (Len - rem), rem, rem);
+	}
+	else
+	{
+		buffer = (unsigned char*)Buf;
+	}
+
+	fd = open(NVMEM_DEVICE, O_WRONLY);
+        
+	if (fd < 0)
+	{
+                return EAPI_STATUS_WRITE_ERROR;
+	}
+
+	lseek(fd,Offset,SEEK_SET);
+
+	ret = write(fd,buffer,Len);
+
+	if (ret > 0)
+	{
+		close(fd);
+	}
+	else
+	{
+		close(fd);
+		return EAPI_STATUS_WRITE_ERROR;
+	}
 
 	return status;
 }
 
-uint32_t EApiStorageAreaWrite(uint32_t Id, unsigned short Offset, char* Buf, uint32_t Bytecnt)
+uint32_t EApiStorageAreaClear(uint32_t Id,uint32_t Region)
+{
+	return EAPI_STATUS_UNSUPPORTED;
+}
+
+uint32_t EApiStorageLock(uint32_t Id,uint32_t Region)
 {
 	uint32_t status = EAPI_STATUS_SUCCESS;
-	int ret, fd;
-	uint32_t pBlockLength = SMC_FLASH_ALIGNMENT;
-	NVMEM_INIT();
+	int fd;
+	struct secure data;
+	if(Region!=2)
+	{
+		return EAPI_STATUS_INVALID_PARAMETER;
+	}
+	data.Region=Region;
 
-	if (Id != EAPI_ID_STORAGE_STD)
-		return EAPI_STATUS_UNSUPPORTED;
-
-	if ((Offset % pBlockLength) != 0)
-		return EAPI_STATUS_INVALID_BLOCK_ALIGNMENT;
-
-	fd = open(NVMEM_DEVICE, O_WRONLY);
-	if (fd < 0)
-		return -1;
-
-	lseek(fd, Offset, SEEK_SET);
-	ret = write(fd, Buf, Bytecnt);
-	if (ret)
-		close(fd);
-	else {
-		close(fd);
+        if((fd = open("/dev/bmc-nvmem-eapi", O_RDWR)) < 0)
+	{
 		return -1;
 	}
-	
+	if(ioctl(fd, EAPI_STOR_LOCK, &data ) < 0)
+        {
+		return EAPI_STATUS_UNSUPPORTED;
+	}
+
 	return status;
+}
+
+uint32_t EApiStorageUnLock(uint32_t Id,uint32_t Region,uint32_t Permission, char *passcode)
+{
+	uint32_t status = EAPI_STATUS_SUCCESS;
+	int fd;
+        struct secure data;
+       
+	if(Region!=2)
+	{
+		return EAPI_STATUS_INVALID_PARAMETER;
+	}
+	data.Region=Region;
+	data.permission=Permission;
+
+	memcpy(data.passcode,passcode,strlen(passcode));
+
+        if((fd = open("/dev/bmc-nvmem-eapi", O_RDWR)) < 0)
+        {
+                return -1;
+        }
+
+        if(ioctl(fd, EAPI_STOR_UNLOCK,&data ) < 0)
+        {
+                return EAPI_STATUS_UNSUPPORTED;
+        }
+
+        return status;
 }

@@ -1,0 +1,48 @@
+Loading the ADLINK EC GPIO Driver:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	Follow below commands to load the driver:
+	# sudo insmod driver/adl-bmc.ko 
+        # sudo insmod driver/adl-bmc-gpio.ko
+
+Exporting GPIO Pins:
+~~~~~~~~~~~~~~~~~~~~~
+	After loading the driver, a new entry will be created. Please check below path:
+	# ls /sys/class/gpio/
+	export  gpiochip504  unexport
+	
+	In the above, gpiochip504 is the new entry. Here the number 504 is considered as base. 
+	
+	Exporting gpio pins:
+	<switch to root user>
+	# su
+	# echo 504 > /sys/class/gpio/export     <EC GPIO 0>
+	# echo 505 > /sys/class/gpio/export  
+	# echo 506 > /sys/class/gpio/export 
+	# echo 507 > /sys/class/gpio/export 
+	# echo 508 > /sys/class/gpio/export 
+	# echo 509 > /sys/class/gpio/export 
+	# echo 510 > /sys/class/gpio/export 				
+	# echo 511 > /sys/class/gpio/export      <EC GPIO 7>
+
+Setting the Direction of GPIO pins:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	Setting as input:
+	# echo in > /sys/class/gpio/gpio511/direction    <EC GPIO 7>
+	Setting as output:
+	# echo out > /sys/class/gpio/gpio511/direction   <EC GPIO 7>
+
+Writing value for GPIO which is configured as output:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	Making it high:
+	# echo 1 > /sys/class/gpio/gpio504/value         <EC GPIO 0>
+	Making it low:
+	# echo 0 > /sys/class/gpio/gpio504/value         <EC GPIO 0>
+	
+Reading value of GPIO pin which is configured as input:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	# cat /sys/class/gpio/gpio504/value
+
+
+	
+
+

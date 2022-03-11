@@ -17,206 +17,738 @@
 #include <linux/slab.h>
 #include <linux/platform_device.h>
 #include <linux/delay.h>
+
+#include <linux/cdev.h>
+#include <linux/ioctl.h>
+#include <linux/fs.h>
+#include <linux/uaccess.h>
+#include <linux/slab.h>
+
 #include "adl-bmc.h"
 
-#define SLAVE_ADDR(x) ((x<<1) & 0xFE)
-#define BMC_DELAY(x)  udelay(delay * x)
 
+#define SEMA_C_I2C1             0x00010000                      ///< Bit 16: Ext. I2C bus #1 available
+#define SEMA_C_I2C2             0x00020000                      ///< Bit 17: Ext. I2C bus #2 available
+#define SEMA_C_I2C3             0x20000000                      ///< Group 0 bit 29: Ext. I2C bus #3 available
+
+#define SLAVE_ADDR(x) ((x<<1) & 0xFE)
+
+#define SEMA_CMD_IIC1_BLOCK             0xB1
+#define SEMA_CMD_IIC2_BLOCK             0xB2
+#define SEMA_CMD_IIC3_BLOCK             0xB3	
+
+#define SEMA_CMD_IIC1_TRANS             0xC1
+#define SEMA_CMD_IIC2_TRANS             0xC2
+#define SEMA_CMD_IIC3_TRANS             0xC3	
+
+#define SEMA_CMD_IIC_GETDATA            0xBF
+#define SEMA_CMD_IIC_STATUS             0xC4
+
+#define SEMA_EXT_IIC_BUS_1              0
+#define SEMA_EXT_IIC_BUS_2              1
+#define SEMA_EXT_IIC_BUS_3              2
+
+#define SEMA_EXT_IIC_READ               0x01
+#define SEMA_EXT_IIC_BLOCK              0x02
+#define SEMA_EXT_IIC_EXT_COMMAND        0x10
+
+
+
+#define EAPI_TRXN       _IOWR('a', 1, unsigned long)
+#define BMC_I2C_STS     _IOWR('a', 2, unsigned long)
+#define PROBE_DEV       _IOWR('a', 3, unsigned long)
+
+#define DEBUG_I2C 0
+
+int eapi_read_transaction(void);
 struct adlink_i2c_dev {
-	struct device 		*dev;
-	struct mutex 		i2c_lock;
-	struct i2c_adapter 	adapter;
+    struct device 		*dev;
+    struct i2c_adapter 	adapter1;
+    struct i2c_adapter 	adapter2;
+    struct i2c_adapter  adapter3;
+    dev_t ldev;
+    struct class *class;
+    struct cdev cdev;
 };
 
-static int delay;
+struct eapi_txn {
+    int Bus;
+    int Type;
+    int Length;
+    unsigned char tBuffer[50];
+};
 
-static int i2c_write (struct i2c_msg msg)
+struct eapi_txn buf;
+struct mutex i2c_lock;
+
+static int open(struct inode *inode, struct file *file)
 {
-	int i, ret;
-	unsigned char buf[32];
-
-
-	buf[0] = SLAVE_ADDR(msg.addr);
-	buf[1] = msg.len;
-	buf[2] = 0x00;
-
-	/*Added for write length validation*/
-	if(msg.len>29)  {
-		printk("i2c write error: write length cannot exceed 28 bytes\n");
-		return -EINVAL;
-	}	
-
-	for(i=0; i<msg.len; i++)
-		buf[i+3] = msg.buf[i];
-
-	ret = adl_bmc_i2c_write_device(NULL, 0xC2, msg.len + 3, buf);
-	if (ret < 0) {
-		printk("i2c write error: %d\n", ret);
-		return -ENODEV;
-	}
-
-	BMC_DELAY(msg.len);
-
-	ret = adl_bmc_i2c_read_device(NULL, 0xC4, 0, buf);
-	if (ret < 0) {
-		printk("i2c read error: %d\n", ret);
-		return -ENODEV;
-	}
-
-	debug_printk("write status = %x\n", buf[0]);
-	ret = (buf[0] & 0x04) ? -ENODEV : 0;
-	return ret;
+    return 0;
 }
 
-static int i2c_read (struct i2c_msg msg)
+static int release(struct inode *inode, struct file *file)
 {
-	int ret;
-	unsigned char buf[32];
-	buf[0] = SLAVE_ADDR(msg.addr);
+    return 0;
+}
 
-	if(msg.len > 0)
+static int check_bmc_status_free(unsigned char *status, int retry_count)
+{	
+	register int i;
+
+	for (i = 0; i < retry_count; i++)
 	{
-		int i;
-
-		buf[1] = 0x00;
-		buf[2] = msg.len;
-
-		ret = adl_bmc_i2c_write_device(NULL, 0xC2, msg.len + 3, buf);
-		if (ret < 0) {
-			printk("i2c write error: %d\n", ret);
-			return -ENODEV;
+		if (adl_bmc_ec_read_device(EC_RW_ADDR_IIC_BMC_STATUS, status, 1, EC_REGION_2) == 0)
+		{
+			if (!!(*status & 0x4) != 1 && ((*status & 0x1) == 0))
+			{
+				return 0;
+			}
 		}
+	}
 
-		BMC_DELAY(msg.len);
+	return -1;
+}
 
-		ret = adl_bmc_i2c_read_device(NULL, 0xC4, 0, buf);
-		if (ret < 0) {
-			printk("i2c read error: %d\n", ret);
-			return -ENODEV;
+static int check_iic_txn_status(unsigned char *status, int retry_count)
+{
+	register int i;
+
+	for (i = 0; i < retry_count; i++)
+	{
+		if (adl_bmc_ec_read_device(EC_RO_ADDR_IIC_TXN_STATUS, status, 1, EC_REGION_2) == 0)
+		{
+			if((*status & 0x2C) == 0)
+			{
+				return 0;
+			}
 		}
-		debug_printk("read status = %x\n", buf[0]);
+	}
 
-		if(buf[0] & 0x04)
-			return -ENODEV;
+	return -1;
+}
 
 
-		BMC_DELAY(msg.len);
+static int check_bmc_status_iic(unsigned char *status, int retry_count)
+{
+	int i;
 
-		ret = adl_bmc_i2c_read_device(NULL, 0xBF, 0, buf);
-		if (ret < 0) {
-			printk("i2c read error: %d\n", ret);
-			return -ENODEV;
+	for (i = 0; i < retry_count; i++)
+	{
+		if (adl_bmc_ec_read_device(EC_RW_ADDR_IIC_BMC_STATUS, status, 1, EC_REGION_2) == 0)
+		{
+			if ((*status & 0x1) == 0)
+			{
+				return 0;
+			}
 		}
+	}
 
-		debug_printk("read request %x %d %x %x\n", msg.addr, msg.len, msg.flags, msg.buf[0]);
-		for(i=0; i<ret; i++)
-			msg.buf[i] = buf[i];
-
+	if (i < retry_count && !!(*status & 0x8) != 1)
+	{
 		return 0;
 	}
 
-	printk("Invalid read request\n");
-	return -EINVAL;
+	return -ENODEV;
 }
 
-static int adlink_i2c_xfer_msg (struct i2c_msg msg)
+int ProbeDevice(struct eapi_txn *trxn)
 {
-	int ret = -EOPNOTSUPP;
+	unsigned char Status;
 
-	if(msg.flags & I2C_M_RD)
-		ret = i2c_read(msg);
+	if((check_bmc_status_free(&Status, 200)) < 0)
+	{
+		return -1;
+	}
 
-	else if(msg.flags == 0 || msg.flags == 0x200)
-		ret = i2c_write(msg);
+	if (adl_bmc_ec_write_device(EC_WO_ADDR_IIC_CMD_START, buf.tBuffer, 6, EC_REGION_2) != 0)
+	{
+		return -1;
+	}
 
-	else
-		printk("Unsupported xfer %x %x\n", msg.flags, msg.len);
+	Status = 1 << 2;
+	if (adl_bmc_ec_write_device(EC_RW_ADDR_IIC_BMC_STATUS, &Status, 1, EC_REGION_2) != 0)
+	{
+		return -1;
+	}
 
-	return ret;
+	if((check_bmc_status_free(&Status, 200)) < 0)
+	{
+		return -1;
+	}
+
+	buf.tBuffer[1] = Status;
+
+	if (adl_bmc_ec_read_device(EC_RO_ADDR_IIC_TXN_STATUS, &Status, 1, EC_REGION_2) != 0)
+	{
+		return -1;
+	}
+
+	buf.tBuffer[0] = Status;
+
+	return 0;
 }
 
-static int adlink_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
+
+int eapi_read_transaction()
 {
-	int i, ret = -ENODEV;
-	struct adlink_i2c_dev *adlink = i2c_get_adapdata(adap);
 
-	mutex_lock(&adlink->i2c_lock);
+	u8 buffer[32];
+	unsigned char Status;
+	int i;
+#if DEBUG_I2C
+	for (i=0; i<20; i++)
+	   printk("%x ", buf.tBuffer[i]);
+	printk("\n");
+#endif
 
-	for(i=0; i<num; i++)
-		ret = adlink_i2c_xfer_msg (msgs[i]);
+//	delay(15000);
+	//1. check the i2c is free
+	if((check_bmc_status_free(&Status, 100)) < 0)
+    		return -1;
+	
+	//2. Clear the buffer
+	for (i=0; i<32; i++)
+	       buffer[i]=0;
+        	
+        if (adl_bmc_ec_write_device(EC_RW_ADDR_IIC_BUFFER, buffer, 32, EC_REGION_2) != 0)
+        {
+		return -1;
+	}
 
-	mutex_unlock(&adlink->i2c_lock);
+	//3. Update the datas
+	buffer[0] = buf.tBuffer[0]; //I/F type 0x11
+	buffer[1] = buf.tBuffer[1] ; //I2C R/W CMD 0x12
+	buffer[2] = buf.tBuffer[2]; //I2C Length 0x13
+	buffer[3] = buf.tBuffer[3]; //I2C Channel 0x14
+	buffer[4] = 0x0; //Reserved 0x15
+	buffer[5] = buf.tBuffer[5]; //I2C address 0x16
+        if (adl_bmc_ec_write_device(EC_WO_ADDR_IIC_CMD_START, buffer, 6, EC_REGION_2) != 0)
+        {
+		return -1;
+	}
+	//4. Start read transaction
+	buffer[0] = 0x4;
+        if (adl_bmc_ec_write_device(EC_RW_ADDR_IIC_BMC_STATUS, buffer, 1, EC_REGION_2) != 0)
+        {
+		return -1;
+	}
 
-	if(ret == 0)
-		ret = num;
+	//5. check the transaction is completed. 
+        if((check_bmc_status_free(&Status, 100)) < 0)
+                return -1;
 
-	return ret;
+	
+	//6. check if the I2C transaction is completed.
+	if((check_iic_txn_status(&Status, 20)) < 0)
+		return -1;
+
+	//7. Read EC Data
+	if (adl_bmc_ec_read_device(EC_RW_ADDR_IIC_BUFFER, buffer, buf.Length, EC_REGION_2) != 0)
+       	{
+		return -1;
+	}
+#if DEBUG_I2C
+	for (i=0;i<10;i++)
+		printk("%x ",buffer[i]);
+#endif
+	memcpy(buf.tBuffer, buffer, buf.Length);
+#if DEBUG_I2C	
+	printk("---%s---\n", __func__);
+#endif
+	return 0;
+}
+
+
+int eapi_transaction(struct eapi_txn *trxn)
+{
+    //volatile int i;
+    unsigned char Status;
+#if DEBUG_I2C
+    printk("%s\n", __func__);
+    printk("trxn->Type %x\n", trxn->Type);
+    printk("trxn->Length %x\n", trxn->Length);
+#endif
+
+//    delay(15000);
+    //1. Check if the i2c bus is free
+    if((check_bmc_status_free(&Status, 20)) < 0)
+        return -1;
+
+    //2. Update the write data (library already filled it) This data contains, except I2C slave address
+    if((trxn->Type == SEMA_EXT_IIC_BLOCK) && (trxn->Length > 0))
+    {
+	if (adl_bmc_ec_write_device(EC_RW_ADDR_IIC_BUFFER, &(trxn->tBuffer[6]), trxn->Length, EC_REGION_2) != 0)
+	{
+	    return -1;
+	}
+    }
+    
+    //0x11 to 0x16 EC address. 
+    //3. Update -> I/F type, I2C-RW, I2C len, I2C chn, res, I2C slave addr
+    if (adl_bmc_ec_write_device(EC_WO_ADDR_IIC_CMD_START, trxn->tBuffer, 6, EC_REGION_2) != 0)
+    {
+	return -1;
+    }
+
+    //0x10 4. Initiate I2C transaction
+    Status = 1 << 2;
+    if (adl_bmc_ec_write_device(EC_RW_ADDR_IIC_BMC_STATUS, &Status, 1, EC_REGION_2) != 0)
+    {
+	return -1;
+    }
+
+    //5. Check transaction is completed - BMC_STATUS
+    if((check_bmc_status_free(&Status, 20)) < 0)
+        return -1;
+
+    
+    //6. check if the I2C transaction is completed.
+    if((check_iic_txn_status(&Status, 20)) < 0)
+        return -1;
+
+
+    //7. check the transaction 
+    //Need to remove later.
+    if(trxn->Type == SEMA_EXT_IIC_READ)
+    {
+	if(adl_bmc_ec_read_device(EC_RW_ADDR_IIC_BUFFER, buf.tBuffer, trxn->Length, EC_REGION_2) != 0)
+	{
+	    return -1;
+	}
+    }
+
+    return 0;
+}
+
+
+int bmc_i2c_status(struct eapi_txn *trxn)
+{
+	unsigned char Status;
+	if (adl_bmc_ec_read_device(EC_RO_ADDR_IIC_TXN_STATUS, &Status, 1, EC_REGION_2) == 0)
+	{
+		buf.tBuffer[0] = Status;
+		return 0;
+	}
+
+	return -1;
+}
+
+long ioctl(struct file *file, unsigned int cmd, unsigned long data)
+{
+	copy_from_user(&buf, (void*)data, sizeof(struct eapi_txn));
+
+	mutex_lock(&i2c_lock);
+	switch(cmd)
+	{
+		case PROBE_DEV:
+			if(ProbeDevice((struct eapi_txn*)data) == 0)
+			{
+				copy_to_user((void*)data, &buf, sizeof(struct eapi_txn));
+				mutex_unlock(&i2c_lock);
+				return 0;
+			}
+			mutex_unlock(&i2c_lock);
+			return -1;
+		case EAPI_TRXN:
+			if (buf.Type == SEMA_EXT_IIC_READ)
+			{	    
+				eapi_read_transaction();
+			}
+			else
+			{
+				eapi_transaction((struct eapi_txn*)&buf);
+			}
+			copy_to_user((void*)data, &buf, sizeof(struct eapi_txn));
+			break;
+		case BMC_I2C_STS:
+			bmc_i2c_status((struct eapi_txn*)data);
+			copy_to_user((void*)data, &buf, sizeof(struct eapi_txn));
+			break;
+		default:
+			mutex_unlock(&i2c_lock);
+			return -1;
+	}
+	mutex_unlock(&i2c_lock);
+	return 0;
+}
+
+struct file_operations fops = {
+    .owner = THIS_MODULE,
+    .open = open,
+    .unlocked_ioctl = ioctl,
+    .release = release,
+};
+
+static int i2c_write_iic (struct i2c_msg msg, int bus)
+{
+    uint8_t Addr;
+    unsigned char buf[50]; 
+    unsigned char Status;
+    volatile int i;
+    Addr = SLAVE_ADDR(msg.addr);
+
+    if(msg.addr == 0)
+    {
+	    return -1;
+    }
+
+    buf[0] = 0x4;
+    buf[1] = 0x2;
+    buf[2] = msg.len;
+    buf[3] = bus;
+    buf[4] = (Addr >> 8) & 0x7;
+    buf[5] = (uint8_t)Addr;
+
+    for(i=0; i<msg.len; i++)
+	buf[i+6] = msg.buf[i];
+
+    if(buf[2] == 0)
+    {
+	    //buf[2]+=1;
+    }
+
+    if((check_bmc_status_free(&Status, 20)) < 0)
+        return -ENODEV;
+
+    if (adl_bmc_ec_write_device(EC_RW_ADDR_IIC_BUFFER, &(buf[6]), msg.len, EC_REGION_2) != 0)
+    {
+	return -ENODEV;
+    }
+
+    if (adl_bmc_ec_write_device(EC_WO_ADDR_IIC_CMD_START, buf, 6, EC_REGION_2) != 0)
+    {
+	return -ENODEV;
+    }
+
+    Status = 0;
+    adl_bmc_ec_write_device(EC_RO_ADDR_IIC_TXN_STATUS, &Status, 1, EC_REGION_2);
+
+    Status = 1 << 2;
+    if (adl_bmc_ec_write_device(EC_RW_ADDR_IIC_BMC_STATUS, &Status, 1, EC_REGION_2) != 0)
+    {
+	return -ENODEV;
+    }
+
+    if((check_bmc_status_iic(&Status, 200))<0)
+		return -ENODEV;
+	
+    /*
+    if((check_iic_txn_status(&Status, 20)) < 0)
+        return -1;
+*/
+    return 0;
+}
+
+
+static int i2c_read_iic(struct i2c_msg msg, int bus)
+{
+    uint8_t Addr;
+    int ret;
+    unsigned char buf[50]; 
+    unsigned char Status;
+    volatile int i;
+
+    Addr = SLAVE_ADDR(msg.addr) | 1;
+
+    if(msg.addr == 0)
+    {
+	    return -1;
+    }
+
+    if(msg.len > 0)
+    {
+	buf[0] = 0x4; 
+	buf[1] = 0x1; 
+	buf[2] = msg.len;
+	buf[3] = bus;
+	buf[4] = (Addr >> 8) & 0x7; 
+	buf[5] = (uint8_t)Addr;
+
+        if((check_bmc_status_free(&Status, 20)) < 0)
+	    return -1;
+
+
+	if (adl_bmc_ec_write_device(EC_WO_ADDR_IIC_CMD_START, buf, 6, EC_REGION_2) != 0)
+	{
+	    return -1;
+	}
+
+	Status = 0;
+	adl_bmc_ec_write_device(EC_RO_ADDR_IIC_TXN_STATUS, &Status, 1, EC_REGION_2);
+
+	Status = 1 << 2;
+	if (adl_bmc_ec_write_device(EC_RW_ADDR_IIC_BMC_STATUS, &Status, 1, EC_REGION_2) != 0)
+	{
+	    return -1;
+	}
+
+    if((check_bmc_status_iic(&Status, 200))<0)
+		return -ENODEV;
+		
+/*
+	if((check_iic_txn_status(&Status, 20)) < 0)
+            return -1;
+*/
+
+	ret = adl_bmc_ec_read_device(EC_RW_ADDR_IIC_BUFFER, buf, msg.len, EC_REGION_2);
+
+	for(i=0; i<msg.len; i++)
+	    msg.buf[i] = buf[i];
+
+	return 0;
+    }
+
+    return -EINVAL;
+}
+
+static int adlink_i2c_xfer_msg1(struct i2c_msg msg)
+{
+    int ret = -EOPNOTSUPP;
+    int bus = 1;
+
+    debug_printk("%s\n", __func__);
+    if(msg.flags & I2C_M_RD)
+	ret = i2c_read_iic(msg, bus);
+
+    else if(msg.flags == 0 || msg.flags == 0x200)
+	ret = i2c_write_iic(msg, bus);
+
+    else
+	debug_printk("Unsupported xfer %x %x\n", msg.flags, msg.len);
+
+    return ret;
+}
+
+static int adlink_i2c_xfer_msg2 (struct i2c_msg msg)
+{
+    int ret = -EOPNOTSUPP;
+    int bus = 2;
+
+    if(msg.flags & I2C_M_RD)
+	ret = i2c_read_iic(msg, bus);
+
+    else if(msg.flags == 0 || msg.flags == 0x200)
+	ret = i2c_write_iic(msg, bus);
+
+    else
+	debug_printk("Unsupported xfer %x %x\n", msg.flags, msg.len);
+
+    return ret;
+}
+
+static int adlink_i2c_xfer_msg3(struct i2c_msg msg)
+{
+    int ret = -EOPNOTSUPP;
+    int bus = 3;
+
+    debug_printk("%s\n", __func__);
+    if(msg.flags & I2C_M_RD)
+        ret = i2c_read_iic(msg, bus);
+
+    else if(msg.flags == 0 || msg.flags == 0x200)
+        ret = i2c_write_iic(msg, bus);
+
+    else
+        debug_printk("Unsupported xfer %x %x\n", msg.flags, msg.len);
+
+    return ret;
+}
+
+static int adlink_i2c_xfer1(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
+{
+    int i, ret = -ENODEV;
+    mutex_lock(&i2c_lock);
+
+    for(i=0; i<num; i++)
+	ret = adlink_i2c_xfer_msg1 (msgs[i]);
+
+    mutex_unlock(&i2c_lock);
+
+    if(ret == 0)
+	ret = num;
+
+    return ret;
+}
+
+static int adlink_i2c_xfer2(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
+{
+    int i, ret = -ENODEV;
+    mutex_lock(&i2c_lock);
+
+    for(i=0; i<num; i++)
+	ret = adlink_i2c_xfer_msg2 (msgs[i]);
+
+    mutex_unlock(&i2c_lock);
+
+    if(ret == 0)
+	ret = num;
+
+    return ret;
+}
+
+static int adlink_i2c_xfer3(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
+{
+    int i, ret = -ENODEV;
+    mutex_lock(&i2c_lock);
+
+    for(i=0; i<num; i++)
+        ret = adlink_i2c_xfer_msg3 (msgs[i]);
+
+    mutex_unlock(&i2c_lock);
+
+    if(ret == 0)
+        ret = num;
+
+    return ret;
 }
 
 static u32 adlink_i2c_func(struct i2c_adapter *adapter)
 {
-	return I2C_FUNC_I2C | I2C_FUNC_SMBUS_EMUL;
+    return I2C_FUNC_I2C | I2C_FUNC_SMBUS_EMUL;
 }
 
-static const struct i2c_algorithm adlink_i2c_algo = {
-	.functionality	= adlink_i2c_func,
-	.master_xfer	= adlink_i2c_xfer,
+static const struct i2c_algorithm adlink_i2c_algo1 = {
+    .functionality	= adlink_i2c_func,
+    .master_xfer	= adlink_i2c_xfer1,
+};
+
+static const struct i2c_algorithm adlink_i2c_algo2 = {
+    .functionality	= adlink_i2c_func,
+    .master_xfer	= adlink_i2c_xfer2,
+};
+
+static const struct i2c_algorithm adlink_i2c_algo3 = {
+    .functionality      = adlink_i2c_func,
+    .master_xfer        = adlink_i2c_xfer3,
 };
 
 static int adl_bmc_i2c_probe(struct platform_device *pdev)
 {
-	struct i2c_adapter *adap;
-	struct adlink_i2c_dev *adlink;
+    struct i2c_adapter *adap1, *adap2, *adap3;
+    struct adlink_i2c_dev *adlink;
+    int ret;
 
-	char buf[100] = { 0};
-	int ret;
+    struct adl_bmc_dev *adl_dev;
+    adl_dev = dev_get_drvdata(pdev->dev.parent);
 
+    adlink = devm_kzalloc(&pdev->dev, sizeof(struct adlink_i2c_dev), GFP_KERNEL);
+    if (!adlink)
+	return -ENOMEM;
 
-	adlink = devm_kzalloc(&pdev->dev, sizeof(struct adlink_i2c_dev), GFP_KERNEL);
-	if (!adlink)
-		return -ENOMEM;
+    memset(adlink, 0, sizeof(struct adlink_i2c_dev));
 
-	adlink->dev = &pdev->dev;
-	mutex_init(&adlink->i2c_lock);
-	platform_set_drvdata(pdev, adlink);
+    adlink->dev = &pdev->dev;
+    mutex_init(&i2c_lock);
+    platform_set_drvdata(pdev, adlink);
 
-	adap = &adlink->adapter;
-	i2c_set_adapdata(adap, adlink);
-	adap->owner = THIS_MODULE;
-	adap->class = I2C_CLASS_DEPRECATED;
-	strlcpy(adap->name, "ADLINK BMC I2C adapter", sizeof(adap->name));
-	adap->algo = &adlink_i2c_algo;
+    adap1 = &adlink->adapter1;
+    adap2 = &adlink->adapter2;
+    adap3 = &adlink->adapter3;
 
-	ret = adl_bmc_i2c_read_device(NULL, 0x30, 0, buf);
-	if (ret < 0) {
+    i2c_set_adapdata(adap1, adlink);
+    i2c_set_adapdata(adap2, adlink);
+    i2c_set_adapdata(adap3, adlink);
 
-		printk("i2c read error: %d\n", ret);
-		return -ENODEV;
-	}
+    adap1->owner = THIS_MODULE;
+    adap1->class = I2C_CLASS_DEPRECATED;
 
-	if(strncmp("NanoX,cExp-BT/BT2 3v3", buf, strlen("NanoX,cExp-BT/BT2 3v3")) != 0)
+    adap2->owner = THIS_MODULE;
+    adap2->class = I2C_CLASS_DEPRECATED;
+
+    adap3->owner = THIS_MODULE;
+    adap3->class = I2C_CLASS_DEPRECATED;
+
+    strlcpy(adap1->name, "ADLINK BMC I2C adapter bus 1", sizeof(adap1->name));
+    strlcpy(adap2->name, "ADLINK BMC I2C adapter bus 2", sizeof(adap2->name));
+    strlcpy(adap3->name, "ADLINK BMC I2C adapter bus 3", sizeof(adap3->name));
+
+    adap1->algo = &adlink_i2c_algo1;
+    adap2->algo = &adlink_i2c_algo2;
+    adap3->algo = &adlink_i2c_algo3;
+
+    if (adl_dev->Bmc_Capabilities[0] & SEMA_C_I2C1)
+    {
+	ret = i2c_add_adapter(adap1);
+	if(ret < 0)
 	{
-		delay = 300;
+	    return -1;
 	}
+    }
 
-	return i2c_add_adapter(adap);
+    if(adl_dev->Bmc_Capabilities[0] & SEMA_C_I2C2)
+    {
+	ret = i2c_add_adapter(adap2);
+	if(ret < 0)
+	{
+	    return -1;
+	}
+    }
+
+    if(adl_dev->Bmc_Capabilities[0] & SEMA_C_I2C3)
+    {
+        ret = i2c_add_adapter(adap3);
+        if(ret < 0)
+        {
+            return -1;
+        }
+    }
+
+    if(alloc_chrdev_region(&(adlink->ldev), 0, 1, "adl_i2c_eapi") < 0)
+    {
+	return -1;
+    }
+
+    adlink->class = class_create(THIS_MODULE, "adl-bmc-i2c-eapi");
+    if(adlink->class == NULL)
+    {
+	unregister_chrdev_region(adlink->ldev, 1);
+	return -1;
+    }
+
+    if(device_create(adlink->class, NULL, adlink->ldev, NULL, "bmc-i2c-eapi") == NULL)
+    {
+	class_destroy(adlink->class);
+	unregister_chrdev_region(adlink->ldev, 1);
+	return -1;
+    }
+
+    cdev_init(&(adlink->cdev), &fops);
+    if(cdev_add(&(adlink->cdev), adlink->ldev, 1) < 0)
+    {
+	device_destroy(adlink->class, adlink->ldev);
+	class_destroy(adlink->class);
+	unregister_chrdev_region(adlink->ldev, 1);
+	return -1;
+    }
+
+    return 0;
 }
 
 static int adl_bmc_i2c_remove(struct platform_device *pdev)
 {
-	struct adlink_i2c_dev *adlink = platform_get_drvdata(pdev);
+    struct adlink_i2c_dev *adlink = platform_get_drvdata(pdev);
 
-	i2c_del_adapter(&adlink->adapter);
-	return 0;
+    device_destroy(adlink->class, adlink->ldev);
+    class_destroy(adlink->class);
+    cdev_del(&(adlink->cdev));
+    unregister_chrdev_region(adlink->ldev, 1);
+
+    if(&adlink->adapter1 != NULL)
+	i2c_del_adapter(&adlink->adapter1);
+    if(&adlink->adapter2 != NULL)
+	i2c_del_adapter(&adlink->adapter2);
+    if(&adlink->adapter3 != NULL)
+        i2c_del_adapter(&adlink->adapter3);
+    return 0;
 }
 
 static struct platform_driver adl_bmc_i2c_driver = {
-	.driver = {
-		.name	= "adl-bmc-i2c",
-	},
+    .driver = {
+	.name	= "adl-bmc-i2c",
+    },
 
-	.probe		= adl_bmc_i2c_probe,
-	.remove		= adl_bmc_i2c_remove,
+    .probe		= adl_bmc_i2c_probe,
+    .remove		= adl_bmc_i2c_remove,
 };
 
 module_platform_driver(adl_bmc_i2c_driver);

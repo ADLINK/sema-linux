@@ -1,11 +1,3 @@
-// SPDX-License-Identifier: LGPL-2.0+
-/*
- * SEMA Library APIs for backlight
- *
- * Copyright (C) 2020 ADLINK Technology Inc.
- *
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,8 +6,6 @@
 #include <unistd.h>
 #include <eapi.h>
 #include <common.h>
-
-#define DEFAULT_BRIGHTNESS 200
 
 uint32_t EApiVgaGetBacklightEnable(uint32_t id, uint32_t *pEnable)
 {
@@ -27,9 +17,14 @@ uint32_t EApiVgaGetBacklightEnable(uint32_t id, uint32_t *pEnable)
 	uint32_t Enable;
 	int ret;
 
-	if (id  != EAPI_ID_BACKLIGHT_1) {
+	if (id  != EAPI_ID_BACKLIGHT_1 ) {
 		errno = EINVAL;
 		return EAPI_STATUS_UNSUPPORTED;
+	}
+
+	if(pEnable==NULL)
+	{
+		return EAPI_STATUS_INVALID_PARAMETER;
 	}
 
 	sprintf(sysfile, "/sys/class/backlight/adl-bmc-bklight/bl_power");
@@ -39,9 +34,9 @@ uint32_t EApiVgaGetBacklightEnable(uint32_t id, uint32_t *pEnable)
 	}	
 
 	Enable = atoi(value);
-	if (!Enable)
+	if (Enable == 0)
 		*pEnable = EAPI_BACKLIGHT_SET_ON;
-	else
+	else if(Enable == 4)
 		*pEnable = EAPI_BACKLIGHT_SET_OFF;
 
 	return status;
@@ -50,43 +45,32 @@ uint32_t EApiVgaGetBacklightEnable(uint32_t id, uint32_t *pEnable)
 uint32_t EApiVgaSetBacklightEnable(uint32_t id, uint32_t Enable)
 {
         uint32_t status = EAPI_STATUS_SUCCESS;
-        uint32_t Brightness = DEFAULT_BRIGHTNESS;
-	char value[256];
+        char value[256];
 	char sysfile[256];
 	int ret;
 
-	if(Enable != EAPI_BACKLIGHT_SET_ON && Enable != 1){
+	if(Enable != EAPI_BACKLIGHT_SET_ON && Enable != EAPI_BACKLIGHT_SET_OFF){
                 return EAPI_STATUS_INVALID_PARAMETER;
         }
 
-	if (id  != EAPI_ID_BACKLIGHT_1) {
+	if (id  != EAPI_ID_BACKLIGHT_1 ) {
 		errno = EINVAL;
 		return EAPI_STATUS_UNSUPPORTED;
 	}
 
-	if (Enable == 0)
-		Enable = 4;
-	else
-		Enable = 0;
-
 	sprintf(sysfile, "/sys/class/backlight/adl-bmc-bklight/bl_power");
-	sprintf(value, "%u", Enable);
+	
+	if(Enable == 0)
+		sprintf(value, "%u", 4);
+	else
+		sprintf(value, "%u", 0);
+	
 	
 	ret = write_sysfs_file(sysfile, value, sizeof(value));
 	if(ret < 0) {
 		return EAPI_STATUS_WRITE_ERROR;
 	}
-
-	if (!Enable) {
-		sprintf(sysfile, "/sys/class/backlight/adl-bmc-bklight/brightness");
-		sprintf(value, "%u", Brightness);
-
-		ret = write_sysfs_file(sysfile, value, sizeof(value));
-		if(ret < 0) {
-			return EAPI_STATUS_WRITE_ERROR;
-		}
-	}
-
+	
 	return status;
 }
 
@@ -102,7 +86,7 @@ uint32_t EApiVgaGetBacklightBrightness(uint32_t id, uint32_t *pBrightness)
                 return EAPI_STATUS_INVALID_PARAMETER;
         }
 
-	if (id  != EAPI_ID_BACKLIGHT_1) {
+	if (id  != EAPI_ID_BACKLIGHT_1 ) {
 		errno = EINVAL;
 		return EAPI_STATUS_UNSUPPORTED;
 	}
@@ -128,18 +112,10 @@ uint32_t EApiVgaSetBacklightBrightness(uint32_t id, uint32_t Brightness)
                 return EAPI_STATUS_INVALID_PARAMETER;
         }
 
-	if (id  != EAPI_ID_BACKLIGHT_1) {
+	if (id  != EAPI_ID_BACKLIGHT_1 ) {
 		errno = EINVAL;
 		return EAPI_STATUS_UNSUPPORTED;
 	}
-
-	sprintf(sysfile, "/sys/class/backlight/adl-bmc-bklight/bl_power");
-	sprintf(value, "%u", 0);
-	ret = write_sysfs_file(sysfile, value, sizeof(value));
-	if(ret < 0) {
-		return EAPI_STATUS_WRITE_ERROR;
-	}
-
 	sprintf(sysfile, "/sys/class/backlight/adl-bmc-bklight/brightness");
 	sprintf(value, "%u", Brightness);
 
@@ -150,4 +126,3 @@ uint32_t EApiVgaSetBacklightBrightness(uint32_t id, uint32_t Brightness)
 	
 	return status;
 }
-
