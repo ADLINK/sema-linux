@@ -1,63 +1,55 @@
-## Introduction
+
+
+### What is SEMA?
+
+**The Smart Embedded Management Agent (SEMA®)**
+
+Downtime of devices or systems is not acceptable in today's industries. To help customers to analyze their systems and take counter measures for preventive maintenance, ADLINK Technology Inc. has developed a tool which is able to monitor and collect system performance and status information from the hardware in a timely, flexible and precise manner. A Board Management Controller collects all relevant technical information from the chipset and other sources.
+
+Using the System Management Bus driver, an application layer fetches the data and presents it to the user. SEMA® provides a ready-made application that shows the data in user-friendly graphic interfaces, suitable for supervision and troubleshooting.
 
 
 
-<img src="https://cdn.adlinktech.com/webupd/en/Upload/ProductNews/logo_sema.png" alt="sema_logo" width="30%" align="right"  />
+### Important notice 
 
-## What is SEMA 4.0?
+SEMA4.0 would be supported for the different board controllers with our design. It would take effort to implement the layer between the driver and the controller. 
 
-**The Smart Embedded Management Agent (SEMA®)** 
+Prior to the release of SEMA 4.0 integration, **please check on which platform/hardware you're using first and then select the corresponding branch on GitHub.**
 
-Downtime of devices or systems is not acceptable in today's industries. To help customers to analyze their 
-systems and take counter measures for preventive maintenance, ADLINK Technology Inc. has developed a tool which is able to monitor and collect system performance and status information from the hardware in a timely, flexible and precise manner. A Board Management Controller collects all relevant technical information from the chipset and other sources.
-
-Using the System Management Bus driver, an application layer fetches the data and presents it to the user. 
-SEMA® provides a ready-made application that shows the data in user-friendly graphic interfaces, suitable 
-for supervision and troubleshooting.
+| branch: sema-ec<br> https://github.com/ADLINK/sema-linux/tree/sema-ec | branch: sema-bmc<br>https://github.com/ADLINK/sema-linux/tree/sema-bmc |
+| :----------------------------------------------------------- | ------------------------------------------------------------ |
+| - cExpress-TL , cExpress-EL, cExpress-AR<br>- Express-ID7, Express-ADP, Express-TL <br>- COM-HPC-cADP, COM-HPC-sIDH <br>- LEC-EL <br>- nanoX-EL | - Express-CF/CFE, Express-KL/KLE, Express-SL/SLE, Express-DN7, Express-BD7 <br>- cExpress-WL, cExpress-KL, cExpress-SL, cExpress-AL<br>- nanoX-AL<br>- LEC-AL<br>- Q7-AL<br>- LEC-PX30 |
 
 
 
-Features
-----------
+### Architecture Overview 
 
-SEMA® is designed to be:
+Here is the architecture of SEMA 4.0 as below:
 
-* Power Consumption
-* User Area Access
-* I2C Control 
-* Temperatures (CPU and Board)
-* Board Information (Serial Number, Part Number, Firmware Version...)
-* Fan Control
-* GPIO Control (only support PCA9535 I/O Expander)
-* Watch Dog  
-
-
-Detailed forensic information is available after system or module failures. The BMC Power-Up Error Log function provides detailed information about history of failures that may have occurred during power-up sequences. Log information includes e.g. error number, flags, restart event, power cycles, boot count, status, CPU temperature and board temperature. Moreover minimum and maximum temperature of the CPU and system is available to analyze system or module failure in detail.
+![image-20220422162134957](Readme.assets/image-20220422162134957.png)
 
 
 
-Support Operating System
---------------------------
-* **Windows 10 64bit**
+* Modularization implementation in SEMA drivers an each driver can be individually installed based on your needs.
 
-* **Linux (kernel 4.15 or above)**
-  
-* **Yocto Linux ([meta-adlink-sema](https://github.com/ADLINK/meta-adlink-sema/tree/sema4.0))**  
+* When you develop your program,  we provide two approaches to access the board controller:
 
-* **VxWorks (by request)** 
-* **QNX (by request)**
+  * **EAPI(Embedded API) library:**  
+
+    PICMG® organization defined the software specification on COM Express for the industrial applications. Here is the available specification https://www.picmg.org/wp-content/uploads/COM_EAPI_R1_0.pdf for your reference.
+
+    Also, can use EPAI function calls to access the board controller if the developers are not familiar with sysfs interfaces.
+
+  * **Sysfs Interface:** 
+
+    With the exposure of Sysfs interfaces, it can be easier and straightforward to access the board controller.  
+
+    
+
+**Note:** All of source code is free to use. it includes SEMA driver, EAPI library, and utility. 
 
 
-## How to install
-* see [documentation](https://adlinktech.github.io/sema-doc/#/source/HowToInstallSEMA?id=ubuntu-linux) for more details
 
-## Supported Hardware List:
-* see [the hardware list](https://adlinktech.github.io/sema-doc/#/source/SupportedHardware) for more details
 
-## Developer's Guide (how to use EAPI or Sysfs): 
-* See [documentation](https://adlinktech.github.io/sema-doc/#/source/DeveloperGuide) for more details.
 
-   
-## Other information:
-internal GitLab commit ID: 981f6bf59bca14101d6c9d1f5345a69d1a5f91df
-
+#### 
