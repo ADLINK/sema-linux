@@ -8,7 +8,7 @@ Downtime of devices or systems is not acceptable in today's industries. To help 
 
 Using the System Management Bus driver, an application layer fetches the data and presents it to the user. SEMA® provides a ready-made application that shows the data in user-friendly graphic interfaces, suitable for supervision and troubleshooting.
 
-
+<br>
 
 ### Important notice 
 
@@ -16,17 +16,20 @@ SEMA4.0 would be supported for the different board controllers with our design. 
 
 Prior to the release of SEMA 4.0 integration, **please check on which platform/hardware you're using first and then select the corresponding branch on GitHub.**
 
-| branch: sema-ec<br> https://github.com/ADLINK/sema-linux/tree/sema-ec | branch: sema-bmc<br>https://github.com/ADLINK/sema-linux/tree/sema-bmc |
-| :----------------------------------------------------------- | ------------------------------------------------------------ |
+| sema-ec<br> https://github.com/ADLINK/sema-linux/tree/sema-ec            | sema-bmc<br>https://github.com/ADLINK/sema-linux/tree/sema-bmc |
+| :----------------------------------------------------------- | :------------------------------------------------------------ |
 | - cExpress-TL , cExpress-EL, cExpress-AR<br>- Express-ID7, Express-ADP, Express-TL <br>- COM-HPC-cADP, COM-HPC-sIDH <br>- LEC-EL <br>- nanoX-EL | - Express-CF/CFE, Express-KL/KLE, Express-SL/SLE, Express-DN7, Express-BD7 <br>- cExpress-WL, cExpress-KL, cExpress-SL, cExpress-AL<br>- nanoX-AL<br>- LEC-AL<br>- Q7-AL<br>- LEC-PX30 |
 
-
+<br>
 
 ### Architecture Overview 
 
 Here is the architecture of SEMA 4.0 as below:
 
+ 
+
 ![image-20220422162134957](Readme.assets/image-20220422162134957.png)
+ 
 
 
 
