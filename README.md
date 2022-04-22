@@ -10,7 +10,7 @@ Using the System Management Bus driver, an application layer fetches the data an
 
 <br>
 
-### Important notice 
+### Important Notice 
 
 SEMA4.0 would be supported for the different board controllers with our design. It would take effort to implement the layer between the driver and the controller. 
 
@@ -50,6 +50,24 @@ Here is the architecture of SEMA 4.0 as below:
     
 
 **Note:** All of source code is free to use. it includes SEMA driver, EAPI library, and utility. 
+
+<br>
+
+
+### Features Set
+
+* Power Consumption
+* User Area Access
+* I2C Control 
+* Temperatures (CPU and Board)
+* Board Information (Serial Number, Part Number, Firmware Version...)
+* Fan Control
+* GPIO Control 
+* Watch Dog  
+
+
+Detailed forensic information is available after system or module failures. The BMC Power-Up Error Log function provides detailed information about history of failures that may have occurred during power-up sequences. Log information includes e.g. error number, flags, restart event, power cycles, boot count, status, CPU temperature and board temperature. Moreover minimum and maximum temperature of the CPU and system is available to analyze system or module failure in detail.
+
 
 
 
