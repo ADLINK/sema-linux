@@ -34,7 +34,7 @@ Here is the architecture of SEMA 4.0 as below:
 
 
 
-* Modularization implementation in SEMA drivers an each driver can be individually installed based on your needs.
+* Modularization implementation in SEMA drivers and each driver can be individually installed based on your needs.
 
 * When you develop your program,  we provide two approaches to access the board controller:
 
