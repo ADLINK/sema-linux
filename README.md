@@ -2,9 +2,6 @@
 ### How to install
 * see [documentation](https://adlinktech.github.io/sema-doc/#/source/HowToInstallSEMA?id=ubuntu-linux) for more details
 
-### Supported Hardware List:
-* see [the hardware list](https://adlinktech.github.io/sema-doc/#/source/SupportedHardware) for more details
-
 ### Developer's Guide (how to use EAPI or Sysfs): 
 * See [documentation](https://adlinktech.github.io/sema-doc/#/source/DeveloperGuide) for more details.
 
