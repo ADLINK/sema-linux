@@ -1,21 +1,24 @@
 
 ### What is SEMA?
-<img src="https://cdn.adlinktech.com/webupd/en/Upload/ProductNews/logo_sema.png" alt="sema_logo" width="30%" align="right"  />
+<img src="https://cdn.adlinktech.com/webupd/en/Upload/ProductNews/logo_sema.png" alt="sema_logo" width="20%" align="right"  />
 
 
 **The Smart Embedded Management Agent (SEMA®)**
 
-Downtime of devices or systems is not acceptable in today's industries. To help customers to analyze their systems and take counter measures for preventive maintenance, ADLINK Technology Inc. has developed a tool which is able to monitor and collect system performance and status information from the hardware in a timely, flexible and precise manner. A Board Management Controller collects all relevant technical information from the chipset and other sources.
+Downtime of devices or systems is not acceptable in today's industries. To help customers to analyze their systems and take counter measures for preventive maintenance. We provide the solution which is able to monitor and collect system performance and status information from the hardware in a timely.
 
-Using the System Management Bus driver, an application layer fetches the data and presents it to the user. SEMA® provides a ready-made application that shows the data in user-friendly graphic interfaces, suitable for supervision and troubleshooting.
+A Board Management Controller is embedded on our hardware and collects all relevant technical information from the chipset through the different communication interfaces such as eSPI, I2C and SMBus.
+
+SEMA® middleware is on the top of Board controller that provides a ready-made application that shows the data in user-friendly graphic interfaces, suitable for supervision and troubleshooting.
+
 
 <br>
 
 ### Important Notice 
 
-SEMA4.0 would be supported for the different board controllers with our design. It would take effort to implement the layer between the driver and the controller. 
+SEMA4.0 would be designed the abstraction layer to integrate the different controllers (EC, TivaBCC and LiteBMC) and this integration will be ready in Q4 2022. 
 
-Prior to the release of SEMA 4.0 integration, **please check on which platform/hardware you're using first and then select the corresponding branch on GitHub.**
+Prior to the release of SEMA 4.0 integration, **please check which platform/hardware you're using first and then select the corresponding branch on GitHub**
 
 | sema-ec<br> https://github.com/ADLINK/sema-linux/tree/sema-ec            | sema-bmc<br>https://github.com/ADLINK/sema-linux/tree/sema-bmc |
 | :----------------------------------------------------------- | :------------------------------------------------------------ |
