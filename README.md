@@ -2,7 +2,7 @@
 ### How to install SEMA® - EC controller
 * see [documentation](https://adlinktech.github.io/sema/HowToInstallonLinux.html) for more details
 
-### Developer's Guide (how to use EAPI or Sysfs): 
+### Developer's Guide (how to use EAPI and Sysfs): 
 * See [documentation](https://adlinktech.github.io/sema/DeveloperGuide.html) for more details.
 
    
