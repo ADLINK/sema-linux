@@ -45,7 +45,6 @@ Here is the architecture of SEMA 4.0 as below:
 
     PICMG® organization defined the software specification on COM Express for the industrial applications. Here is the available specification https://www.picmg.org/wp-content/uploads/COM_EAPI_R1_0.pdf for your reference.
 
-    Also, can use EPAI function calls to access the board controller if the developers are not familiar with sysfs interfaces.
 
   * **Sysfs Interface:** 
 
@@ -53,7 +52,7 @@ Here is the architecture of SEMA 4.0 as below:
 
     
 
-**Note:** All of source code is free to use. it includes SEMA driver, EAPI library, and utility. 
+**Note:** All of source code is free to use which including SEMA driver, EAPI library, and utility.
 
 <br>
 
@@ -70,8 +69,12 @@ Here is the architecture of SEMA 4.0 as below:
 * Watch Dog  
 
 
-Detailed forensic information is available after system or module failures. The BMC Power-Up Error Log function provides detailed information about history of failures that may have occurred during power-up sequences. Log information includes e.g. error number, flags, restart event, power cycles, boot count, status, CPU temperature and board temperature. Moreover minimum and maximum temperature of the CPU and system is available to analyze system or module failure in detail.
-
+### Support Operating System
+* Windows OS: Windows 10 64bit
+* Linux OS: kernel 4.15 or above
+* Yocto Linux: see meta-adlink-sema for more details
+* VxWorks (by request)
+* QNX (by request)
 
 
 
