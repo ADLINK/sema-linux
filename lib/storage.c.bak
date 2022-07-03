@@ -14,7 +14,6 @@
 
 #define EAPI_STOR_LOCK       _IOWR('a', 1, unsigned long)
 #define EAPI_STOR_UNLOCK       _IOWR('a', 2, unsigned long)
-#define EAPI_STOR_REGION      _IOWR('a', 3, unsigned long)
 
 struct secure {
         uint8_t Region;
@@ -115,17 +114,12 @@ uint32_t EApiStorageAreaRead(uint32_t Id,uint32_t Region, uint32_t Offset, void 
 	int fd;
 	uint32_t BytecntTemp=Bytecnt;
         uint8_t pBufferTemp[(Bytecnt%4)?Bytecnt+4-(Bytecnt%4):Bytecnt];
-	struct secure data;       
-	        
+	
 	if(Region==1)
 	{
 		NVMEM_INIT();
 	}
 	else if(Region==2)
-	{
-		NVMEM_SEC_INIT();
-	}
-	else if(Region==3)
 	{
 		NVMEM_SEC_INIT();
 	}
@@ -147,20 +141,6 @@ uint32_t EApiStorageAreaRead(uint32_t Id,uint32_t Region, uint32_t Offset, void 
 		return EAPI_STATUS_MORE_DATA;
 	}
 
-	data.Region=Region;
-	
-        if((fd = open("/dev/bmc-nvmem-eapi", O_RDWR)) < 0)
-	{
-		return -1;
-	}
-	if(ioctl(fd, EAPI_STOR_REGION, &data ) < 0)
-        {
-        	close(fd);
-		return EAPI_STATUS_UNSUPPORTED;
-	}
-	else
-	close(fd);
-		
 	fd = open(NVMEM_DEVICE, O_RDONLY);
 	
 	if (fd < 0)
@@ -195,17 +175,12 @@ uint32_t EApiStorageAreaWrite(uint32_t Id,uint32_t Region, uint32_t Offset, char
 {
 	uint32_t status = EAPI_STATUS_SUCCESS;
 	int ret,fd;
-	struct secure data;       
 	
 	if(Region==1)
 	{
 		NVMEM_INIT();
 	}
 	else if(Region==2)
-	{
-		NVMEM_SEC_INIT();
-	}
-	else if(Region==3)
 	{
 		NVMEM_SEC_INIT();
 	}
@@ -242,19 +217,6 @@ uint32_t EApiStorageAreaWrite(uint32_t Id,uint32_t Region, uint32_t Offset, char
 		buffer = (unsigned char*)Buf;
 	}
 
-	data.Region=Region;
-	
-        if((fd = open("/dev/bmc-nvmem-eapi", O_RDWR)) < 0)
-	{
-		return -1;
-	}
-	if(ioctl(fd, EAPI_STOR_REGION, &data ) < 0)
-        {
-        	close(fd);
-		return EAPI_STATUS_UNSUPPORTED;
-	}
-	else
-	close(fd);
 	fd = open(NVMEM_DEVICE, O_WRONLY);
         
 	if (fd < 0)
@@ -289,7 +251,7 @@ uint32_t EApiStorageLock(uint32_t Id,uint32_t Region)
 	uint32_t status = EAPI_STATUS_SUCCESS;
 	int fd;
 	struct secure data;
-	if(Region!=2 && Region!=3 )
+	if(Region!=2)
 	{
 		return EAPI_STATUS_INVALID_PARAMETER;
 	}
@@ -311,8 +273,9 @@ uint32_t EApiStorageUnLock(uint32_t Id,uint32_t Region,uint32_t Permission, char
 {
 	uint32_t status = EAPI_STATUS_SUCCESS;
 	int fd;
-        struct secure data;       
-	if(Region!=2 && Region!=3 )
+        struct secure data;
+       
+	if(Region!=2)
 	{
 		return EAPI_STATUS_INVALID_PARAMETER;
 	}

@@ -771,10 +771,7 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 		passcode=argv[5];
 		ret = EApiStorageUnLock(Id,region,permission, passcode);
 		if (!ret) {
-			if(region==2)
 			printf("Secure region is unLocked successfully\n");
-			else if(region==3)
-			printf("ODM region is unLocked successfully\n");
 		}
 		else
 		{

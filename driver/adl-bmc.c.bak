@@ -636,7 +636,7 @@ static int adl_bmc_acpi_probe(struct platform_device *pdev)
 
     CollectCapabilities(adl_bmc_dev->Bmc_Capabilities, 0,  NULL);
 
-    debug_printk("%x %x\n", adl_bmc_dev->Bmc_Capabilities[0], adl_bmc_dev->Bmc_Capabilities[1]);
+    printk("%x %x\n", adl_bmc_dev->Bmc_Capabilities[0], adl_bmc_dev->Bmc_Capabilities[1]);
 
     platform_set_drvdata(pdev, adl_bmc_dev);
 

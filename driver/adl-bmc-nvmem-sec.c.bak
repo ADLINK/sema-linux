@@ -16,7 +16,6 @@
 #include "adl-bmc.h"
 #define EAPI_STOR_LOCK       _IOWR('a', 1, unsigned long)
 #define EAPI_STOR_UNLOCK       _IOWR('a', 2, unsigned long)
-#define EAPI_STOR_REGION      _IOWR('a', 3, unsigned long)
 
 struct secure {
    uint8_t Region;
@@ -26,7 +25,6 @@ struct secure {
 
 struct kobject *kobj_ref;
 unsigned int storagesize;
-static int REGION =2;
 struct adl_bmc_dev *adl_dev;
 
 struct adlink_nvmem_dev {
@@ -164,80 +162,6 @@ static int WriteMem(unsigned char Region, unsigned int nAdr, u8* pData, unsigned
     return -1;
 }
 #endif
-
-
-int ReadODMMem(unsigned char Region, unsigned int nAdr, u8* pData, unsigned int nSize)
-{
-    unsigned char  i;     
-    unsigned char pDataIn[] = { 0x2, 0x1, (unsigned char)nSize, (unsigned char)(Region + 1), (unsigned char)(nAdr >> 8), (unsigned char)(nAdr & 0xFF) };
-    
-    if(StatusCheck()!=0)
-    {
-        return -1;
-    }
-
-    if (adl_bmc_ec_write_device(EC_WO_ADDR_IIC_CMD_START,pDataIn, 6, EC_REGION_2) == 0)
-    {
-        pDataIn[0] = 4;
-
-        if (adl_bmc_ec_write_device(EC_RW_ADDR_IIC_BMC_STATUS, pDataIn, 1,EC_REGION_2) == 0)
-        {
-            for (i = 0; i < 100; i++)
-            {
-                if (adl_bmc_ec_read_device(EC_RW_ADDR_IIC_BMC_STATUS, pDataIn, 1,EC_REGION_2) == 0)
-                {
-                  if (!!(pDataIn[0] & 0x4) == 0x0 && (pDataIn[0] & 0x1) == 0 && !!(pDataIn[0] & 0x8) == 0)             
-                    {
-                        delay(40);
-                        adl_bmc_ec_read_device(EC_RW_ADDR_IIC_BUFFER, pData, nSize, EC_REGION_2);
-			    if (pData[0] == 0xff)
-				    pData[0] = 0;			
-                        return 0;      
-                    }
-                }
-                delay(100);
-            }
-        }
-    }
-
-    return -1;
-}
-
-
-int WriteODMMem(unsigned char Region, unsigned int nAdr, u8* pData, unsigned int nSize)
-{
-    unsigned char  i;
-    unsigned char pDataIn[] = { 0x2, 0x2, (unsigned char)nSize, (unsigned char)(Region + 1), (unsigned char)(nAdr >> 8), (unsigned char)(nAdr & 0xFF) };
-    
-    if(StatusCheck() != 0)
-    {
-        return -1;
-    }
-
-    if (adl_bmc_ec_write_device(EC_WO_ADDR_IIC_CMD_START, pDataIn, 6,EC_REGION_2) == 0)
-    {
-        if (adl_bmc_ec_write_device(EC_RW_ADDR_IIC_BUFFER, pData, nSize,EC_REGION_2) == 0)
-        {
-            pDataIn[0] = 4;
-            if (adl_bmc_ec_write_device(EC_RW_ADDR_IIC_BMC_STATUS, pDataIn, 1,EC_REGION_2) == 0)
-            {
-                for (i = 0; i < 100; i++)
-                {
-                    if (adl_bmc_ec_read_device(EC_RW_ADDR_IIC_BMC_STATUS, pDataIn, 1,EC_REGION_2) == 0)
-		    {
-			    if (!!(pDataIn[0] & 0x4) == 0x0 && (pDataIn[0] & 0x1) == 0 && !!(pDataIn[0] & 0x8) == 0)
-			    {
-				    return 0;
-			    }
-		    }
-                    delay(100);
-                }
-            }            
-        }
-    }
-    return -1;
-}
-
 static ssize_t nvmemcap_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
     unsigned int blocklen = 4;
@@ -247,7 +171,7 @@ static ssize_t nvmemcap_show(struct kobject *kobj, struct kobj_attribute *attr, 
 static int adl_bmc_nvmem_read(void *context, unsigned int offset, void *val, size_t bytes)
 {
     size_t size;
-    int ret, i, region=2;
+    int ret, i;
     size = bytes;
     
     if(val == NULL)
@@ -257,37 +181,20 @@ static int adl_bmc_nvmem_read(void *context, unsigned int offset, void *val, siz
     
     mutex_lock(&adl_dev->mx_nvmem);
 
-	 if(REGION==2)	
-	 {
-    	 offset = offset + 0x6000;
-   	 region=2;
-   	 }
-   	 else if(REGION==3)	
-   	 {
-	 offset = offset + 0x0C00;
-    	 region=3;
-	}
-	
+    offset = offset + 0x6000;
+
     for(i = 0; size > 0; i += 32)
     {
 	if(size > 32)
 	{
 	    delay(200);
-	    if(region==2)
-	    ret = ReadMem(region, offset + i, (char*)(val + i), 32);
-	    else
-	    ret = ReadODMMem(region, offset + i, (char*)(val + i), 32);
-
+	    ret = ReadMem(2, offset + i, (char*)(val + i), 32);
 	    size -= 32;
 	}
 	else
 	{
 	    delay(200);
-	    if(region==2)
-	    ret = ReadMem(region, offset + i, (char*)(val + i), size);
-	    else
-	    ret = ReadODMMem(region, offset + i, (char*)(val + i), size);	    
-
+	    ret = ReadMem(2, offset + i, (char*)(val + i), size);
 	    size -= size;
 	}
 
@@ -308,7 +215,7 @@ static int adl_bmc_nvmem_read(void *context, unsigned int offset, void *val, siz
 static int adl_bmc_nvmem_write(void *context, unsigned int offset, void *val, size_t bytes)
 {
     size_t size=0;
-    int ret=0, i, region=2;
+    int ret=0, i;
 
     if((offset+bytes) > storagesize)
 	    return -EINVAL;
@@ -317,36 +224,20 @@ static int adl_bmc_nvmem_write(void *context, unsigned int offset, void *val, si
     
     mutex_lock(&adl_dev->mx_nvmem);
 
-	 if(REGION==2)	
-	 {
-    	 offset = offset + 0x6000;
-   	 region=2;
-   	 }
-   	 else if(REGION==3)	
-   	 {
-	 offset = offset + 0x0C00;
-    	 region=3;
-	}
+    offset = offset + 0x6000;
 
     for(i = 0; size > 0; i += 32)
     {
 	if(size > 32)
 	{
 	    delay(200);
-	    if(region==2)
-		ret = WriteMem(region, offset + i, (char*)(val + i), 32);
-	    else
-	    ret = WriteODMMem(region, offset + i, (char*)(val + i), 32);
+	    ret = WriteMem(2, offset + i, (char*)(val + i), 32);
 	    size -= 32;
 	}
 	else
 	{
 	    delay(200);
-	    if(region==2)
-	     ret = WriteMem(region, offset + i, (char*)(val + i), size);
-	    else
-	    ret = WriteODMMem(region, offset + i, (char*)(val + i), size);
-	    
+	    ret = WriteMem(2, offset + i, (char*)(val + i), size);
 	    size -= size;
 	}
 
@@ -409,40 +300,30 @@ static int adl_bmc_nvmem_unlock(struct secure *data)
 
     if (data->Region == 2)
     {
-		pDataIn_data[1] = 0xAC;
+	pDataIn_data[1] = 0xAC;
         if (data->permission == 1)
-		{
-			pDataIn_data[2] = 0x4;
-		}
-		else if (data->permission == 2)
-		{
-				pDataIn_data[2] = 0x6;
-			}
-			else
-		{
-				return -EINVAL;
-		}
-		
-		if((strcasecmp(data->passcode, "ADAC") != 0) && (strcasecmp(data->passcode, "0xadac") != 0) && (strcasecmp(data->passcode, "0xad0xac") != 0))
-		{
-			printk("came here %d\n", -EINVAL);
-			return -EINVAL;
-		}
+	{
+	    pDataIn_data[2] = 0x4;
+	}
+	else if (data->permission == 2)
+	{
+     	    pDataIn_data[2] = 0x6;
+        }
+    	else
+	{
+            return -EINVAL;
+	}
     }
-    else if (data->Region == 3)
+    else
     {
-		if (data->permission == 1)
-		{
-			pDataIn_data[2] = 0x4;
-		}
-		if((strcasecmp(data->passcode, "ADEC") != 0) && (strcasecmp(data->passcode, "0xadec") != 0) && (strcasecmp(data->passcode, "0xad0xec") != 0))
-		{
-			printk("came here- %d\n", -EINVAL);
-			return -EINVAL;
-		}
+        return -EINVAL;
     }
-	else
-	        return -EINVAL;
+
+    if((strcasecmp(data->passcode, "ADAC") != 0) && (strcasecmp(data->passcode, "0xadac") != 0) && (strcasecmp(data->passcode, "0xad0xac") != 0))
+    {
+	    printk("came here %d\n", -EINVAL);
+	    return -EINVAL;
+    }
 
     mutex_lock(&adl_dev->mx_nvmem);
     if(StatusCheck() != 0)
@@ -493,10 +374,6 @@ long ioctl(struct file *file, unsigned int cmd, unsigned long data)
 		    return -EINVAL;
 	    }
             copy_to_user((void*)data, &buffer, sizeof(struct secure));
-            return 0;
-        case EAPI_STOR_REGION:
-
-        	REGION = buffer.Region;
             return 0;
     }  
     return 0;
