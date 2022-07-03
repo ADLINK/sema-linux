@@ -1,10 +1,6 @@
-// SPDX-License-Identifier: GPL-2.0
 /*
- * Driver for HWMON, part of a mfd device
- *
- * Copyright (C) 2020 ADLINK Technology Inc.
- *
- */
+*/
+
 
 #include <linux/module.h>
 #include <linux/init.h>
@@ -23,8 +19,6 @@
 
 #include "adl-bmc.h"
 
-
-
 struct adl_bmc_hwmon_data {
 	struct device *hwmon_dev;
 	struct adl_bmc_dev *adl_dev;
@@ -35,16 +29,16 @@ struct adl_bmc_hwmon_data {
 #define SHOW_SET_FAN_ENABLE		1
 #define SHOW_SET_FAN_AUTO_TEMP_SRC 	2	
 /*
-FAN Modes:
-	00 = AUTO (SMART FAN)
-	01 = OFF
-	10 = ON
-	11 = Soft Fan (Smart FAN with interpolation
+   FAN Modes:
+   00 = AUTO (SMART FAN)
+   01 = OFF
+   10 = ON
+   11 = Soft Fan (Smart FAN with interpolation
 
-Temperature source:
-	0 = CPU Temperature
-	1 = Board Temperature
-*/
+   Temperature source:
+   0 = CPU Temperature
+   1 = Board Temperature
+   */
 
 #define SHOW_FAN_INPUT	 0
 
@@ -54,25 +48,35 @@ Temperature source:
 #define SHOW_TEMP_STARTUP 3
 #define SHOW_TEMP_LABEL 4
 
+#define TMP_LVL_1_INDEX 0
+#define PWM_LVL_1_INDEX 1
 
-#define KELVINS_OfFSET 2731
+#define TMP_LVL_2_INDEX 2
+#define PWM_LVL_2_INDEX 3
 
-static unsigned char DtsTemp;
+#define TMP_LVL_3_INDEX 4
+#define PWM_LVL_3_INDEX 5
+
+#define TMP_LVL_4_INDEX 6
+#define PWM_LVL_4_INDEX 7
+
+#define KELVINS_OFFSET 2731
 
 static ssize_t show_fan_enable_temp_src(struct device *dev, struct device_attribute *attr,
-			char *buf)
+		char *buf)
 {
 	unsigned char conf_data[32];
 	int i, size;
-	struct adl_bmc_hwmon_data *hwmon_data = dev_get_drvdata(dev);
 	unsigned int value = 0, bmc_conf = 0;
 	struct sensor_device_attribute_2 *sensor_attr_2 =
-						to_sensor_dev_attr_2(attr);
+		to_sensor_dev_attr_2(attr);
 	int fn = sensor_attr_2->nr;
 	int fan_num = sensor_attr_2->index;
 	debug_printk("%s\n", __func__);
-	size = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_SYSCFG, 4, conf_data);
-	for (i=0;i<32;i++)
+
+	size = adl_bmc_ec_read_device(ADL_BMC_OFS_SYSCFG, (u8*)conf_data,4, EC_REGION_1);
+
+	for (i=0;i<4;i++)
 	{
 		debug_printk("read_data i=%d, val=%x\n", i, conf_data[i]);
 	}
@@ -99,16 +103,6 @@ static ssize_t show_fan_enable_temp_src(struct device *dev, struct device_attrib
 				value = (bmc_conf >> 11) & 0x3;//get bits 12 and 11
 			}
 
-		
-			if (fan_num == 2) //system fan2
-			{
-				value = (bmc_conf >> 17) & 0x3;//get bits 18 and 17
-			}
-
-			if (fan_num == 3) //system fan3
-			{
-				value = (bmc_conf >> 20) & 0x3;//get bits 21 and 20
-			}
 			break;
 
 		case SHOW_SET_FAN_AUTO_TEMP_SRC:
@@ -124,31 +118,19 @@ static ssize_t show_fan_enable_temp_src(struct device *dev, struct device_attrib
 				value = (bmc_conf >> 13) & 0x1;//get bit 13
 			}
 
-		
-			if (fan_num == 2) //system fan2
-			{
-				value = (bmc_conf >> 16) & 0x1;//get bit 16
-			}
-
-			if (fan_num == 3) //system fan3
-			{
-				value = (bmc_conf >> 20) & 0x1;//get bit 19
-			}
 			break;
 		default:
 			return -EINVAL;
 	}
-	
-
 
 	return sprintf(buf, "%u\n", value);
-	
+
 }
 
 
 
 static ssize_t set_fan_enable_temp_src(struct device *dev, struct device_attribute *attr,
-		       const char *buf, size_t count)
+		const char *buf, size_t count)
 {
 	unsigned char conf_data[32];
 	int err;
@@ -159,26 +141,28 @@ static ssize_t set_fan_enable_temp_src(struct device *dev, struct device_attribu
 	struct adl_bmc_hwmon_data *hwmon_data = dev_get_drvdata(dev);
 
 	struct sensor_device_attribute_2 *sensor_attr_2 =
-						to_sensor_dev_attr_2(attr);
+		to_sensor_dev_attr_2(attr);
 	int fan_num = sensor_attr_2->index;
 	int fn = sensor_attr_2->nr;
 
 	debug_printk("%s\n", __func__);
 	debug_printk("fan_num %d \n", fan_num );
 
-        err = kstrtoul(buf, 10, &val);
-        if (err < 0)
-                return err;
+	err = kstrtoul(buf, 10, &val);
+	if (err < 0)
+		return err;
 
 	mutex_lock(&hwmon_data->update_lock);
 	/*read the config register*/
-	size = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_SYSCFG, 4, conf_data);
+
+	size = adl_bmc_ec_read_device(ADL_BMC_OFS_SYSCFG, (u8*)conf_data, 4, EC_REGION_1);
+
 	if (size < 0)
 	{
 		goto Exit;
 	}
 
-	for (i=0;i<32;i++)
+	for (i=0;i<4;i++)
 	{
 		debug_printk("read_data i=%d, val=%x\n", i, conf_data[i]);
 	}
@@ -212,19 +196,6 @@ static ssize_t set_fan_enable_temp_src(struct device *dev, struct device_attribu
 				bmc_conf &= ~(0x3 << 11);//clear bits 12 and 11
 				bmc_conf |= (val << 11);
 			}
-
-		
-			if (fan_num == 2) //system fan2
-			{
-				bmc_conf &= ~(0x3 << 17);//clear bits 18 and 17
-				bmc_conf |= (val << 17);
-			}
-
-			if (fan_num == 3) //system fan3
-			{
-				bmc_conf &= ~(0x3 << 20);//clear bits 21 and 20
-				bmc_conf |= (val << 20);
-			}
 			break;
 
 		case SHOW_SET_FAN_AUTO_TEMP_SRC:
@@ -246,34 +217,22 @@ static ssize_t set_fan_enable_temp_src(struct device *dev, struct device_attribu
 				bmc_conf &= ~(0x1 << 13);//clear bit 13
 				bmc_conf |= (val << 13);
 			}
-
-		
-			if (fan_num == 2) //system fan2
-			{
-				bmc_conf &= ~(0x1 << 16);//clear bit 16
-				bmc_conf |= (val << 16);
-			}
-
-			if (fan_num == 3) //system fan3
-			{
-				bmc_conf &= ~(0x1 << 20);//clear bit 19
-				bmc_conf |= (val << 20);
-			}
 			break;
 		default:
 			size = -EINVAL;
 			goto Exit;
 	}
-	
-			
+
 	conf_data[0] = bmc_conf & 0xff;
 	conf_data[1] = (bmc_conf >> 8) & 0xff;
 	conf_data[2] = (bmc_conf >> 16) & 0xff;
 	conf_data[3] = (bmc_conf >> 24) & 0xff;
-	size = adl_bmc_i2c_write_device(hwmon_data->adl_dev, ADL_BMC_CMD_SYSCFG, 4, conf_data);
+
+	size = adl_bmc_ec_write_device(ADL_BMC_OFS_SYSCFG, (u8*)conf_data, 4, EC_REGION_1);
+
 	if (size < 0)
 		goto Exit;
-	
+
 	size = count;
 Exit:
 	mutex_unlock(&hwmon_data->update_lock);
@@ -282,91 +241,77 @@ Exit:
 
 
 /*
-The BMC supports maximum 4 PWMs 
-Each PWM can be set for 4 temperature trigger points for SMART fan/SMART fan with interpolation mode. 
-And also, a corresponding PWM to be set. 
+   The BMC supports maximum 4 PWMs 
+   Each PWM can be set for 4 temperature trigger points for SMART fan/SMART fan with interpolation mode. 
+   And also, a corresponding PWM to be set. 
 
-show_pwm_auto_point_temp - shows Temperature trigger points for a PWM
-set_pwm_auto_point_temp  - sets Temperature trigger points for a PWM
+   show_pwm_auto_point_temp - shows Temperature trigger points for a PWM
+   set_pwm_auto_point_temp  - sets Temperature trigger points for a PWM
 
-show_pwm_auto_point_pwm	 - shows PWM trigger points for a PWM
-set_pwm_auto_point_pwm   - sets PWM trigger points for a PWM
-*/
+   show_pwm_auto_point_pwm	 - shows PWM trigger points for a PWM
+   set_pwm_auto_point_pwm   - sets PWM trigger points for a PWM
+   */
 
 static ssize_t show_fan_auto_point_temp(struct device *dev,
-					struct device_attribute *attr,
-					char *buf)
+		struct device_attribute *attr,
+		char *buf)
 {
-	u8 trig_temp[32];
-	int i;
+	u8 trig_temp[2];
 	int size;
-	struct adl_bmc_hwmon_data *hwmon_data = dev_get_drvdata(dev);
-
 	struct sensor_device_attribute_2 *sensor_attr_2 =
-						to_sensor_dev_attr_2(attr);
+		to_sensor_dev_attr_2(attr);
 	int temp_index = sensor_attr_2->index;
 	int fan_num = sensor_attr_2->nr;
 	unsigned char cmd;
 
 	debug_printk("%s fan_num: %d, temp_index: %d\n", __func__, fan_num, temp_index);
-	
+
 	switch (fan_num) {
 		case 0: //cpu fan
-		{
-			cmd = ADL_BMC_CPU_FAN_TEMP_THRE_REG;
-			break;
-		}
+			{
+				cmd = EC_RW_CPU_TMP_REG;
+				break;
+			}
 
-		case 1: //system fan1
-		{
-			cmd = ADL_BMC_SYS_FAN1_TEMP_THRE_REG;
-			break;
-		}
-
-
-		case 2: //system fan2
-		{
-			cmd = ADL_BMC_SYS_FAN2_TEMP_THRE_REG;
-			break;
-		}
-
-		case 3: //system fan3
-		{
-			cmd = ADL_BMC_SYS_FAN3_TEMP_THRE_REG;
-			break;
-		}
+		case 1: //system fan
+			{
+				cmd = EC_RW_SYS_TMP_REG;
+				break;
+			}
 		default:
 			return -EINVAL;
 	}
 
 
 	/*read the default temperature values*/
-	size = adl_bmc_i2c_read_device(hwmon_data->adl_dev, cmd, 4, trig_temp);
+	if(temp_index == 0)
+		size = adl_bmc_ec_read_device(cmd+TMP_LVL_1_INDEX, (u8*)trig_temp, 1, EC_REGION_1);
+	else if(temp_index == 1)
+		size = adl_bmc_ec_read_device(cmd+TMP_LVL_2_INDEX, (u8*)trig_temp, 1, EC_REGION_1);
+	else if(temp_index == 2)
+		size = adl_bmc_ec_read_device(cmd+TMP_LVL_3_INDEX, (u8*)trig_temp, 1, EC_REGION_1);
+	else if(temp_index == 3)
+		size = adl_bmc_ec_read_device(cmd+TMP_LVL_4_INDEX, (u8*)trig_temp, 1, EC_REGION_1);
+
 	if (size < 0)
 		return size;
 
-	for (i=0;i<32;i++)
-	{
-		debug_printk("read_data i=%d, val=%x\n", i, trig_temp[i]);
-	}
-
-	return sprintf(buf, "%d\n", trig_temp[temp_index]);
+	return sprintf(buf, "%d\n", trig_temp[0]);
 
 }
 
 static ssize_t set_fan_auto_point_temp(struct device *dev,
-				       struct device_attribute *attr,
-				       const char *buf, size_t count)
+		struct device_attribute *attr,
+		const char *buf, size_t count)
 {
-	u8 trig_temp[32];
+	u8 trig_temp[2];
 	int err;
-	int i;
 	int size;
 	long val;
 	struct adl_bmc_hwmon_data *hwmon_data = dev_get_drvdata(dev);
 
 	struct sensor_device_attribute_2 *sensor_attr_2 =
-						to_sensor_dev_attr_2(attr);
+		to_sensor_dev_attr_2(attr);
 	int temp_index = sensor_attr_2->index;
 	int fan_num = sensor_attr_2->nr;
 	unsigned char cmd;
@@ -374,11 +319,11 @@ static ssize_t set_fan_auto_point_temp(struct device *dev,
 	debug_printk("%s fan_num: %d, temp_index: %d \n", __func__, fan_num, temp_index);
 	debug_printk("fan_num %d,  user input is %s\n", fan_num , buf);
 
-        err = kstrtol(buf, 10, &val);
-        if (err < 0)
+	err = kstrtol(buf, 10, &val);
+	if (err < 0)
 	{
 		debug_printk("Error in kstrtoul %ld\n", val);
-                return err;
+		return err;
 	}
 
 	debug_printk("User input value is %ld\n", val);
@@ -388,54 +333,38 @@ static ssize_t set_fan_auto_point_temp(struct device *dev,
 		return -EINVAL;
 	}
 
-	
+
 	switch (fan_num) {
 		case 0: //cpu fan
-		{
-			cmd = ADL_BMC_CPU_FAN_TEMP_THRE_REG;
-			break;
-		}
+			{
+				cmd = EC_RW_CPU_TMP_REG;
+				break;
+			}
 
-		case 1: //system fan1
-		{
-			cmd = ADL_BMC_SYS_FAN1_TEMP_THRE_REG;
-			break;
-		}
+		case 1: //system fan
+			{
+				cmd = EC_RW_SYS_TMP_REG;
+				break;
+			}
 
-
-		case 2: //system fan2
-		{
-			cmd = ADL_BMC_SYS_FAN2_TEMP_THRE_REG;
-			break;
-		}
-
-		case 3: //system fan3
-		{
-			cmd = ADL_BMC_SYS_FAN3_TEMP_THRE_REG;
-			break;
-		}
 		default:
 			return -EINVAL;
 	}
 
 	mutex_lock(&hwmon_data->update_lock);
-	/*read the temparature values*/
-	size = adl_bmc_i2c_read_device(hwmon_data->adl_dev, cmd, 4, trig_temp);
-	if (size < 0)
-	{
-		debug_printk("Invalid size\n");
-		goto Exit;
-	}
 
-	for (i=0;i<32;i++)
-	{
-		debug_printk("read_data i=%d, val=%x\n", i, trig_temp[i]);
-	}
+	trig_temp[0] = (unsigned char)val;
+	debug_printk("Updated trigger temp is %d\n", trig_temp[0]);
 
+	if(temp_index == 0)
+		size = adl_bmc_ec_write_device(cmd+TMP_LVL_1_INDEX, (u8*)trig_temp, 1, EC_REGION_1);
+	else if(temp_index == 1)
+		size = adl_bmc_ec_write_device(cmd+TMP_LVL_2_INDEX, (u8*)trig_temp, 1, EC_REGION_1);
+	else if(temp_index == 2)
+		size = adl_bmc_ec_write_device(cmd+TMP_LVL_3_INDEX, (u8*)trig_temp, 1, EC_REGION_1);
+	else if(temp_index == 3)
+		size = adl_bmc_ec_write_device(cmd+TMP_LVL_4_INDEX, (u8*)trig_temp, 1, EC_REGION_1);
 
-	trig_temp[temp_index] = (unsigned char)val;
-	debug_printk("Updated trigger temp is %d\n", trig_temp[temp_index]);
-	size = adl_bmc_i2c_write_device(hwmon_data->adl_dev, cmd, 4, trig_temp);
 	if (size < 0)
 	{
 		goto Exit;
@@ -449,140 +378,112 @@ Exit:
 
 
 static ssize_t show_fan_auto_point_pwm(struct device *dev,
-				       struct device_attribute *attr,
-				       char *buf)
+		struct device_attribute *attr,
+		char *buf)
 {
-	u8 trig_pwm[32];
-	int i;
+	u8 trig_pwm[2];
 	int size;
-	struct adl_bmc_hwmon_data *hwmon_data = dev_get_drvdata(dev);
-
 	struct sensor_device_attribute_2 *sensor_attr_2 =
-						to_sensor_dev_attr_2(attr);
+		to_sensor_dev_attr_2(attr);
 	int pwm_index = sensor_attr_2->index;
 	int fan_num = sensor_attr_2->nr;
 	unsigned char cmd;
 
 	debug_printk("%s fan_num: %d, pwm_index: %d\n", __func__, fan_num, pwm_index);
-	
+
 	switch (fan_num) {
 		case 0: //cpu fan
-		{
-			cmd = ADL_BMC_CPU_FAN_PWM_THRE_REG;
-			break;
-		}
+			{
+				cmd = EC_RW_CPU_TMP_REG;
+				break;
+			}
 
 		case 1: //system fan1
-		{
-			cmd = ADL_BMC_SYS_FAN1_PWM_THRE_REG;
-			break;
-		}
-
-
-		case 2: //system fan2
-		{
-			cmd = ADL_BMC_SYS_FAN2_PWM_THRE_REG;
-			break;
-		}
-
-		case 3: //system fan3
-		{
-			cmd = ADL_BMC_SYS_FAN3_PWM_THRE_REG;
-			break;
-		}
+			{
+				cmd = EC_RW_SYS_TMP_REG;
+				break;
+			}
 		default:
 			return -EINVAL;
 	}
 
 
 	/*read the default temperature values*/
-	size = adl_bmc_i2c_read_device(hwmon_data->adl_dev, cmd, 4, trig_pwm);
+
+	if(pwm_index == 0)
+		size = adl_bmc_ec_read_device(cmd+PWM_LVL_1_INDEX, (u8*)trig_pwm, 1, EC_REGION_1);
+	else if(pwm_index == 1)
+		size = adl_bmc_ec_read_device(cmd+PWM_LVL_2_INDEX, (u8*)trig_pwm, 1, EC_REGION_1);
+	else if(pwm_index == 2)
+		size = adl_bmc_ec_read_device(cmd+PWM_LVL_3_INDEX, (u8*)trig_pwm, 1, EC_REGION_1);
+	else if(pwm_index == 3)
+		size = adl_bmc_ec_read_device(cmd+PWM_LVL_4_INDEX, (u8*)trig_pwm, 1, EC_REGION_1);
+
 	if (size < 0)
 		return size;
 
-	for (i=0;i<32;i++)
-	{
-		debug_printk("read_data i=%d, val=%x\n", i, trig_pwm[i]);
-	}
-
-	return sprintf(buf, "%d\n", trig_pwm[pwm_index]);
+	return sprintf(buf, "%d\n", trig_pwm[0]);
 }
 
 static ssize_t set_fan_auto_point_pwm(struct device *dev,
-				      struct device_attribute *attr,
-				      const char *buf, size_t count)
+		struct device_attribute *attr,
+		const char *buf, size_t count)
 {
-	u8 trig_pwm[32];
+	u8 trig_pwm[2];
 	int err;
-	int i;
 	int size;
 	unsigned long val;
 	struct adl_bmc_hwmon_data *hwmon_data = dev_get_drvdata(dev);
 
 	struct sensor_device_attribute_2 *sensor_attr_2 =
-						to_sensor_dev_attr_2(attr);
+		to_sensor_dev_attr_2(attr);
 	int pwm_index = sensor_attr_2->index;
 	int fan_num = sensor_attr_2->nr;
 	unsigned char cmd;
 
 	debug_printk("%s fan_num: %d, pwm_index: %d\n", __func__, fan_num, pwm_index);
 
-        err = kstrtoul(buf, 10, &val);
-        if (err < 0)
-                return err;
+	err = kstrtoul(buf, 10, &val);
+	if (err < 0)
+		return err;
 
 	if (val > 100) //check temperature range
 		return -EINVAL;
 
-	
+
 	switch (fan_num) {
 		case 0: //cpu fan
-		{
-			cmd = ADL_BMC_CPU_FAN_PWM_THRE_REG;
-			break;
-		}
+			{
+				cmd = EC_RW_CPU_TMP_REG;
+				break;
+			}
 
-		case 1: //system fan1
-		{
-			cmd = ADL_BMC_SYS_FAN1_PWM_THRE_REG;
-			break;
-		}
-
-
-		case 2: //system fan2
-		{
-			cmd = ADL_BMC_SYS_FAN2_PWM_THRE_REG;
-			break;
-		}
-
-		case 3: //system fan3
-		{
-			cmd = ADL_BMC_SYS_FAN3_PWM_THRE_REG;
-			break;
-		}
+		case 1: //system fan
+			{
+				cmd = EC_RW_SYS_TMP_REG;
+				break;
+			}
 		default:
 			return -EINVAL;
 	}
 
 	mutex_lock(&hwmon_data->update_lock);
-	/*read the pwm values*/
-	size = adl_bmc_i2c_read_device(hwmon_data->adl_dev, cmd, 4, trig_pwm);
-	if (size < 0) {
-		goto Exit;
-	}
 
-	for (i=0;i<32;i++)
-	{
-		debug_printk("read_data i=%d, val=%x\n", i, trig_pwm[i]);
-	}
+	trig_pwm[0] = (unsigned char)val;
 
-
-	trig_pwm[pwm_index] = (unsigned char)val;
-	size = adl_bmc_i2c_write_device(hwmon_data->adl_dev, cmd, 4, trig_pwm);
+	if(pwm_index == 0)
+		size = adl_bmc_ec_write_device(cmd+PWM_LVL_1_INDEX, (u8*)trig_pwm, 1, EC_REGION_1);
+	else if(pwm_index == 1)
+		size = adl_bmc_ec_write_device(cmd+PWM_LVL_2_INDEX, (u8*)trig_pwm, 1, EC_REGION_1);
+	else if(pwm_index == 2)
+		size = adl_bmc_ec_write_device(cmd+PWM_LVL_3_INDEX, (u8*)trig_pwm, 1, EC_REGION_1);
+	else if(pwm_index == 3)
+		size = adl_bmc_ec_write_device(cmd+PWM_LVL_4_INDEX, (u8*)trig_pwm, 1, EC_REGION_1);
+	
 	if (size < 0){
 		goto Exit;
 	}
-	
+
 	size = count;
 Exit: 
 	mutex_unlock(&hwmon_data->update_lock);
@@ -592,92 +493,61 @@ Exit:
 
 #define SENSOR_ATTR_FAN(fan_num) \
 	SENSOR_ATTR_2(fan##fan_num##_enable, S_IRUGO | S_IWUSR, \
-		show_fan_enable_temp_src, set_fan_enable_temp_src, SHOW_SET_FAN_ENABLE, fan_num-1), \
-	SENSOR_ATTR_2(fan##fan_num##_auto_channels_temp, S_IRUGO | S_IWUSR, \
+			show_fan_enable_temp_src, set_fan_enable_temp_src, SHOW_SET_FAN_ENABLE, fan_num-1), \
+SENSOR_ATTR_2(fan##fan_num##_auto_channels_temp, S_IRUGO | S_IWUSR, \
 		show_fan_enable_temp_src, set_fan_enable_temp_src, SHOW_SET_FAN_AUTO_TEMP_SRC, fan_num-1)
 
 #define SENSOR_ATTR_FAN_AUTO_POINT_TEMP(fan_num, temp_pt) \
 	SENSOR_ATTR_2(fan##fan_num##_auto_point##temp_pt##_temp, S_IRUGO | S_IWUSR, \
-		show_fan_auto_point_temp, set_fan_auto_point_temp, \
-		fan_num-1, temp_pt-1)
+			show_fan_auto_point_temp, set_fan_auto_point_temp, \
+			fan_num-1, temp_pt-1)
 
 #define SENSOR_ATTR_FAN_AUTO_POINT_PWM(fan_num, pwm_pt) \
 	SENSOR_ATTR_2(fan##fan_num##_auto_point##pwm_pt##_pwm, S_IRUGO | S_IWUSR, \
-		show_fan_auto_point_pwm, set_fan_auto_point_pwm, \
-		fan_num-1, pwm_pt-1)
+			show_fan_auto_point_pwm, set_fan_auto_point_pwm, \
+			fan_num-1, pwm_pt-1)
 
 
 //CPU FAN 
 static struct sensor_device_attribute_2 adl_bmc_sysfs_cpu_fan_pwm[] = {
-        SENSOR_ATTR_FAN(1),
-        SENSOR_ATTR_FAN_AUTO_POINT_TEMP(1, 1),
-        SENSOR_ATTR_FAN_AUTO_POINT_TEMP(1, 2),
-        SENSOR_ATTR_FAN_AUTO_POINT_TEMP(1, 3),
-        SENSOR_ATTR_FAN_AUTO_POINT_TEMP(1, 4),
-        SENSOR_ATTR_FAN_AUTO_POINT_PWM(1, 1),
-        SENSOR_ATTR_FAN_AUTO_POINT_PWM(1, 2),
-        SENSOR_ATTR_FAN_AUTO_POINT_PWM(1, 3),
-        SENSOR_ATTR_FAN_AUTO_POINT_PWM(1, 4),
+	SENSOR_ATTR_FAN(1),
+	SENSOR_ATTR_FAN_AUTO_POINT_TEMP(1, 1),
+	SENSOR_ATTR_FAN_AUTO_POINT_TEMP(1, 2),
+	SENSOR_ATTR_FAN_AUTO_POINT_TEMP(1, 3),
+	SENSOR_ATTR_FAN_AUTO_POINT_TEMP(1, 4),
+	SENSOR_ATTR_FAN_AUTO_POINT_PWM(1, 1),
+	SENSOR_ATTR_FAN_AUTO_POINT_PWM(1, 2),
+	SENSOR_ATTR_FAN_AUTO_POINT_PWM(1, 3),
+	SENSOR_ATTR_FAN_AUTO_POINT_PWM(1, 4),
 };
 
 //System FAN 1
 static struct sensor_device_attribute_2 adl_bmc_sysfs_sys_fan1_pwm[] = {
-        SENSOR_ATTR_FAN(2),
-        SENSOR_ATTR_FAN_AUTO_POINT_TEMP(2, 1),
-        SENSOR_ATTR_FAN_AUTO_POINT_TEMP(2, 2),
-        SENSOR_ATTR_FAN_AUTO_POINT_TEMP(2, 3),
-        SENSOR_ATTR_FAN_AUTO_POINT_TEMP(2, 4),
-        SENSOR_ATTR_FAN_AUTO_POINT_PWM(2, 1),
-        SENSOR_ATTR_FAN_AUTO_POINT_PWM(2, 2),
-        SENSOR_ATTR_FAN_AUTO_POINT_PWM(2, 3),
-        SENSOR_ATTR_FAN_AUTO_POINT_PWM(2, 4),
+	SENSOR_ATTR_FAN(2),
+	SENSOR_ATTR_FAN_AUTO_POINT_TEMP(2, 1),
+	SENSOR_ATTR_FAN_AUTO_POINT_TEMP(2, 2),
+	SENSOR_ATTR_FAN_AUTO_POINT_TEMP(2, 3),
+	SENSOR_ATTR_FAN_AUTO_POINT_TEMP(2, 4),
+	SENSOR_ATTR_FAN_AUTO_POINT_PWM(2, 1),
+	SENSOR_ATTR_FAN_AUTO_POINT_PWM(2, 2),
+	SENSOR_ATTR_FAN_AUTO_POINT_PWM(2, 3),
+	SENSOR_ATTR_FAN_AUTO_POINT_PWM(2, 4),
 
 };
 
-//System FAN 2
-static struct sensor_device_attribute_2 adl_bmc_sysfs_sys_fan2_pwm[] = {
-        SENSOR_ATTR_FAN(3),
-        SENSOR_ATTR_FAN_AUTO_POINT_TEMP(3, 1),
-        SENSOR_ATTR_FAN_AUTO_POINT_TEMP(3, 2),
-        SENSOR_ATTR_FAN_AUTO_POINT_TEMP(3, 3),
-        SENSOR_ATTR_FAN_AUTO_POINT_TEMP(3, 4),
-        SENSOR_ATTR_FAN_AUTO_POINT_PWM(3, 1),
-        SENSOR_ATTR_FAN_AUTO_POINT_PWM(3, 2),
-        SENSOR_ATTR_FAN_AUTO_POINT_PWM(3, 3),
-        SENSOR_ATTR_FAN_AUTO_POINT_PWM(3, 4),
-};
-
-//System FAN 3
-static struct sensor_device_attribute_2 adl_bmc_sysfs_sys_fan3_pwm[] = {
-        SENSOR_ATTR_FAN(4),
-        SENSOR_ATTR_FAN_AUTO_POINT_TEMP(4, 1),
-        SENSOR_ATTR_FAN_AUTO_POINT_TEMP(4, 2),
-        SENSOR_ATTR_FAN_AUTO_POINT_TEMP(4, 3),
-        SENSOR_ATTR_FAN_AUTO_POINT_TEMP(4, 4),
-        SENSOR_ATTR_FAN_AUTO_POINT_PWM(4, 1),
-        SENSOR_ATTR_FAN_AUTO_POINT_PWM(4, 2),
-        SENSOR_ATTR_FAN_AUTO_POINT_PWM(4, 3),
-        SENSOR_ATTR_FAN_AUTO_POINT_PWM(4, 4),
-};
-
-
-
-static int encode_celcius(signed char temp)
+static int encode_celcius(char temp)
 {
-	uint32_t tem;
-	tem = (uint32_t)((temp * 10) + KELVINS_OfFSET);
+	int tem;
+	tem = temp * 10 + KELVINS_OFFSET;
 	return tem;
 }
 
 static ssize_t show_fan_input(struct device *dev, struct device_attribute *attr, char *buf)
 {
-	
 	int ret;
 	unsigned char buff[32];
-
-	struct adl_bmc_hwmon_data *hwmon_data = dev_get_drvdata(dev);
 	struct sensor_device_attribute_2 *sensor_attr_2 = to_sensor_dev_attr_2(attr);
-	
+
 	unsigned short speed;
 	int ix = sensor_attr_2->index;
 
@@ -685,304 +555,236 @@ static ssize_t show_fan_input(struct device *dev, struct device_attribute *attr,
 	switch(ix) 
 	{
 		case 0:
-			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_CPU_FAN, 2, buff);
-			if(ret < 0)
-				return ret;
-			msleep(40);
-			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_CPU_FAN, 2, buff);
+			ret = adl_bmc_ec_read_device(ADL_BMC_OFS_RD_CPU_FAN, (u8*)buff, 2, EC_REGION_1);
+
 			if(ret < 0)
 				return ret;
 
+			debug_printk("%s speed %x %x ix %d\n", __func__, buff[0], buff[1], ix);
 			break;
 		case 1:
-			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_SYSTEM_FAN_1, 2, buff);
-			if(ret < 0)
-				return ret;
-			msleep(40);
-			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_SYSTEM_FAN_1, 2, buff);
-			if(ret < 0)
-				return ret;
-			break;
-		case 2:
-			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_SYSTEM_FAN_2, 2, buff);
-			if(ret < 0)
-				return ret;
-			msleep(40);
-			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_SYSTEM_FAN_2, 2, buff);
-			if(ret < 0)
-				return ret;
-			break;
+			ret = adl_bmc_ec_read_device(ADL_BMC_OFS_RD_SYSTEM_FAN_1, (u8*)buff, 2, EC_REGION_1);
 
-		case 3:
-			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_SYSTEM_FAN_3, 2, buff);
 			if(ret < 0)
 				return ret;
-			msleep(40);
-			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_SYSTEM_FAN_3, 2, buff);
-			if(ret < 0)
-				return ret;
+
+			debug_printk("%s speed %x %x ix %d\n", __func__, buff[0], buff[1], ix);
 			break;
 		default:
 			debug_printk(KERN_INFO "Index is not Matcing\n");
 			break;
 	}
 
-	debug_printk("bufer: %d %d\n", buff[0], buff[1]);	
-	speed = (((unsigned short)buff[0]) << 8 | buff[1]);
+	speed = (((unsigned short)buff[1]) << 8 | buff[0]);
+	debug_printk("speed is %d\n", speed);
 	return sprintf(buf, "%hu\n", speed);
 }
 static ssize_t show_temp_input(struct device *dev, struct device_attribute *attr, char *buf)
 {
-	
 	int ret;
-	signed char buff[32];
-
-	struct adl_bmc_hwmon_data *hwmon_data = dev_get_drvdata(dev);
+	uint8_t buff=0;
 	struct sensor_device_attribute_2 *sensor_attr_2 = to_sensor_dev_attr_2(attr);
-	
-	unsigned short temper = 0;
+	unsigned short temper=0;
+
 	int ix = sensor_attr_2->index;
 
-	memset(buff, 0, sizeof(buff)); 
 	switch(ix) 
 	{
 		case 0:
-			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_CPU_TEMP, 2, (char *)buff);
-			debug_printk("return value buf: %d ret: %d\n", buff[0], ret);
+			ret = adl_bmc_ec_read_device(ADL_BMC_OFS_RD_CPU_TEMP, &buff, 1, EC_REGION_1);	
 			if(ret < 0)
 				return ret;
-			
-			temper = encode_celcius(buff[0]);
+
+			temper = encode_celcius (buff);
+
+			debug_printk("%s ix %d buff %d temper %d\n", __func__, ix, buff, temper);
 			break;
 		case 1:
-			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_SYSTEM_TEMP, 1, (char *)buff);
+			ret = adl_bmc_ec_read_device(ADL_BMC_OFS_RD_SYSTEM_TEMP, &buff, 1, EC_REGION_1);
 			if(ret < 0)
 				return ret;
-			temper = encode_celcius(buff[0]);
-			break;
-		case 2:
-			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_SYSTEM2_TEMP, 1, (char *)buff);
-			if(ret < 0)
-				return ret;
-			temper = encode_celcius(buff[0]);
-			break;
 
+			temper = encode_celcius (buff);
+			
+			debug_printk("%s ix %d buff %d temper %d\n", __func__, ix, buff, temper);
+			break;
 		default:
 			debug_printk(KERN_INFO "Index is not Matcing\n");
 			break;
 	}
-	
-		
+
+
 	return sprintf(buf, "%hu\n", temper);
 }
 
 static ssize_t show_temp_min(struct device *dev, struct device_attribute *attr, char *buf)
 {
-
-	struct adl_bmc_hwmon_data *hwmon_data = dev_get_drvdata(dev);
 	struct sensor_device_attribute_2 *sensor_attr_2 = to_sensor_dev_attr_2(attr);
 	int ix = sensor_attr_2->index;
 	int ret;
 	unsigned short temper = 0;
-	signed char buff[32];
+	uint8_t buff=0;
 
-	memset(buff, 0, sizeof(buff)); 
 	switch(ix) 
 	{
 		case 0:
-			if(DtsTemp)
-				return -EINVAL;
-			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_MINMAX_TEMP, 4, (char *)buff);
+			ret = adl_bmc_ec_read_device(ADL_BMC_OFS_RD_MINCPU_TEMP, &buff, 1, EC_REGION_1);
+
 			if(ret < 0)
 				return ret;
-			temper = encode_celcius(buff[1]);
+			temper = encode_celcius(buff);
+
+			debug_printk("%s ix %d buff %d temper %d\n", __func__, ix, buff, temper);
 			break;
 		case 1:
-			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_MINMAX_TEMP, 4, (char *)buff);
+			ret = adl_bmc_ec_read_device(ADL_BMC_OFS_RD_MINBRD_TEMP, &buff, 1, EC_REGION_1);
+
 			if(ret < 0)
 				return ret;
-			temper = encode_celcius(buff[3]);
-			break;
-		case 2:
-			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_SYSTEM2_MINMAX_TEMP, 4, (char *)buff);
-			if(ret < 0)
-				return ret;
-			temper = encode_celcius(buff[3]);
+			temper = encode_celcius(buff);
+
+			debug_printk("%s ix %d buff %d temper %d\n", __func__, ix, buff, temper);
 			break;
 
 		default:
 			debug_printk(KERN_INFO "Index is not Matcing\n");
 			break;
 	}
-	
-		
+
+
 	return sprintf(buf, "%hu\n", temper);
 }
 
 
 static ssize_t show_temp_max(struct device *dev, struct device_attribute *attr, char *buf)
 {
-	
-	struct adl_bmc_hwmon_data *hwmon_data = dev_get_drvdata(dev);
 	struct sensor_device_attribute_2 *sensor_attr_2 = to_sensor_dev_attr_2(attr);
 	int ix = sensor_attr_2->index;
 	int ret;
 	unsigned short temper = 0;
-	signed char buff[32];
+	uint8_t buff=0;
 
-	memset(buff, 0, sizeof(buff)); 
 	switch(ix) 
 	{
 		case 0:
-			if(DtsTemp)
-				return -EINVAL;
-			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_MINMAX_TEMP, 4, (char *)buff);
+			ret = adl_bmc_ec_read_device(ADL_BMC_OFS_RD_MAXCPU_TEMP, &buff, 1, EC_REGION_1);
+
 			if(ret < 0)
 				return ret;
-			temper = encode_celcius(buff[0]);
+			temper = encode_celcius(buff);
+			debug_printk("%s ix %d buff %d temper %d\n", __func__, ix, buff, temper);
 			break;
 		case 1:
-			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_MINMAX_TEMP, 4, (char *)buff);
-			if(ret < 0)
-				return ret;
-			temper = encode_celcius(buff[2]);
-			break;
-		case 2:
-			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_SYSTEM2_MINMAX_TEMP, 4, (char *)buff);
-			if(ret < 0)
-				return ret;
-			temper = encode_celcius(buff[2]);
-			break;
+			ret = adl_bmc_ec_read_device(ADL_BMC_OFS_RD_MAXBRD_TEMP, &buff, 1, EC_REGION_1);
 
+			if(ret < 0)
+				return ret;
+			temper = encode_celcius(buff);
+			debug_printk("%s ix %d buff %d temper %d\n", __func__, ix, buff, temper);
+			break;
 		default:
 			debug_printk(KERN_INFO "Index is not Matcing\n");
 			break;
 	}
-	
-		
+
+
 	return sprintf(buf, "%hu \n", temper);
 
-	
+
 }
 
 static ssize_t show_temp_startup(struct device *dev, struct device_attribute *attr, char *buf)
 {
-	
-	struct adl_bmc_hwmon_data *hwmon_data = dev_get_drvdata(dev);
 	struct sensor_device_attribute_2 *sensor_attr_2 = to_sensor_dev_attr_2(attr);
 	int ix = sensor_attr_2->index;
 	int ret;
-	unsigned int temper = 0;
-	signed char buff[32];
-	memset(buff, 0, sizeof(buff)); 
+	unsigned short temper = 0;
+	uint8_t buff=0;
 	switch(ix) 
 	{
 		case 0:
-			if(DtsTemp)
-				return -EINVAL;
-			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_STARTUP_TEMP, 2, (char *)buff);
+			ret = adl_bmc_ec_read_device(ADL_BMC_OFS_RD_CPU_STARTUP_TEMP, &buff, 1, EC_REGION_1);
+
 			if(ret < 0)
 				return ret;
-			temper = encode_celcius(buff[0]);
+			temper = encode_celcius(buff);
+			debug_printk("%s ix %d buff %d temper %d\n", __func__, ix, buff, temper);
 			break;
 		case 1:
-			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_STARTUP_TEMP, 2, (char *)buff);
+			ret = adl_bmc_ec_read_device(ADL_BMC_OFS_RD_BRD_STARTUP_TEMP, &buff, 1, EC_REGION_1);
+
 			if(ret < 0)
 				return ret;
-			temper = encode_celcius(buff[1]);
-			break;
-		case 2:
-			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_SYSTEM2_STARTUP_TEMP, 2, (char *)buff);
-			if(ret < 0)
-				return ret;
-			temper = encode_celcius(buff[1]);
+			temper = encode_celcius(buff);
+			debug_printk("%s ix %d buff %d temper %d\n", __func__, ix, buff, temper);
 			break;
 
 		default:
 			debug_printk(KERN_INFO "Index is not Matcing\n");
 			break;
 	}
-	
+
 	return sprintf(buf, "%u \n", temper);
 }
 
 
 
 #define SENSOR_ATTR_FAN_CPU(ix) \
-       SENSOR_ATTR_2(cpu_fan_speed, S_IRUGO, \
-                show_fan_input, NULL, SHOW_FAN_INPUT, ix-1)
+	SENSOR_ATTR_2(cpu_fan_speed, S_IRUGO, \
+			show_fan_input, NULL, SHOW_FAN_INPUT, ix-1)
 
 #define SENSOR_ATTR_FAN_SYS1(ix) \
-       SENSOR_ATTR_2(sys1_fan_speed, S_IRUGO, \
-                show_fan_input, NULL, SHOW_FAN_INPUT, ix-1)
-
-#define SENSOR_ATTR_FAN_SYS2(ix) \
-       SENSOR_ATTR_2(sys2_fan_speed, S_IRUGO, \
-                show_fan_input, NULL, SHOW_FAN_INPUT, ix-1)
-
-#define SENSOR_ATTR_FAN_SYS3(ix) \
-       SENSOR_ATTR_2(sys3_fan_speed, S_IRUGO, \
-                show_fan_input, NULL, SHOW_FAN_INPUT, ix-1)
+	SENSOR_ATTR_2(sys1_fan_speed, S_IRUGO, \
+			show_fan_input, NULL, SHOW_FAN_INPUT, ix-1)
 
 #define SENSOR_ATTR_TEMP_CPU(ix) \
-       SENSOR_ATTR_2(cpu_cur_temp, S_IRUGO, \
-                show_temp_input, NULL, SHOW_TEMP_INPUT, ix-1),\
-       SENSOR_ATTR_2(cpu_min_temp, S_IRUGO, \
-                show_temp_min, NULL, SHOW_TEMP_MIN, ix-1), \
-       SENSOR_ATTR_2(cpu_max_temp, S_IRUGO, \
-                show_temp_max, NULL, SHOW_TEMP_MAX, ix-1), \
-       SENSOR_ATTR_2(cpu_startup_temp, S_IRUGO, \
-                show_temp_startup, NULL, SHOW_TEMP_STARTUP, ix-1), \
+	SENSOR_ATTR_2(cpu_cur_temp, S_IRUGO, \
+			show_temp_input, NULL, SHOW_TEMP_INPUT, ix-1),\
+SENSOR_ATTR_2(cpu_min_temp, S_IRUGO, \
+		show_temp_min, NULL, SHOW_TEMP_MIN, ix-1), \
+SENSOR_ATTR_2(cpu_max_temp, S_IRUGO, \
+		show_temp_max, NULL, SHOW_TEMP_MAX, ix-1), \
+SENSOR_ATTR_2(cpu_startup_temp, S_IRUGO, \
+		show_temp_startup, NULL, SHOW_TEMP_STARTUP, ix-1), \
 
 #define SENSOR_ATTR_TEMP_SYSTEM1(ix) \
-       SENSOR_ATTR_2(sys1_cur_temp, S_IRUGO, \
-                show_temp_input, NULL, SHOW_TEMP_INPUT, ix-1),\
-       SENSOR_ATTR_2(sys1_min_temp, S_IRUGO, \
-                show_temp_min, NULL, SHOW_TEMP_MIN, ix-1), \
-       SENSOR_ATTR_2(sys1_max_temp, S_IRUGO, \
-                show_temp_max, NULL, SHOW_TEMP_MAX, ix-1), \
-       SENSOR_ATTR_2(sys1_startup_temp, S_IRUGO, \
-                show_temp_startup, NULL, SHOW_TEMP_STARTUP, ix-1), \
+	SENSOR_ATTR_2(sys1_cur_temp, S_IRUGO, \
+			show_temp_input, NULL, SHOW_TEMP_INPUT, ix-1),\
+SENSOR_ATTR_2(sys1_min_temp, S_IRUGO, \
+		show_temp_min, NULL, SHOW_TEMP_MIN, ix-1), \
+SENSOR_ATTR_2(sys1_max_temp, S_IRUGO, \
+		show_temp_max, NULL, SHOW_TEMP_MAX, ix-1), \
+SENSOR_ATTR_2(sys1_startup_temp, S_IRUGO, \
+		show_temp_startup, NULL, SHOW_TEMP_STARTUP, ix-1), \
 
 
 #define SENSOR_ATTR_TEMP_SYSTEM2(ix) \
-       SENSOR_ATTR_2(sys2_cur_temp, S_IRUGO, \
-                show_temp_input, NULL, SHOW_TEMP_INPUT, ix-1),\
-       SENSOR_ATTR_2(sys2_min_temp, S_IRUGO, \
-                show_temp_min, NULL, SHOW_TEMP_MIN, ix-1), \
-       SENSOR_ATTR_2(sys2_max_temp, S_IRUGO, \
-                show_temp_max, NULL, SHOW_TEMP_MAX, ix-1), \
-       SENSOR_ATTR_2(sys2_startup_temp, S_IRUGO, \
-                show_temp_startup, NULL, SHOW_TEMP_STARTUP, ix-1), \
+	SENSOR_ATTR_2(sys2_cur_temp, S_IRUGO, \
+			show_temp_input, NULL, SHOW_TEMP_INPUT, ix-1),\
+SENSOR_ATTR_2(sys2_min_temp, S_IRUGO, \
+		show_temp_min, NULL, SHOW_TEMP_MIN, ix-1), \
+SENSOR_ATTR_2(sys2_max_temp, S_IRUGO, \
+		show_temp_max, NULL, SHOW_TEMP_MAX, ix-1), \
+SENSOR_ATTR_2(sys2_startup_temp, S_IRUGO, \
+		show_temp_startup, NULL, SHOW_TEMP_STARTUP, ix-1), \
 
 //Temperatures 
 static struct sensor_device_attribute_2 adl_bmc_sysfs_cpu_temp[] = {
-        SENSOR_ATTR_TEMP_CPU(1)
+	SENSOR_ATTR_TEMP_CPU(1)
 };
 
 static struct sensor_device_attribute_2 adl_bmc_sysfs_board_temp[] = {
-        SENSOR_ATTR_TEMP_SYSTEM1(2)
-};
-static struct sensor_device_attribute_2 adl_bmc_sysfs_board_second_temp[] = {
-        SENSOR_ATTR_TEMP_SYSTEM2(3)
+	SENSOR_ATTR_TEMP_SYSTEM1(2)
 };
 
 //Fan 
 static struct sensor_device_attribute_2 adl_bmc_sysfs_cpu_fan[] = {
-        SENSOR_ATTR_FAN_CPU(1)
+	SENSOR_ATTR_FAN_CPU(1)
 };
 
 static struct sensor_device_attribute_2 adl_bmc_sysfs_system_fan1[] = {
-        SENSOR_ATTR_FAN_SYS1(2)
+	SENSOR_ATTR_FAN_SYS1(2)
 };
-static struct sensor_device_attribute_2 adl_bmc_sysfs_system_fan2[] = {
-        SENSOR_ATTR_FAN_SYS2(3)
-};
-
-static struct sensor_device_attribute_2 adl_bmc_sysfs_system_fan3[] = {
-        SENSOR_ATTR_FAN_SYS3(4)
-};
-
 
 static void adl_bmc_hwmon_remove_sysfs(struct platform_device *pdev)
 {
@@ -992,42 +794,23 @@ static void adl_bmc_hwmon_remove_sysfs(struct platform_device *pdev)
 	hwmon_data = platform_get_drvdata(pdev);
 
 
-        if (hwmon_data->adl_dev->Bmc_Capabilities[0] & ADL_BMC_CAP_FAN_CPU)
+	if (hwmon_data->adl_dev->Bmc_Capabilities[0] & ADL_BMC_CAP_FAN_CPU)
 	{	
 		for (i = 0; i < ARRAY_SIZE(adl_bmc_sysfs_cpu_fan_pwm); i++) {
 			device_remove_file(dev,
-				&adl_bmc_sysfs_cpu_fan_pwm[i].dev_attr);
+					&adl_bmc_sysfs_cpu_fan_pwm[i].dev_attr);
 		}
 	}
 
-        if (hwmon_data->adl_dev->Bmc_Capabilities[0] & ADL_BMC_SYS_FAN1_CAP)
+	if (hwmon_data->adl_dev->Bmc_Capabilities[0] & ADL_BMC_SYS_FAN1_CAP)
 	{	
 		for (i = 0; i < ARRAY_SIZE(adl_bmc_sysfs_sys_fan1_pwm); i++) {
 			device_remove_file(dev,
-				&adl_bmc_sysfs_sys_fan1_pwm[i].dev_attr);
+					&adl_bmc_sysfs_sys_fan1_pwm[i].dev_attr);
 		}
 	}
 
-	
-        if (hwmon_data->adl_dev->Bmc_Capabilities[0] & ADL_BMC_SYS_FAN2_CAP)
-	{	
-		for (i = 0; i < ARRAY_SIZE(adl_bmc_sysfs_sys_fan2_pwm); i++) {
-			device_remove_file(dev,
-				&adl_bmc_sysfs_sys_fan2_pwm[i].dev_attr);
-		}
-	}
-
-
-	
-        if (hwmon_data->adl_dev->Bmc_Capabilities[0] & ADL_BMC_SYS_FAN3_CAP)
-	{	
-		for (i = 0; i < ARRAY_SIZE(adl_bmc_sysfs_sys_fan3_pwm); i++) {
-			device_remove_file(dev,
-				&adl_bmc_sysfs_sys_fan3_pwm[i].dev_attr);
-		}
-	}
-
-	/*Remove sysfs entry for tempearature*/
+	/*Remove sysfs entry for temperature*/
 	if (hwmon_data->adl_dev->Bmc_Capabilities[0] & ADL_BMC_CAP_TEMP) 
 	{
 		for (i = 0; i < ARRAY_SIZE(adl_bmc_sysfs_cpu_temp); i++)
@@ -1044,22 +827,13 @@ static void adl_bmc_hwmon_remove_sysfs(struct platform_device *pdev)
 			device_remove_file(&pdev->dev, &adl_bmc_sysfs_board_temp[i].dev_attr);
 		}
 	}
- 
-	if (hwmon_data->adl_dev->Bmc_Capabilities[1] & ADL_BMC_CAP_TEMP_1)
-	{
-
-		for (i = 0; i < ARRAY_SIZE(adl_bmc_sysfs_board_second_temp); i++)
-		{
-			device_remove_file(&pdev->dev, &adl_bmc_sysfs_board_second_temp[i].dev_attr);
-		}
-	}
 
 	/*Remove sysfs entry for fan*/
 	if (hwmon_data->adl_dev->Bmc_Capabilities[0] & ADL_BMC_CAP_FAN_CPU) 
 	{ 
 		for (i = 0; i < ARRAY_SIZE(adl_bmc_sysfs_cpu_fan); i++)
 		{
-			 device_remove_file(&pdev->dev, &adl_bmc_sysfs_cpu_fan[i].dev_attr);
+			device_remove_file(&pdev->dev, &adl_bmc_sysfs_cpu_fan[i].dev_attr);
 		}
 	}
 
@@ -1070,23 +844,6 @@ static void adl_bmc_hwmon_remove_sysfs(struct platform_device *pdev)
 			device_remove_file(&pdev->dev, &adl_bmc_sysfs_system_fan1[i].dev_attr);
 		}
 	}
-
-	if (hwmon_data->adl_dev->Bmc_Capabilities[0] & ADL_BMC_SYS_FAN2_CAP) 
-	{ 
-		for (i = 0; i < ARRAY_SIZE(adl_bmc_sysfs_system_fan2); i++)
-		{
-			device_remove_file(&pdev->dev, &adl_bmc_sysfs_system_fan2[i].dev_attr);
-		}
-	}
-
-	if (hwmon_data->adl_dev->Bmc_Capabilities[0] & ADL_BMC_SYS_FAN3_CAP) 
-	{ 
-		for (i = 0; i < ARRAY_SIZE(adl_bmc_sysfs_system_fan3); i++)
-		{
-			 device_remove_file(&pdev->dev, &adl_bmc_sysfs_system_fan3[i].dev_attr);
-		}
-	}
-
 }
 
 static int adl_bmc_hwmon_probe(struct platform_device *pdev)
@@ -1094,7 +851,7 @@ static int adl_bmc_hwmon_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct adl_bmc_hwmon_data *hwmon_data;
 	int i, err;
-
+	
 	hwmon_data = devm_kzalloc(dev, sizeof(struct adl_bmc_hwmon_data), GFP_KERNEL);
 	if (!hwmon_data)
 		return -ENOMEM;
@@ -1105,18 +862,20 @@ static int adl_bmc_hwmon_probe(struct platform_device *pdev)
 	mutex_init(&hwmon_data->update_lock);
 	/* Create sysfs interface based on the capability */
 
+	debug_printk(KERN_INFO"===>%s %x %x\n",__func__, hwmon_data->adl_dev->Bmc_Capabilities[0], hwmon_data->adl_dev->Bmc_Capabilities[1]);
+
 	/*check CPU fan capability*/
 	if (hwmon_data->adl_dev->Bmc_Capabilities[0] & ADL_BMC_CAP_FAN_CPU) 
 	{
 		debug_printk("CPU fan present\n");
 		for (i = 0; i < ARRAY_SIZE(adl_bmc_sysfs_cpu_fan_pwm); i++) {
 			err = device_create_file(dev,
-				&adl_bmc_sysfs_cpu_fan_pwm[i].dev_attr);
+					&adl_bmc_sysfs_cpu_fan_pwm[i].dev_attr);
 			if (err)
 				goto EXIT_DEV_REMOVE;
 		}
 	}
-		
+
 
 	/*check system fan1 capability*/
 	if (hwmon_data->adl_dev->Bmc_Capabilities[0] & ADL_BMC_SYS_FAN1_CAP) 
@@ -1124,31 +883,7 @@ static int adl_bmc_hwmon_probe(struct platform_device *pdev)
 		debug_printk("System fan1 present\n");
 		for (i = 0; i < ARRAY_SIZE(adl_bmc_sysfs_sys_fan1_pwm); i++) {
 			err = device_create_file(dev,
-				&adl_bmc_sysfs_sys_fan1_pwm[i].dev_attr);
-			if (err)
-				goto EXIT_DEV_REMOVE;
-		}
-	}
-
-	/*check system fan2 capability*/
-	if (hwmon_data->adl_dev->Bmc_Capabilities[0] & ADL_BMC_SYS_FAN2_CAP) 
-	{
-		debug_printk("System fan2 present\n");
-		for (i = 0; i < ARRAY_SIZE(adl_bmc_sysfs_sys_fan2_pwm); i++) {
-			err = device_create_file(dev,
-				&adl_bmc_sysfs_sys_fan2_pwm[i].dev_attr);
-			if (err)
-				goto EXIT_DEV_REMOVE;
-		}
-	}
-
-	/*check system fan3 capability*/
-	if (hwmon_data->adl_dev->Bmc_Capabilities[0] & ADL_BMC_SYS_FAN3_CAP) 
-	{
-		debug_printk("System fan3 present\n");
-		for (i = 0; i < ARRAY_SIZE(adl_bmc_sysfs_sys_fan3_pwm); i++) {
-			err = device_create_file(dev,
-				&adl_bmc_sysfs_sys_fan3_pwm[i].dev_attr);
+					&adl_bmc_sysfs_sys_fan1_pwm[i].dev_attr);
 			if (err)
 				goto EXIT_DEV_REMOVE;
 		}
@@ -1157,28 +892,14 @@ static int adl_bmc_hwmon_probe(struct platform_device *pdev)
 	/*check CPU temperature capability and create sysfs entry for CPU tempearature*/
 	if (hwmon_data->adl_dev->Bmc_Capabilities[0] & ADL_BMC_CAP_TEMP) 
 	{
-		char buff[32];
-		int ret;
-		/* Test for CPU Temperature*/
-		memset(buff, 0, sizeof(buff));
-		ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_CPU_TEMP, 2, buff);
-		if(ret < 0)
-			return ret;
-		if (ret == 2) {
-			DtsTemp = 0;
 
-			for (i = 0; i < ARRAY_SIZE(adl_bmc_sysfs_cpu_temp); i++)
-			{
+		debug_printk("CPU temp present\n");
+		for (i = 0; i < ARRAY_SIZE(adl_bmc_sysfs_cpu_temp); i++)
+		{
 				err = device_create_file(&pdev->dev, &adl_bmc_sysfs_cpu_temp[i].dev_attr);
 				if (err)
 					dev_err(&pdev->dev, "Creation of sysfs entry failed %d\n", err);
-			}
-
 		}
-
-		else 
-			DtsTemp = 1;
-
 
 	}
 
@@ -1189,17 +910,6 @@ static int adl_bmc_hwmon_probe(struct platform_device *pdev)
 		for (i = 0; i < ARRAY_SIZE(adl_bmc_sysfs_board_temp); i++)
 		{
 			err = device_create_file(&pdev->dev, &adl_bmc_sysfs_board_temp[i].dev_attr);
-			if (err)
-				dev_err(&pdev->dev, "Creation of sysfs entry failed %d\n", err);
-		}
-	}
-
-	/*check board 2nd temperature capability and create sysfs entry for board 2nd tempearature*/
-	if (hwmon_data->adl_dev->Bmc_Capabilities[1] & ADL_BMC_CAP_TEMP_1) 
-	{ 
-		for (i = 0; i < ARRAY_SIZE(adl_bmc_sysfs_board_second_temp); i++)
-		{
-			err = device_create_file(&pdev->dev, &adl_bmc_sysfs_board_second_temp[i].dev_attr);
 			if (err)
 				dev_err(&pdev->dev, "Creation of sysfs entry failed %d\n", err);
 		}
@@ -1227,29 +937,6 @@ static int adl_bmc_hwmon_probe(struct platform_device *pdev)
 		}
 	}
 
-	/*check system fan 2 apability and create sysfs entry for sysyem fan 2*/
-	if (hwmon_data->adl_dev->Bmc_Capabilities[0] & ADL_BMC_SYS_FAN2_CAP) 
-	{ 
-		for (i = 0; i < ARRAY_SIZE(adl_bmc_sysfs_system_fan2); i++)
-		{
-			err = device_create_file(&pdev->dev, &adl_bmc_sysfs_system_fan2[i].dev_attr);
-			if (err)
-				dev_err(&pdev->dev, "Creation of sysfs entry failed %d\n", err);
-		}
-	}
-
-	/*check system fan 3 apability and create sysfs entry for sysyem fan 3*/
-	if (hwmon_data->adl_dev->Bmc_Capabilities[0] & ADL_BMC_SYS_FAN3_CAP) 
-	{ 
-		for (i = 0; i < ARRAY_SIZE(adl_bmc_sysfs_system_fan3); i++)
-		{
-			err = device_create_file(&pdev->dev, &adl_bmc_sysfs_system_fan3[i].dev_attr);
-			if (err)
-				dev_err(&pdev->dev, "Creation of sysfs entry failed %d\n", err);
-		}
-	}
-
-
 	/* Register device */
 	hwmon_data->hwmon_dev = hwmon_device_register(dev);
 	if (IS_ERR(hwmon_data->hwmon_dev)) {
@@ -1269,7 +956,7 @@ static int adl_bmc_hwmon_probe(struct platform_device *pdev)
 		debug_printk("PWM interpolation capability not present\n");
 		hwmon_data->soft_fan = 0;
 	}
-		
+
 	debug_printk("adl_cap in fan driver: 0x%x\n", hwmon_data->adl_dev->Bmc_Capabilities[0]);
 
 	return 0;

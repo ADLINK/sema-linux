@@ -1,11 +1,3 @@
-// SPDX-License-Identifier: LGPL-2.0+
-/*
- * Helper functions for SEMA Library
- *
- * Copyright (C) 2020 ADLINK Technology Inc.
- *
- */
-
 #include <stdlib.h>
 #include <stdint.h>
 #include <ctype.h>

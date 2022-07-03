@@ -1,0 +1,90 @@
+#include "adl-bmc.h"
+
+
+int StatusCheck(void)
+{
+    unsigned char status, i;
+
+    for(i=0; i<100; i++)
+    {
+        if(adl_bmc_ec_read_device(EC_RW_ADDR_IIC_BMC_STATUS, &status, 1, EC_REGION_2) == 0)
+        {
+            if((status & 0x1)==0)
+                    return 0;
+        }
+    }
+    return -1;
+}
+
+int ReadMem(unsigned char Region, unsigned int nAdr, u8* pData, unsigned int nSize)
+{
+    unsigned char  i;
+    unsigned char pDataIn[] = { 0x2, 0x1, (unsigned char)nSize, (unsigned char)(Region + 1), (unsigned char)(nAdr >> 8), (unsigned char)(nAdr & 0xFF) };
+
+    if(StatusCheck()!=0)
+    {
+        return -1;
+    }
+
+    if (adl_bmc_ec_write_device(EC_WO_ADDR_IIC_CMD_START,pDataIn, 6, EC_REGION_2) == 0)
+    {
+        pDataIn[0] = 4;
+
+        if (adl_bmc_ec_write_device(EC_RW_ADDR_IIC_BMC_STATUS, pDataIn, 1,EC_REGION_2) == 0)
+        {
+            for (i = 0; i < 100; i++)
+            {
+                if (adl_bmc_ec_read_device(EC_RW_ADDR_IIC_BMC_STATUS, pDataIn, 1,EC_REGION_2) == 0)
+                {
+                    if (!!(pDataIn[0] & 0x4) == 0x0 && (pDataIn[0] & 0x1) == 0 && !!(pDataIn[0] & 0x8) == 0)
+                    {
+                        delay(40);
+                        adl_bmc_ec_read_device(EC_RW_ADDR_IIC_BUFFER, pData, nSize,EC_REGION_2);
+                        return 0;
+                    }
+                }
+                delay(100);
+            }
+        }
+    }
+
+    return -1;
+}
+
+
+int WriteMem(unsigned char Region, unsigned int nAdr, u8* pData, unsigned int nSize)
+{
+    unsigned char  i;
+    unsigned char pDataIn[] = { 0x2, 0x2, (unsigned char)nSize, (unsigned char)(Region + 1), (unsigned char)(nAdr >> 8), (unsigned char)(nAdr & 0xFF) };
+
+
+    if(StatusCheck() != 0)
+    {
+        return -1;
+    }
+
+    if (adl_bmc_ec_write_device(EC_WO_ADDR_IIC_CMD_START, pDataIn, 6,EC_REGION_2) == 0)
+    {
+        if (adl_bmc_ec_write_device(EC_RW_ADDR_IIC_BUFFER, pData, nSize,EC_REGION_2) == 0)
+        {
+            pDataIn[0] = 4;
+            if (adl_bmc_ec_write_device(EC_RW_ADDR_IIC_BMC_STATUS, pDataIn, 1,EC_REGION_2) == 0)
+            {
+                for (i = 0; i < 100; i++)
+                {
+                    if (adl_bmc_ec_read_device(EC_RW_ADDR_IIC_BMC_STATUS, pDataIn, 1,EC_REGION_2) == 0)
+		    {
+			    if (!!(pDataIn[0] & 0x4) == 0x0 && (pDataIn[0] & 0x1) == 0 && !!(pDataIn[0] & 0x8) == 0)
+			    {
+				    return 0;
+			    }
+		    }
+                    delay(100);
+                }
+            }
+        }
+    }
+
+
+    return -1;
+}

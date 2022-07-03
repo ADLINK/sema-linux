@@ -20,6 +20,4 @@
 #define EC_SIMULATION_CLASS                     -4
 #define EC_SIMULATION_NOT_SIMUL         	-401
 
-
-
 #endif
