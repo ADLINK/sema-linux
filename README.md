@@ -1,14 +1,19 @@
 
-## How to install
-* see [documentation](https://adlinktech.github.io/sema-doc/#/source/HowToInstallSEMA?id=ubuntu-linux) for more details
+## How to install SEMA® - EC controller
+* see [documentation](https://adlinktech.github.io/sema/HowToInstallonLinux.html) for more details
 
 ## Supported Hardware List:
-* see [the hardware list](https://adlinktech.github.io/sema-doc/#/source/SupportedHardware) for more details
+* cExpress-TL , cExpress-EL, cExpress-AR
+* Express-ID7, Express-ADP, Express-TL
+* COM-HPC-cADP, COM-HPC-sIDH
+* LEC-EL
+* nanoX-EL
 
-## Developer's Guide (how to use EAPI or Sysfs): 
-* See [documentation](https://adlinktech.github.io/sema-doc/#/source/DeveloperGuide) for more details.
+## Developer's Guide (how to use EAPI and Sysfs): 
+* See [documentation](https://adlinktech.github.io/sema/DeveloperGuide.html) for more details.
 
    
 ## Other information:
-internal GitLab commit ID: 981f6bf59bca14101d6c9d1f5345a69d1a5f91df
+* internal GitLab Branch: ACPI-EC
+* commit ID: ff19c52a83161ee991e62e93a147c5a3a6e0c253
 
