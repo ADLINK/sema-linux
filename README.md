@@ -1,5 +1,6 @@
 
-### What is SEMA?
+What is SEMA?
+-----
 <img src="https://cdn.adlinktech.com/webupd/en/Upload/ProductNews/logo_sema.png" alt="sema_logo" width="20%" align="right"  />
 
 
@@ -12,8 +13,6 @@ A Board Management Controller is embedded on our hardware and collects all relev
 SEMA® middleware is on the top of Board controller that provides a ready-made application that shows the data in user-friendly graphic interfaces, suitable for supervision and troubleshooting.
 
 
-<br>
-
 ### Important Notice 
 
 SEMA4.0 would be designed the abstraction layer to integrate the different controllers (EC, TivaBCC and LiteBMC) and this integration will be ready in Q4 2022. 
@@ -22,11 +21,11 @@ Prior to the release of SEMA 4.0 integration, **please check which platform/hard
 
 | sema-ec<br> https://github.com/ADLINK/sema-linux/tree/sema-ec            | sema-bmc<br>https://github.com/ADLINK/sema-linux/tree/sema-bmc |
 | :----------------------------------------------------------- | :------------------------------------------------------------ |
-| - cExpress-TL , cExpress-EL, cExpress-AR<br>- Express-ID7, Express-ADP, Express-TL <br>- COM-HPC-cADP, COM-HPC-sIDH <br>- LEC-EL <br>- nanoX-EL | - Express-CF/CFE, Express-KL/KLE, Express-SL/SLE, Express-DN7, Express-BD7 <br>- cExpress-WL, cExpress-KL, cExpress-SL, cExpress-AL<br>- nanoX-AL<br>- LEC-AL<br>- Q7-AL<br>- LEC-PX30 |
+| - cExpress-TL , cExpress-EL, cExpress-AR<br>- Express-ID7, Express-ADP, Express-TL <br>- COM-HPC-cADP, COM-HPC-sIDH <br>- LEC-EL <br>- NanoX-EL | - Express-CF/CFE, Express-KL/KLE, Express-SL/SLE, Express-DN7, Express-BD7 <br>- cExpress-WL, cExpress-KL, cExpress-SL, cExpress-AL<br>- nanoX-AL<br>- LEC-AL<br>- Q7-AL<br>- LEC-PX30 |
 
-<br>
 
-### Architecture Overview 
+Architecture Overview
+-----
 
 Here is the architecture of SEMA 4.0 as below:
 
@@ -57,7 +56,8 @@ Here is the architecture of SEMA 4.0 as below:
 <br>
 
 
-### Features Set
+Features Set
+-----
 
 * Power Consumption
 * User Area Access
@@ -69,7 +69,8 @@ Here is the architecture of SEMA 4.0 as below:
 * Watch Dog  
 
 
-### Support Operating System
+Support Operating System
+-----
 * Windows OS: Windows 10 64bit
 * Linux OS: kernel 4.15 or above
 * Yocto Linux: see meta-adlink-sema for more details
