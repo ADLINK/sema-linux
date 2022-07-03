@@ -1,9 +1,9 @@
 
-### How to install
-* see [documentation](https://adlinktech.github.io/sema-doc/#/source/HowToInstallSEMA?id=ubuntu-linux) for more details
+### How to install SEMA® - EC controller
+* see [documentation](https://adlinktech.github.io/sema/HowToInstallonLinux.html) for more details
 
 ### Developer's Guide (how to use EAPI or Sysfs): 
-* See [documentation](https://adlinktech.github.io/sema-doc/#/source/DeveloperGuide) for more details.
+* See [documentation](https://adlinktech.github.io/sema/DeveloperGuide.html) for more details.
 
    
 ### Other information:
