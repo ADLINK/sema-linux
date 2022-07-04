@@ -1,6 +1,6 @@
 /**
- * @file eapi.h 
- * @author 
+ * @file eapi.h
+ * @author
  * @brief File containing the SEMA Library Application Programming Interface Function Definitions
  *
  *
@@ -31,22 +31,6 @@
 #define FALSE 0
 
 
-/* Description
- *   This means that the Block length is too long.
- * Actions
- *   Use Alignment Capabilities information to correctly align write access.
- */
-#define EAPI_STATUS_INVALID_BLOCK_LENGTH    EAPI_UINT32_C(0xFFFFFEFD)
-
-/* Description
- *   The amount of available data exceeds the buffer size.
- *   Storage buffer overflow was prevented. Read count was larger then
- *   the defined buffer length.
- *   Read Count > Buffer Length
- * Actions
- *   Either increase the buffer size or reduce the block length.
- */
-#define EAPI_STATUS_MORE_DATA         EAPI_UINT32_C(0xFFFFF9FF)
 
 
 
@@ -60,6 +44,8 @@
 #define EAPI_STATUS_WRITE_ERROR       EAPI_UINT32_C(0xFFFFFAFE)
 #define EAPI_STATUS_SUCCESS           EAPI_UINT32_C(0)
 #define EAPI_STATUS_RUNNING           EAPI_UINT32_C(0xFFFFFEFA)
+#define EAPI_STATUS_MORE_DATA         EAPI_UINT32_C(0xFFFFF9FF)
+#define EAPI_STATUS_INVALID_BLOCK_LENGTH    EAPI_UINT32_C(0xFFFFFEFD)
 #define EAPI_STATUS_INVALID_BLOCK_ALIGNMENT EAPI_UINT32_C(0xFFFFFEFE)
 
 
@@ -70,15 +56,15 @@
 #define EAPI_ID_BACKLIGHT_3           EAPI_UINT32_C(2)
 
 /* Backlight Values */
-#define EAPI_BACKLIGHT_SET_ON         EAPI_UINT32_C(1)
-#define EAPI_BACKLIGHT_SET_OFF        EAPI_UINT32_C(0)
+#define EAPI_BACKLIGHT_SET_ON         EAPI_UINT32_C(0)
+#define EAPI_BACKLIGHT_SET_OFF        EAPI_UINT32_C(0xFFFFFFFF)
 #define EAPI_BACKLIGHT_SET_DIMEST     EAPI_UINT32_C(0)
 #define EAPI_BACKLIGHT_SET_BRIGHTEST  EAPI_UINT32_C(255)
 
 
 /**
  * @brief Function initializes the SEMA Library.
- * 
+ *
  * This function initializes the Smart Embedded Management Agent ( SEMA ) Library.
  * This function confirms that whether the board is supported by this library and initializes
  * if board is supported, else it will return -1 with error information on errno.
@@ -89,7 +75,7 @@ uint32_t EApiLibInitialize(void);
 
 /**
  * @brief Function Uninitializes the SEMA Library.
- * 
+ *
  * This function Uninitializes the Smart Embedded Management Agent ( SEMA ) Library.
  * @return 0 on success -1 on failure
  */
@@ -134,11 +120,10 @@ uint32_t EApiBoardGetVoltageMonitor(uint32_t id, uint32_t *pVoltage, char *pBuf,
  * @param buf buffer pointer
  * @return 0 on success -1 on failure
  */
-uint32_t EApiBoardGetErrorLog (uint32_t position, uint32_t *ErrorNumber, uint8_t  *Flags, uint8_t  *RestartEvent, uint32_t *PwrCycles, uint32_t *Bootcount, uint32_t *Time,\
-	       	uint8_t *Status, signed char *CPUtemp, signed char *Boardtemp, uint32_t *TotalOnTime, uint8_t *BiosSel);
+uint32_t EApiBoardGetErrorLog (uint32_t position, uint32_t *ErrorNumber, uint8_t  *Flags, uint8_t  *RestartEvent, uint32_t *PwrCycles, uint32_t *Bootcount, uint32_t *Time, uint8_t *Status, signed char *CPUtemp, signed char *Boardtemp);
 
-uint32_t EApiBoardGetCurPosErrorLog (uint32_t *ErrorNumber, uint8_t  *Flags, uint8_t  *RestartEvent, uint32_t *PwrCycles, uint32_t *Bootcount, uint32_t *Time, \
-		uint8_t *Status, signed char *CPUtemp, signed char *Boardtemp, uint32_t *TotalOnTime, uint8_t *BiosSel);
+
+uint32_t EApiBoardGetCurPosErrorLog (uint32_t *ErrorNumber, uint8_t  *Flags, uint8_t  *RestartEvent, uint32_t *PwrCycles, uint32_t *Bootcount, uint32_t *Time, uint8_t *Status, signed char *CPUtemp, signed char *Boardtemp);
 
 /**
  * @brief Function To Get text information of the Error number in the error log.
@@ -174,7 +159,7 @@ uint32_t EApiVgaGetBacklightEnable(uint32_t Id, uint32_t *pEnable);
  * @param id Backlight Identifier
  * @param Enable Backlight State to be updated
  * @return 0 On Success -1 On Failure
- */                
+ */
 uint32_t EApiVgaSetBacklightEnable(uint32_t Id, uint32_t Enable);
 
 /**
@@ -182,7 +167,7 @@ uint32_t EApiVgaSetBacklightEnable(uint32_t Id, uint32_t Enable);
  * @param id Backlight Identifier
  * @param pBrightness Buffer Pointer that receives the current backlight brightness level
  * @return 0 On Success -1 On Failure
- */                
+ */
 uint32_t EApiVgaGetBacklightBrightness(uint32_t Id, uint32_t *pBright);
 
 /**
@@ -190,7 +175,7 @@ uint32_t EApiVgaGetBacklightBrightness(uint32_t Id, uint32_t *pBright);
  * @param id Backlight Identifier
  * @param Brightness Backlight Brightness Level to be updated
  * @return 0 On Success -1 On Failure
- */                
+ */
 uint32_t EApiVgaSetBacklightBrightness(uint32_t Id, uint32_t Bright);
 
 
@@ -206,7 +191,7 @@ uint32_t EApiVgaSetBacklightBrightness(uint32_t Id, uint32_t Bright);
  * @return 0 on success -1 on failure
  */
 uint32_t EApiStorageCap(uint32_t Id, uint32_t *pStorageSize, uint32_t *pBlockLength);
-                
+
 /**
  * @brief Function To Read data to the selected user data area.
  * @param Offset storage area start address offset in bytes. This value must be a multiple of block length.
@@ -214,8 +199,8 @@ uint32_t EApiStorageCap(uint32_t Id, uint32_t *pStorageSize, uint32_t *pBlockLen
  * @param pBuf Pointer to buffer that receives the reda data.
  * @return 0 on success -1 on failure
  */
-uint32_t EApiStorageAreaRead(uint32_t Id,uint32_t Region, uint32_t Offset, void *pBuffer, uint32_t BufLen, uint32_t  Bytecnt);
-                
+uint32_t EApiStorageAreaRead(uint32_t Id, uint32_t Offset, void *pBuffer, uint32_t BufLen, uint32_t  Bytecnt);
+
 /**
  * @brief Function To Read data to the selected user data area.
  * @param Offset storage area start address offset in bytes. This value must be a multiple of block length.
@@ -223,24 +208,7 @@ uint32_t EApiStorageAreaRead(uint32_t Id,uint32_t Region, uint32_t Offset, void 
  * @param Length Number of bytes to write.
  * @return 0 on success -1 on failure
  */
-uint32_t EApiStorageAreaWrite(uint32_t Id,uint32_t Region, uint32_t Offset, char *pBuf, uint32_t Length);
-
-/**
- * @brief Function to Clear the User Region.
- * @return 0 on success
- */
-uint32_t EApiStorageAreaClear(uint32_t Id,uint32_t Region);
-
-
-
-
-uint32_t EApiStorageLock(uint32_t Id,uint32_t Region);
-
-
-
-
-uint32_t EApiStorageUnLock(uint32_t Id,uint32_t Region,uint32_t Permission, char *passcode);
-
+uint32_t EApiStorageAreaWrite(uint32_t Id, unsigned short Offset, char *pBuf, uint32_t Bytecnt);
 
 /*
  *
@@ -438,61 +406,32 @@ uint32_t EApiSmartFanSetTempSrc(int id, int Tempsrc);
  * I 2 C
  *
  */
+uint32_t EApiI2CWriteReadRaw(uint32_t Id, uint8_t Addr, void *pWBuffer, uint32_t WriteBCnt, void *pRBuffer, uint32_t RBufLen, uint32_t  ReadBCnt);
 
-#define EAPI_ID_I2C_EXTERNAL       	   EAPI_UINT32_C(0) /* Baseboard I2C Interface */
-#define EAPI_ID_I2C_LVDS_1         	   EAPI_UINT32_C(1) /* LVDS/EDP 1 Interface (optional) */
-#define EAPI_ID_I2C_LVDS_2         	   EAPI_UINT32_C(3) /* LVDS/EDP 2 Interface (optional) */
-#define SEMA_EAPI_ID_I2C_EXTERNAL_2        EAPI_UINT32_C(2) /* 2nd External I2C Interface (optional) */
-#define SEMA_EAPI_ID_I2C_EXTERNAL_3        EAPI_UINT32_C(4) /* 3th External I2C Interface (optional) */
-
-#define EAPI_I2C_IS_10BIT_ADDR(x)  (((x)&0xF800)==0xF000)
-
-#define SEMA_C_I2C1             0x00010000                      ///< Bit 16: Ext. I2C bus #1 available
-#define SEMA_C_I2C2             0x00020000                      ///< Bit 17: Ext. I2C bus #2 available
+#define EAPI_ID_I2C_EXTERNAL       EAPI_UINT32_C(0) /* Baseboard I2C Interface
+                                                     * required
+                                                     */
+#define EAPI_ID_I2C_LVDS_1         EAPI_UINT32_C(1) /* LVDS/EDP 1 Interface
+                                                     * (optional)
+                                                     */
+#define EAPI_ID_I2C_LVDS_2         EAPI_UINT32_C(2) /* LVDS/EDP 2 Interface
+                                                     * (optional)
+                                                     */
+#define SEMA_EAPI_ID_I2C_EXTERNAL_2        EAPI_UINT32_C(3) /* 2nd External I2C Interface
+                                                     * (optional)
+                                                     */
+#define SEMA_EAPI_ID_I2C_EXTERNAL_3        EAPI_UINT32_C(4) /* 3th External I2C Interface
+                                                     * (optional)
+                                                     */
 #define SEMA_C_I2C3             0x20000000                      ///< Group 0 bit 29: Ext. I2C bus #3 available
 #define SEMA_C_I2C4             0x40000000                      ///< Group 0 bit 30: Ext. I2C bus #4 available
-
 #define SEMA_C_BMC_TIVA         0x80000000                      ///< Group 0 bit 31: BMC is from TIVA type
 
+//Ext. I2C defines
 #define SEMA_EXT_IIC_BUS_1              0
 #define SEMA_EXT_IIC_BUS_2              1
 #define SEMA_EXT_IIC_BUS_3              2
 #define SEMA_EXT_IIC_BUS_4              3
 
-/*
- *
- * */
-uint32_t EApiI2CReadTransfer(uint32_t Id, uint32_t Addr, uint32_t Cmd, void* pBuffer, uint32_t BufLen, uint32_t ByteCnt);
-
-/*
- *
- * */
-uint32_t EApiI2CWriteTransfer(uint32_t Id, uint32_t Addr, uint32_t Cmd, void *pBuffer, uint32_t ByteCnt);
-
-
-/*
- *
- * */
-uint32_t EApiI2CWriteReadRaw(uint32_t Id, uint8_t Addr, void *pWBuffer, uint32_t WriteBCnt, void *pRBuffer, uint32_t RBufLen, uint32_t  ReadBCnt);
-
-
-/*
- *
- * */
-uint32_t EApiI2CGetBusCap(uint32_t Id, uint32_t *pMaxBlkLen);
-
-
-/*
- *
- * */
-uint32_t EApiI2CProbeDevice(uint32_t Id, uint32_t Addr);
-/*
- *
- * */
-uint32_t EApiI2CGetBusSts(uint32_t Id, uint8_t *Bus_Sts);
 #endif
 
-
-uint32_t EApiSetBiosSource(uint8_t data);
-uint32_t EApiGetBiosStatus(uint8_t *data);
-uint32_t EApiGetBiosSource(uint8_t *data);

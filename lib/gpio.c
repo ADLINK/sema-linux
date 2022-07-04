@@ -1,26 +1,34 @@
+// SPDX-License-Identifier: LGPL-2.0+
+/*
+ * SEMA Library APIs for GPIO
+ *
+ * Copyright (C) 2020 ADLINK Technology Inc.
+ *
+ */
+
 #include <stdio.h> 
 #include <stdlib.h>
 #include <stdint.h>
 #include <dirent.h> 
 #include <string.h>
-#include <unistd.h>
-#include <fcntl.h>
 #include <errno.h>
-#include "eapi.h"
+#include <eapi.h>
 #include <common.h>
 
 static int gpiobase = -1;
 static int ngpio = -1;
 
+
 #define EAPI_GPIO_BANK_ID(GPIO_NUM)     EAPI_UINT32_C(0x10000|((GPIO_NUM)>>5))
 
 #define EAPI_ID_GPIO_BANK00    EAPI_GPIO_BANK_ID( 0) /* GPIOs  0 - 31 */
 
-#define EC_GPIO_INPUT_CAP                       0xFF            ///< supported inputs (EC GPIO)
-#define EC_GPIO_OUTPUT_CAP                      0xFF            ///< supported outputs (EC GPIO)
+#define PCA9535_INPUT_CAP			0xFFFF		///< supported inputs (PCA9535)
+#define PCA9535_OUTPUT_CAP			0xFFFF		///< supported outputs (PCA9535)
 
 #define EAPI_GPIO_INPUT   1
 #define EAPI_GPIO_OUTPUT   0
+
 
 
 static int get_gpio_base(int *gpiobase, int *ngpio)
@@ -32,6 +40,7 @@ static int get_gpio_base(int *gpiobase, int *ngpio)
 
 	if (dr == NULL)  // opendir returns NULL if couldn't open directory 
 	{ 
+		printf("Could not open current directory" ); 
 		return 0; 
 	} 
 
@@ -41,11 +50,11 @@ static int get_gpio_base(int *gpiobase, int *ngpio)
 		if(strncmp(de->d_name, "gpiochip", strlen("gpiochip")) == 0) {
 			char sysfile[278];
 			char value[256];
-			sprintf(sysfile, "/sys/class/gpio/%s/label", de->d_name);
+			sprintf(sysfile, "/sys/class/gpio/%s/device/name", de->d_name);
 			if(read_sysfs_file(sysfile, value, sizeof(value)) != 0) {
 				continue;
 			}
-			if(strncmp(value, "adl-bmc-gpio", strlen("adl-bmc-gpio")) != 0) {
+			if(strncmp(value, "pca9535", strlen("pca9535")) != 0) {
 				continue;
 			}
 			sprintf(sysfile, "/sys/class/gpio/%s/base", de->d_name);
@@ -67,7 +76,7 @@ static int get_gpio_base(int *gpiobase, int *ngpio)
 	return -1;
 }
 
-int initialize_gpio(void)
+static int initialize_gpio(void)
 {
 	int gpio;
 
@@ -75,36 +84,33 @@ int initialize_gpio(void)
 		int ret;
 		ret = get_gpio_base(&gpiobase, &ngpio);
 		if(ret < 0) {
+			fprintf(stderr, "gpio init failed: %s\n", strerror(errno));
 			return -1;
 		}
 	}
 
-	if(open("/dev/gpio_adl",O_RDONLY) >= 0)
-	{
-		for(gpio = gpiobase; gpio < (gpiobase + ngpio); gpio++) {
-			char export[256];
+	for(gpio = gpiobase; gpio < (gpiobase + ngpio); gpio++) {
+		char export[256];
+		DIR *dr;
+		sprintf(export, "/sys/class/gpio/gpio%d", gpio);
+		
+		dr = opendir(export);
+		if (dr == NULL) {		
 			sprintf(export, "echo %d > /sys/class/gpio/export", gpio);
 			system(export);
-			if(gpiobase + 3 >= gpio)
-				sprintf(export, "echo in > /sys/class/gpio/gpio%d/direction", gpio);
-			else
-				sprintf(export, "echo out > /sys/class/gpio/gpio%d/direction", gpio);
-			system(export);
+		}else{
+			closedir(dr);
 		}
 	}
 
 	return 0;
 }
 
+#define GPIO_BASE_UPDATE() if(initialize_gpio() < 0) return -1;
+
 
 uint32_t adjustBitMask(uint32_t id, uint32_t *Bitmask)
 {
-
-	if(Bitmask==NULL)
-	{
-		return EAPI_STATUS_INVALID_PARAMETER;
-	}
-
 	switch(id)
 	{
 		case 1:
@@ -156,6 +162,7 @@ uint32_t adjustBitMask(uint32_t id, uint32_t *Bitmask)
 			*Bitmask = 0x8000;
 			break;
 		default:
+			printf("Invalid Id\n");
 			return EAPI_STATUS_UNSUPPORTED;
 	}
 			return EAPI_STATUS_SUCCESS;
@@ -166,27 +173,26 @@ uint32_t adjustBitMask(uint32_t id, uint32_t *Bitmask)
 uint32_t EApiGPIOGetDirectionCaps(uint32_t Id, uint32_t *pInputs, uint32_t *pOutputs)
 {
 	uint32_t status = EAPI_STATUS_SUCCESS;
+	GPIO_BASE_UPDATE();
 
 	uint32_t BitMask = 0xFFFF;
 	status = adjustBitMask(Id, &BitMask);
 	if (status)
-	{
 		return status;
-	}
 
 	if(Id == EAPI_ID_GPIO_BANK00)
 	{
-		*pInputs = EC_GPIO_INPUT_CAP;
-		*pOutputs =EC_GPIO_OUTPUT_CAP;
+		*pInputs = PCA9535_INPUT_CAP;
+		*pOutputs = PCA9535_OUTPUT_CAP;
 	}
 	else
 	{
-		if(EC_GPIO_INPUT_CAP & BitMask)
+		if(PCA9535_INPUT_CAP & BitMask)
 			*pInputs = EAPI_GPIO_INPUT;
 		else
 			*pInputs = EAPI_GPIO_OUTPUT;
 
-		if(EC_GPIO_OUTPUT_CAP & BitMask)
+		if(PCA9535_OUTPUT_CAP & BitMask)
 			*pOutputs = EAPI_GPIO_INPUT;
 		else
 			*pOutputs = EAPI_GPIO_OUTPUT;
@@ -202,16 +208,11 @@ uint32_t EApiGPIOGetDirection(uint32_t Id, uint32_t Bitmask, uint32_t *pDirectio
 	char sysfile[256];
 	char value[256];
 
-	//status = adjustBitMask(Bitmask, &Bitmask);
-	//if (status)
-	//	return status;
-	
-	if (Bitmask > 0xff)
-		return EAPI_STATUS_UNSUPPORTED;
+	GPIO_BASE_UPDATE();
 
-	if(pDirection==NULL)
-		return EAPI_STATUS_INVALID_PARAMETER;
-
+	status = adjustBitMask(Bitmask, &Bitmask);
+	if (status)
+		return status;
 	for(gpio = gpiobase, bit = 0; gpio < (gpiobase + ngpio); gpio++, bit++) {
 		if(Bitmask & (1 << bit)) {
 			sprintf(sysfile, "/sys/class/gpio/gpio%d/direction", gpio);
@@ -236,18 +237,19 @@ uint32_t EApiGPIOSetDirection(uint32_t Id, uint32_t Bitmask, uint32_t Direction)
 	int gpio, bit;
 	char sysfile[256];
 
-	if (Bitmask > 0xff)
-		return EAPI_STATUS_UNSUPPORTED;
+	GPIO_BASE_UPDATE();
+
+	status = adjustBitMask(Bitmask, &Bitmask);
+	if (status)
+		return status;
 	for(gpio = gpiobase, bit = 0; gpio < (gpiobase + ngpio); gpio++, bit++) {
 		if(Bitmask & (1 << bit)) {
 			if(Direction) {
 				sprintf(sysfile, "echo \"in\" > /sys/class/gpio/gpio%d/direction", gpio);
+				system(sysfile);
 			}else{
 				sprintf(sysfile, "echo \"out\" > /sys/class/gpio/gpio%d/direction", gpio);
-			}
-			if(system(sysfile) != 0)
-			{
-				return EAPI_STATUS_WRITE_ERROR;
+				system(sysfile);
 			}
 		}
 	}
@@ -260,20 +262,26 @@ uint32_t EApiGPIOGetLevel(uint32_t Id, uint32_t Bitmask, uint32_t *pLevel)
 	uint32_t status = EAPI_STATUS_SUCCESS;
 	int gpio, bit;
 	char sysfile[256];
-	char value[10];
+	char value[256];
 
-	if (Bitmask > 0xff)
-		return EAPI_STATUS_UNSUPPORTED;
+	GPIO_BASE_UPDATE();
+
+	status = adjustBitMask(Bitmask, &Bitmask);
+	if (status)
+		return status;
 	for(gpio = gpiobase, bit = 0; gpio < (gpiobase + ngpio); gpio++, bit++) {
 		if(Bitmask & (1 << bit)) {
 			sprintf(sysfile, "/sys/class/gpio/gpio%d/value", gpio);
-			if(read_sysfs_file(sysfile, value, 1) < 0) {
-				return EAPI_STATUS_UNSUPPORTED;
+			if(read_sysfs_file(sysfile, value, sizeof(value)) < 0) {
+				return -1;
 			}
-
-			*pLevel |= value[0] - '0';
+			if(strncmp(value, "1", strlen("1")) == 0) {
+				*pLevel = 1;
+			}
+			if(strncmp(value, "0", strlen("0")) == 0) {
+				*pLevel = 0;
+			}
 		}
-
 	}
 
         return status;
@@ -285,26 +293,26 @@ uint32_t EApiGPIOSetLevel(uint32_t Id, uint32_t Bitmask, uint32_t Level)
 	int gpio, bit;
 	char sysfile[256];
 
-	if (Bitmask > 0xff)
-	{
-            return EAPI_STATUS_UNSUPPORTED;
-	}
+	GPIO_BASE_UPDATE();
 
+	status = adjustBitMask(Bitmask, &Bitmask);
+	if (status)
+		return status;
 	for(gpio = gpiobase, bit = 0; gpio < (gpiobase + ngpio); gpio++, bit++) {
 		if(Bitmask & (1 << bit)) {
-			if(Level & (1 << bit)) 
-			{
+			if(Level) {
 				sprintf(sysfile, "echo \"1\" > /sys/class/gpio/gpio%d/value", gpio);
+				system(sysfile);
 			}else{
 				sprintf(sysfile, "echo \"0\" > /sys/class/gpio/gpio%d/value", gpio);
-			}
-			if(system(sysfile) != 0)
-			{
-				return EAPI_STATUS_WRITE_ERROR;
+				system(sysfile);
 			}
 		}
-
 	}
 
         return status;
 }
+                                                                                                                                     
+                                                                                                                                     
+    
+

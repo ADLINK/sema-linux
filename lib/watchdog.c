@@ -1,3 +1,11 @@
+// SPDX-License-Identifier: LGPL-2.0+
+/*
+ * SEMA Library APIs for watchdog
+ *
+ * Copyright (C) 2020 ADLINK Technology Inc.
+ *
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -20,7 +28,7 @@ static int initialize_watchdog()
 	DIR *dr = opendir("/sys/bus/platform/devices/adl-bmc-wdt/watchdog"); 
 
 	if (dr == NULL)  // opendir returns NULL if couldn't open directory 
-		return -1;
+		return -1; 
 
 	memset(WATCHDOG_DEVICE, 0, sizeof(WATCHDOG_DEVICE));
 	while ((de = readdir(dr)) != NULL) {
@@ -92,6 +100,9 @@ uint32_t EApiWDogStart(uint32_t Delay, uint32_t EventTimeout, uint32_t ResetTime
                 return EAPI_STATUS_INVALID_PARAMETER;
         }
 
+
+
+
 	WDOG_INIT();
 
 	char sysfile[256];	
@@ -114,19 +125,18 @@ uint32_t EApiWDogStart(uint32_t Delay, uint32_t EventTimeout, uint32_t ResetTime
 
 	fd = open(WATCHDOG_DEVICE, O_WRONLY);
 	if (fd < 0) {
-		return EAPI_STATUS_UNSUPPORTED;
+		return fd;
 	}
 
-	flags = ResetTimeout; 
+	flags = ResetTimeout;
 
 	ret = ioctl(fd, WDIOC_SETTIMEOUT, &flags);
-
 	if (!ret){
 		close(fd);
 	}
 	else {
 		close(fd);
-		return EAPI_STATUS_UNSUPPORTED;
+		return ret;
 	}
 	
         return status;
@@ -158,7 +168,7 @@ uint32_t EApiWDogTrigger(void)
 
 	fd = open(WATCHDOG_DEVICE, O_WRONLY);
 	if (fd < 0) {
-		return EAPI_STATUS_UNSUPPORTED;
+		return fd;
 	}
 
 	ret = ioctl(fd, WDIOC_SETTIMEOUT, &tout);
@@ -166,7 +176,7 @@ uint32_t EApiWDogTrigger(void)
 		close(fd);
 	else {
 	        close(fd);	
-		return EAPI_STATUS_UNSUPPORTED;
+		return ret;
 	}
 
         return status;
@@ -182,12 +192,12 @@ uint32_t EApiWDogStop(void)
 
 	fd = open(WATCHDOG_DEVICE, O_WRONLY);
 	if (fd < 0) {
-		return EAPI_STATUS_UNSUPPORTED;
+		return fd;
 	}
 	
 	ret = write(fd, &v, 1);
 	if (ret < 0)
-		return EAPI_STATUS_WRITE_ERROR;
+		printf("Stopping watchdog ticks failed (%d)...\n", errno);
 
 	close(fd);
         return status;
@@ -201,9 +211,9 @@ uint32_t EApiPwrUpWDogStart(uint32_t timeout)
 	char value[256];
 	int ret;
 
-	if (timeout < 0 && timeout > 255) {
+	if (timeout > 65535 || timeout < 24) {
 		errno = EINVAL;
-		return EAPI_STATUS_INVALID_PARAMETER;
+		return -1;
 	}
 
 	WDOG_INIT();
@@ -211,7 +221,7 @@ uint32_t EApiPwrUpWDogStart(uint32_t timeout)
 	sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-wdt/Capabilities/PwrUpWDog");
         fp = fopen(sysfile, "r+");
         if(fp == NULL)
-                return EAPI_STATUS_INVALID_PARAMETER;
+                return -1;
         sprintf(value, "%u", timeout);
         ret = fwrite(value, 256, sizeof(char), fp);
 
@@ -219,7 +229,7 @@ uint32_t EApiPwrUpWDogStart(uint32_t timeout)
 		fclose(fp);
 	else {
 		fclose(fp);
-		return EAPI_STATUS_WRITE_ERROR;
+		return -1;
         }
 
         return status;
@@ -239,7 +249,7 @@ uint32_t EApiPwrUpWDogStop(void)
 	sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-wdt/Capabilities/PwrUpWDog");
         fp = fopen(sysfile, "r+");
         if(fp == NULL)
-               return EAPI_STATUS_UNSUPPORTED;
+               return -1;
 
 	sprintf(value, "%u", timeout);
 
@@ -248,7 +258,7 @@ uint32_t EApiPwrUpWDogStop(void)
 		fclose(fp);
 	else {
 		fclose(fp);
-		return EAPI_STATUS_WRITE_ERROR;
+		return -1;
         }
 
         return status;
