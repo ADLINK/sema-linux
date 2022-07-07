@@ -74,7 +74,7 @@ Support Operating System
 -----
 * Windows OS: Windows 10 64bit
 * Linux OS: Ubuntu 18.04/20.04. 
-   <br> **Note:** since kernel functions of Ubuntu 22.04/19.04 was different from older versions to cause SEMA4.0 can't work. It will be fixed in the middle of July.
+   <br> **Note:** since kernel functions of Ubuntu 22.04 was different from older versions to cause SEMA4.0 can't work. It will be fixed in the middle of July.
 * Yocto Linux: see sema4.0 branch of [meta-adlink-sema](https://github.com/ADLINK/meta-adlink-sema) for more details
 * VxWorks (by request)
 * QNX (by request)
