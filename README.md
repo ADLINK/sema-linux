@@ -14,7 +14,8 @@ A Board Management Controller is embedded on our hardware and collects all relev
 SEMA® middleware is on the top of Board controller that provides a ready-made application that shows the data in user-friendly graphic interfaces, suitable for supervision and troubleshooting.
 
 
-### Important Notice 
+Important Notice 
+-----
 
 SEMA4.0 would be designed the abstraction layer to integrate the different controllers (EC, TivaBCC and LiteBMC) and this integration will be ready in Q4 2022. 
 
