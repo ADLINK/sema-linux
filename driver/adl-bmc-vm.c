@@ -16,6 +16,7 @@
 struct adl_bmc_vm_data {
 	struct regulator_desc adl_bmc_vm_desc[16];
 	struct regulator_dev *adl_bmc_vm_rdev[16];
+	struct regulator *adl_bmc_vm_dev[16];
 	struct adl_bmc_dev *adl_dev;
 	char name_arr[16][256];
 	int cnt;
@@ -132,7 +133,7 @@ static int adl_bmc_vm_probe(struct platform_device *pdev)
 
 ret_failed:
 	for(j = 0; j < i; j++) {
-		devm_regulator_unregister(&pdev->dev, vm_data->adl_bmc_vm_rdev[j]);
+		devm_regulator_put(vm_data->adl_bmc_vm_dev[j]);
 		debug_printk("In for loop\n");
 	}
 
@@ -147,7 +148,7 @@ static int adl_bmc_vm_remove(struct platform_device *pdev)
 
 	for (i = 0; i < vm_data->cnt; i++) 
 	{
-		devm_regulator_unregister(&pdev->dev, vm_data->adl_bmc_vm_rdev[i]);
+		devm_regulator_put(vm_data->adl_bmc_vm_dev[i]);
 	}
 
 	devm_kfree(&pdev->dev, vm_data);
