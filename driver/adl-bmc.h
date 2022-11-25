@@ -146,19 +146,35 @@
 #define EC_RO_ADDR_IIC_TXN_STATUS			0x18
 #define EC_RW_ADDR_IIC_BUFFER				0x20
 
+#define EC_RW_ADDR_IIC_ENABLE           0x10
+#define EC_RW_ADDR_IIC_IF_TYPE          0x11
+#define EC_RW_ADDR_IIC_RW_TYPE          0x12
+#define EC_RW_ADDR_IIC_CHANNEL          0x14
+#define EC_RW_ADDR_IIC_ADDRESS          0x16
+#define EC_RW_ADDR_IIC_STREAM_WR_LEN    0x19
+#define EC_RW_ADDR_IIC_STREAM_RD_LEN    0x1A
+#define EC_RW_ADDR_IIC_STREAM_RD_BUF    0x40     
+
+#define EC_IIC_TRANS                    0x04  
+#define EC_IIC_TYPE_READ                0x01
+#define EC_IIC_TYPE_WRITE               0x02
+#define EC_IIC_TYPE_STREAM_RW           0x03
+
 int StatusCheck(void);
 
 int WtLockUnlock(uint8_t * pDataIn_data,uint32_t Region);
 
 void delay(unsigned long int ticks);
 
-//Read 
+//Read
 int adl_bmc_ec_read_device(u8 addr, u8 *dest, int len, unsigned int Region);
 
 //Write
 int adl_bmc_ec_write_device(u8 reg, u8 *source, int len, unsigned int Region);
 
+
 #define DEBUG 0
+
 
 #if DEBUG
 #define debug_printk(fmt...) printk(fmt)
