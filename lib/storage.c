@@ -55,13 +55,13 @@ static int initialize_nvmem_sec()
 
         if (dr == NULL)  // opendir returns NULL if couldn't open directory 
                 return -1;
-
-
         memset(NVMEM_DEVICE, 0, sizeof(NVMEM_DEVICE));
         while ((de = readdir(dr)) != NULL) {
                 if(strncmp(de->d_name, "nvmem-sec", strlen("nvmem-sec")) == 0) {
-                        sprintf(NVMEM_DEVICE, "/sys/bus/nvmem/devices/%s/nvmem", de->d_name);
-                        closedir(dr);
+                       
+		       	sprintf(NVMEM_DEVICE, "/sys/bus/nvmem/devices/%s/nvmem", de->d_name);
+                       
+		       	closedir(dr);
                         return 0;
                 }
         }
@@ -151,6 +151,7 @@ uint32_t EApiStorageAreaRead(uint32_t Id,uint32_t Region, uint32_t Offset, void 
 	
         if((fd = open("/dev/bmc-nvmem-eapi", O_RDWR)) < 0)
 	{
+	
 		return -1;
 	}
 	if(ioctl(fd, EAPI_STOR_REGION, &data ) < 0)
@@ -218,13 +219,12 @@ uint32_t EApiStorageAreaWrite(uint32_t Id,uint32_t Region, uint32_t Offset, char
 	{
 		return EAPI_STATUS_UNSUPPORTED;
 	}
-	if(Offset + Len > 1024 )
+	if(Offset + Len > 2048)
 	{
 		return EAPI_STATUS_MORE_DATA;
 	}
 
 	unsigned char *buffer;
-
 	if((Len % 4) != 0)
 	{
 		int rem = 4 - (Len % 4);
@@ -254,7 +254,9 @@ uint32_t EApiStorageAreaWrite(uint32_t Id,uint32_t Region, uint32_t Offset, char
 		return EAPI_STATUS_UNSUPPORTED;
 	}
 	else
+	{
 	close(fd);
+	}
 	fd = open(NVMEM_DEVICE, O_WRONLY);
         
 	if (fd < 0)
