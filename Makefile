@@ -1,3 +1,4 @@
+
 SEMA_OBJS = $(patsubst %.c,%.o,$(wildcard lib/*.c))
 WDOG_OBJS = $(patsubst %.c,%.o,$(wildcard watchdogtest/*.c))
 APP_OBJS = $(patsubst %.c,%.o,$(wildcard app/*.c))
@@ -29,6 +30,7 @@ clean: driver_clean app_clean
 install: all driver_install app_install
 
 driver_install:
+	@if grep "Debian" /etc/os-release; then mkdir -p /lib/modules/`uname -r`/build/certs; fi 
 	@openssl req -new -nodes -utf8 -sha512 -days 36500 -batch -x509 -config x509.genkey -outform PEM -out signing_key.x509 -keyout signing_key.pem > /dev/null
 	@cp signing_key.pem /lib/modules/`uname -r`/build/certs/
 	@cp signing_key.x509 /lib/modules/`uname -r`/build/certs/

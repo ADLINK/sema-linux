@@ -145,8 +145,8 @@ void ShowHelp(int condition)
 		printf("  4. semautil /g get_level         [GPIO Bit]\n");
 		printf("  5. semautil /g set_level         [GPIO Bit] [0 - Low or 1 - High]\n");
 		printf("       GPIO set/write parameters:\n");
-		printf("       GPIO Bit   \n");
-		printf("        Note: GPIO access may not be available on all platforms\n\n");
+		printf("       GPIO Bit  1-16 \n");
+		printf("       Note: GPIO access may not be available on all platforms\n\n");
 	}
 	if (condition == 9 || condition == 0)
 	{
@@ -793,6 +793,13 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 		}
 		uint32_t input , output;
 		Id = atoi(argv[3]);
+		if (Id > 12 || Id == 0)
+                {
+                        printf("GPIO value should be 1-8 or 1-12\n");
+                        printf("Note: GPIO access may not be available on all platforms\n\n");
+                        return -1;
+                }
+
 		ret = EApiGPIOGetDirectionCaps(Id, &input, &output);
 		if (ret) {
 			printf("Get EApi information failed\n");
@@ -816,9 +823,10 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 			exit(-1);
 		}
 		bitmask = atoi(argv[3]); //bitmask --> user provided gpio number. 
-		if (bitmask > 8 || bitmask == 0)
+		if (bitmask > 12 || bitmask == 0)
 		{
-			printf("GPIO value should be 1-8\n");
+			printf("GPIO value should be 1-8 or 1-12\n");
+			printf("Note: GPIO access may not be available on all platforms\n\n");
 			return -1;
 		}
 		bitmask--;
@@ -845,9 +853,10 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 		}
 		bitmask = atoi(argv[3]);
 		dir = atoi(argv[4]);
-		if (bitmask > 8 || bitmask == 0)
+		if (bitmask > 12 || bitmask == 0)
 		{
-			printf("GPIO value should be 1-8\n");
+			printf("GPIO value should be 1-8 or 1-12\n");
+			printf("Note: GPIO access may not be available on all platforms\n\n");
 			return -1;
 		}
 		if ((dir < 0) || (dir > 1))
@@ -875,9 +884,10 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 		uint32_t bitmask=0, val=0;
 
 		bitmask = atoi(argv[3]);
-		if (bitmask > 8 || bitmask == 0)
+		if (bitmask > 12 || bitmask == 0)
 		{
-			printf("GPIO pin number should be 1-8\n");
+			printf("GPIO pin number should be 1-8 or 1-12\n");
+			printf("Note: GPIO access may not be available on all platforms\n\n");
 			return -1;
 		}
 		bitmask--;
@@ -905,9 +915,10 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 		}
 		bitmask = atoi(argv[3]);
 		val = atoi(argv[4]);
-		if (bitmask > 8 || bitmask == 0)
+		if (bitmask > 12 || bitmask == 0)
 		{
-			printf("GPIO pin number should be 1-8\n");
+			printf("GPIO pin number should be 1-8 or 1-12\n");
+			printf("Note: GPIO access may not be available on all platforms\n\n");
 			return -1;
 		}
 		if ((val < 0) || (val > 1))

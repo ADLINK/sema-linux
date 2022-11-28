@@ -21,6 +21,7 @@
 #include <linux/ioctl.h>
 #include <linux/fs.h>
 #include <linux/uaccess.h>
+
 #include <linux/slab.h>
 
 #include "adl-bmc.h"
@@ -338,15 +339,22 @@ int bmc_i2c_status(struct eapi_txn *trxn)
 
 long ioctl(struct file *file, unsigned int cmd, unsigned long data)
 {
-	copy_from_user(&buf, (void*)data, sizeof(struct eapi_txn));
+	int RetVal;
 
+       	if((RetVal=copy_from_user(&buf, (void*)data, sizeof(struct eapi_txn)))!=0)
+	{
+        	return EFAULT;
+	}
 	mutex_lock(&i2c_lock);
 	switch(cmd)
 	{
 		case PROBE_DEV:
 			if(ProbeDevice((struct eapi_txn*)data) == 0)
 			{
-				copy_to_user((void*)data, &buf, sizeof(struct eapi_txn));
+				if((RetVal=copy_to_user((void*)data, &buf, sizeof(struct eapi_txn)))!=0)
+				{
+					return EFAULT;
+				}
 				mutex_unlock(&i2c_lock);
 				return 0;
 			}
@@ -361,11 +369,17 @@ long ioctl(struct file *file, unsigned int cmd, unsigned long data)
 			{
 				eapi_transaction((struct eapi_txn*)&buf);
 			}
-			copy_to_user((void*)data, &buf, sizeof(struct eapi_txn));
+			if((RetVal=copy_to_user((void*)data, &buf, sizeof(struct eapi_txn)))!=0)
+			{
+				return EFAULT;
+			}
 			break;
 		case BMC_I2C_STS:
 			bmc_i2c_status((struct eapi_txn*)data);
-			copy_to_user((void*)data, &buf, sizeof(struct eapi_txn));
+			if((RetVal=copy_to_user((void*)data, &buf, sizeof(struct eapi_txn)))!=0)
+			{
+				return EFAULT;
+			}
 			break;
 		default:
 			mutex_unlock(&i2c_lock);

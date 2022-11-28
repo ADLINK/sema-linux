@@ -421,14 +421,14 @@ uint32_t EApiI2CGetBusCap(uint32_t Id, uint32_t *pMaxBlkLen)
 	switch (Id)
 	{
 		case SEMA_EXT_IIC_BUS_1:
-			if (m_nSemaCaps & SEMA_C_I2C2)
+			if (m_nSemaCaps & SEMA_C_I2C1)
 			{
 				return EAPI_STATUS_SUCCESS;
 			}
 			break;
 
 		case SEMA_EXT_IIC_BUS_2:
-			if (m_nSemaCaps & SEMA_C_I2C1)
+			if (m_nSemaCaps & SEMA_C_I2C2)
 			{
 				return EAPI_STATUS_SUCCESS;
 			}

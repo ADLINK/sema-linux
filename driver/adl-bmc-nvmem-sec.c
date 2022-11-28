@@ -12,7 +12,6 @@
 #include <linux/fs.h>
 #include <linux/cdev.h>
 #include <linux/ioctl.h>
-
 #include "adl-bmc.h"
 #define EAPI_STOR_LOCK       _IOWR('a', 1, unsigned long)
 #define EAPI_STOR_UNLOCK       _IOWR('a', 2, unsigned long)
@@ -472,11 +471,13 @@ static int release(struct inode *inode, struct file *file)
     return 0;
 }
 
-
 long ioctl(struct file *file, unsigned int cmd, unsigned long data)
 {
-    copy_from_user(&buffer, (void*)data, sizeof(struct secure));
-
+	int RetVal;
+	if((RetVal=copy_from_user(&buffer, (void*)data, sizeof(struct secure)))!=0)
+	{
+	   return EFAULT;
+	}
     switch (cmd)
     {
         case EAPI_STOR_LOCK:
@@ -484,7 +485,10 @@ long ioctl(struct file *file, unsigned int cmd, unsigned long data)
 	    {
 		    return -EINVAL;
 	    }
-            copy_to_user((void*)data, &buffer, sizeof(struct secure));
+          if((RetVal=copy_to_user((void*)data, &buffer, sizeof(struct secure)))!=0)
+	    {
+	            return EFAULT;
+	    }
             return 0;
 
 	case EAPI_STOR_UNLOCK:
@@ -492,7 +496,10 @@ long ioctl(struct file *file, unsigned int cmd, unsigned long data)
 	    {
 		    return -EINVAL;
 	    }
-            copy_to_user((void*)data, &buffer, sizeof(struct secure));
+            if((RetVal=copy_to_user((void*)data, &buffer, sizeof(struct secure)))!=0)
+   	    {
+		    return EFAULT;
+            }
             return 0;
         case EAPI_STOR_REGION:
 
