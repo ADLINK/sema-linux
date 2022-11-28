@@ -12,7 +12,7 @@
 
 ### Supported Operating System:
 * Ubuntu 18.04, 20.04, 22.04
-* Debian 7, 8, 8 (except that Voltage Monitoring)
+* Debian all versions (except that Voltage Monitoring)
 
 
 ### Developer's Guide (how to use EAPI and Sysfs): 
