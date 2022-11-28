@@ -795,6 +795,10 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 			exit(-1);
 		}
 		Vid = atoi(argv[3]);
+		if (Vid < 0 || Vid > 15) {
+                       printf("Invalid Channel. Please enter channel in between 0 - 15.\n");
+                       exit(-1);
+                }
 		Size = sizeof(Vmbuf);
 		ret = EApiBoardGetVoltageMonitor(Vid, &Voltage, Vmbuf, Size);
 		if (ret) {
