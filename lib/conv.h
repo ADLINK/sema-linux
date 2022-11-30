@@ -171,6 +171,7 @@ char Conv_HexString2Word(char *String, unsigned short *Hex);
 ********************************************************************************
 **/
 char Conv_HexString2DWord(char *String, uint32_t *Hex);
+int Conv_String2HexByte(char *string, char *result);
 
 
 #endif /* CONV_H */

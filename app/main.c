@@ -14,7 +14,7 @@
 
 char*			ExeName;
 uint8_t	SetWatchdog, TriggerWatchdog, StopWatchdog, WatchDogCap,IsPwrUpWDogStart, IsPwrUpWDogStop;
-uint8_t	StorageCap, StorageAreaRead, StorageAreaWrite, StorageAreaLock, StorageAreaUnLock;
+uint8_t	StorageCap, StorageAreaRead, StorageAreaWrite, StorageAreaLock, StorageAreaUnLock,StorageHexWrite, StorgeHexRead;;
 uint8_t	SmartFanTempSet, SmartFanTempGet, SmartFanTempSetSrc, SmartFanTempGetSrc, SmartFanPWMSet;
 uint8_t	SmartFanModeGet, SmartFanModeSet, SmartFanPWMGet;
 uint8_t	GetStringA, GetValue, GetVoltageMonitor;
@@ -72,8 +72,10 @@ void ShowHelp(int condition)
 		printf("  1. semautil /s get_cap\n");
 		printf("  2. semautil /s read [Region] [Address] [Length] \n");
 		printf("  3. semautil /s write [Region] [Address] [string/value] [Length] \n");
-		printf("  4. semautil /s lock [Region]\n");
-		printf("  5. semautil /s unlock [Region] [Permission] [passcode]\n\n");
+		printf("  4. semautil /s hex_write [Region] [Address] [value] \n");
+		printf("  5. semautil /s hex_read [Region] [Address] [Length] \n");
+		printf("  6. semautil /s lock [Region]\n");
+		printf("  7. semautil /s unlock [Region] [Permission] [passcode]\n\n");
 		printf("     Region:\n");
 		printf("     1.User\n");
 		printf("     2.Secure\n\n");
@@ -82,6 +84,7 @@ void ShowHelp(int condition)
 		printf("     2.Read/Write\n\n");
 		printf("     Example: semautil /s write 1020 Aaaa 4\n          It will be written to 1020, 1021, 1022, 1023\n\n");
 		//printf("\n     Note: Hexa decimal values are not valid\n     Note: Locking of ODM region will only make ODM is read-only.\n          lock function will not protect User region.\n          read and write function will not work on ODM region\n");
+		printf("     Note : hex_write operation should be provided as below\n	Example: semautil /s hex_write 1 128 aa bb c d \n");
 
 	}
 	if (condition == 3 || condition == 0)
@@ -290,7 +293,8 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 	int fid = 0, Level1, Level2, Level3, Level4, Tempsrc, fan_mode, sts;
 	/* Storage */
 	uint32_t Offset, BufLen, ByteCnt;
-	char *Buffer, memcap[4096];
+	char *Buffer;
+	unsigned char memcap[4096];
 	uint32_t Storagesize = 0, BlockLength = 0;
 
 	// Library Initializing
@@ -736,7 +740,73 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 		}
 		printf("Data Written Successfully\n");
 	}
+	
+	if(StorageHexWrite)
+	{
+		if(argc != 6){
+			if(argc < 6)
+			{
+				printf("Wrong arguments\n");
+				exit(-1);
+			}
+		}
+		char hex_buf[2048];
+		int i,j=0;
+		
+		for(i=5;i<argc;i++)
+                {
+			if(strlen(argv[i])==1)
+			{
+			       hex_buf[j] = '0';
+			       j++;
+		       	       hex_buf[j] = argv[i][0];	       
+			}
+			else
+			{
+                        	strcpy(hex_buf + j,argv[i]);
+			}
+                        j = strlen (argv[i]) + j;
+		}
+		Id = EAPI_ID_STORAGE_STD;
+                region = atoi(argv[3]);
+                Offset = atoi(argv[4]);
+		Buffer = hex_buf;
+                ByteCnt = strlen(Buffer);
+		ret = EApiStorageHexWrite(Id,region, Offset, Buffer, ByteCnt/2);
+                if (ret) {
+                        printf("Get EApi information failed\n");
+                        errno_exit("EApiStorageHexWrite");
+                }
+                printf("%d Bytes Written Successfully\n",ByteCnt/2);
 
+	}
+	
+	if(StorgeHexRead)
+	{
+                if (argc != 6) {
+                        printf("Wrong arguments\n");
+                        exit(-1);
+                }
+                Id = EAPI_ID_STORAGE_STD;
+                memset(memcap, 0, sizeof(memcap));
+                region= atoi(argv[3]);
+                Offset = atoi(argv[4]);
+                ByteCnt = atoi(argv[5]);
+                BufLen = sizeof(memcap);
+
+                ret = EApiStorageHexRead(Id,region, Offset, memcap, BufLen, ByteCnt);
+                if (ret) {
+                        printf("Get EApi information failed\n");
+                        errno_exit("EApiStorageHexRead");
+                }
+		printf("Read Buffer : ");
+		for(int i=0;i<ByteCnt;i++)
+		{
+                	printf("0x%02X ", memcap[i]);
+		}
+		printf("\n");
+
+	}
 	if(StorageAreaLock)
 	{
 		if (argc != 4) {
@@ -1336,6 +1406,14 @@ signed int ParseArgs(int argc, char* argv[])
 		else if (argc == 7 && (strcasecmp(argv[2], "write") == 0))
 		{
 			StorageAreaWrite = TRUE;
+		}
+		else if (argc >= 6 && (strcasecmp(argv[2], "hex_write")==0))
+		{
+			StorageHexWrite = TRUE;	
+		}
+		else if (argc == 6 && (strcasecmp(argv[2], "hex_read") == 0))
+		{
+			StorgeHexRead = TRUE;
 		}
 		else if (argc == 4 && (strcasecmp(argv[2], "lock") == 0))
 		{

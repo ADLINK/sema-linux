@@ -7,8 +7,9 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
-
+#include <ctype.h>
 #include <common.h>
+#include "conv.h"
 
 #define SMC_FLASH_ALIGNMENT 4
 
@@ -255,7 +256,7 @@ uint32_t EApiStorageAreaWrite(uint32_t Id,uint32_t Region, uint32_t Offset, char
 	}
 	else
 	{
-	close(fd);
+		close(fd);
 	}
 	fd = open(NVMEM_DEVICE, O_WRONLY);
         
@@ -265,9 +266,7 @@ uint32_t EApiStorageAreaWrite(uint32_t Id,uint32_t Region, uint32_t Offset, char
 	}
 
 	lseek(fd,Offset,SEEK_SET);
-
 	ret = write(fd,buffer,Len);
-
 	if (ret > 0)
 	{
 		close(fd);
@@ -279,6 +278,105 @@ uint32_t EApiStorageAreaWrite(uint32_t Id,uint32_t Region, uint32_t Offset, char
 	}
 
 	return status;
+}
+
+uint32_t EApiStorageHexRead(uint32_t Id,uint32_t Region, uint32_t Offset, void *pBuffer, uint32_t BufLen, uint32_t  Bytecnt)
+{
+        int ret = 0;
+	ret = EApiStorageAreaRead(Id,Region,Offset,pBuffer,BufLen,Bytecnt);
+	
+	if(ret)
+		return ret;
+	else
+		return EAPI_STATUS_SUCCESS;
+}
+
+uint32_t EApiStorageHexWrite(uint32_t Id,uint32_t Region, uint32_t Offset, char* Buf, uint32_t Len)
+{
+        uint32_t status = EAPI_STATUS_SUCCESS;
+        int ret,i,fd;
+	struct secure data;
+	char *asciiString,*hex_buf;
+        char result[1028];
+
+	for(i=0;i<Len*2;i++)
+	{
+		if(isxdigit(Buf[i])==0)
+		{
+			printf("Please provide the hex data only 'A'-'F','a'-'f' and '0'-'9'\n");
+			return EAPI_STATUS_UNSUPPORTED;
+		}
+	}
+	asciiString = Buf;
+	Conv_String2HexByte(asciiString,result);
+	hex_buf = result;
+
+        if(Region==1)
+        {
+                NVMEM_INIT();
+        }
+        else if(Region==2)
+        {
+                NVMEM_SEC_INIT();
+        }
+        else if(Region==3)
+        {
+                NVMEM_SEC_INIT();
+        }
+        else
+        {
+                return EAPI_STATUS_INVALID_PARAMETER;
+        }
+
+        if(Id > 1 && Id < 0)
+        {
+                return EAPI_STATUS_UNSUPPORTED;
+        }
+        if(Offset + Len > 2048)
+        {
+                return EAPI_STATUS_MORE_DATA;
+        }
+
+        unsigned char *buffer;
+	
+	buffer = (unsigned char*)hex_buf;
+
+        data.Region=Region;
+
+        if((fd = open("/dev/bmc-nvmem-eapi", O_RDWR)) < 0)
+        {
+                return -1;
+        }
+        if(ioctl(fd, EAPI_STOR_REGION, &data ) < 0)
+        {
+                close(fd);
+                return EAPI_STATUS_UNSUPPORTED;
+        }
+        else
+        {
+                close(fd);
+        }
+	
+	fd = open(NVMEM_DEVICE, O_WRONLY);
+
+        if (fd < 0)
+        {
+                return EAPI_STATUS_WRITE_ERROR;
+        }
+
+        lseek(fd,Offset,SEEK_SET);
+        ret = write(fd,buffer,Len);
+        if (ret > 0)
+        {
+                close(fd);
+        }
+        else
+        {
+                close(fd);
+                return EAPI_STATUS_WRITE_ERROR;
+        }
+
+        return status;
 }
 
 uint32_t EApiStorageAreaClear(uint32_t Id,uint32_t Region)

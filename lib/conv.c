@@ -2,7 +2,6 @@
 #include <stdint.h>
 #include <ctype.h>
 #include <string.h>
-#include <ctype.h>
 #include "conv.h"
 
 
@@ -150,3 +149,19 @@ char Conv_HexString2DWord(char *String, uint32_t *Hex)
 
 	return true;
 }
+
+
+int Conv_String2HexByte(char *string, char *result)
+{
+        int k=0;
+        int Len = strlen(string);
+
+        for(int i = 0; i < Len; i = i + 2)
+        {
+                result[k] = Conv_GetHex( &string[i] );
+                k++;
+        }
+
+        return k; // number of bytes in the result array
+}
+

@@ -229,6 +229,13 @@ uint32_t EApiStorageAreaWrite(uint32_t Id,uint32_t Region, uint32_t Offset, char
  * @brief Function to Clear the User Region.
  * @return 0 on success
  */
+ 
+uint32_t EApiStorageHexWrite(uint32_t Id,uint32_t Region, uint32_t Offset, char* Buf, uint32_t Len);
+
+uint32_t EApiStorageHexRead(uint32_t Id,uint32_t Region, uint32_t Offset, void *pBuffer, uint32_t BufLen, uint32_t  Bytecnt);
+
+
+
 uint32_t EApiStorageAreaClear(uint32_t Id,uint32_t Region);
 
 

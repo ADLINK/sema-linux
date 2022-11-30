@@ -8,7 +8,6 @@
 #include <linux/nvmem-provider.h>
 #include <linux/delay.h>
 #include <linux/sysfs.h>
-
 #include "adl-bmc.h"
 
 struct kobject *kobj_ref;
@@ -197,7 +196,7 @@ struct kobj_attribute attr0 = __ATTR_RO(nvmemcap);
 static struct nvmem_config adl_bmc_nvmem_config = {
     .name = "nvmem",
     .read_only = false,
-    .word_size = 4,
+//    .word_size = 4,
     .stride = 4,
     .reg_read = adl_bmc_nvmem_read,
     .reg_write = adl_bmc_nvmem_write,
