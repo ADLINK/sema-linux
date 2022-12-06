@@ -17,11 +17,11 @@ SEMA® middleware is on the top of Board controller that provides a ready-made a
 Important Notice 
 -----
 
-SEMA4.0 would be designed the abstraction layer to integrate the different controllers (EC, TivaBCC and LiteBMC) and this integration will be ready in Q4 2022. 
+SEMA4.0 would be designed the abstraction layer to integrate the different controllers (EC, TivaBMC and LiteBMC) and this integration will be ready in Q4 2022. 
 
 Prior to the release of SEMA 4.0 integration, **please check which platform/hardware you're using first and then select the corresponding branch on GitHub**
 
-| **SEMA® - EC controller**<br> click [here](https://github.com/ADLINK/sema-linux/tree/sema-ec) to download the latest release                         | **SEMA® - TiVaBMC controller**<br> click [here](https://github.com/ADLINK/sema-linux/tree/sema-bmc) to download the latest release |
+| **SEMA® - EC controller**<br> click [here](https://github.com/ADLINK/sema-linux/tree/sema-ec) to download the latest release                         | **SEMA® - TivaBMC controller**<br> click [here](https://github.com/ADLINK/sema-linux/tree/sema-bmc) to download the latest release |
 | :----------------------------------------------------------- | :------------------------------------------------------------ |
 | - cExpress-TL , cExpress-EL, cExpress-AR<br>- Express-ID7, Express-ADP, Express-TL <br>- COM-HPC-cADP, COM-HPC-sIDH <br>- LEC-EL <br>- NanoX-EL                | - Express-CF/CFE, Express-KL/KLE, Express-SL/SLE, Express-DN7, Express-BD7 <br>- cExpress-WL, cExpress-KL, cExpress-SL, cExpress-AL<br>- nanoX-AL<br>- LEC-AL<br>- Q7-AL<br>- LEC-PX30 |
 
