@@ -23,5 +23,5 @@
    
 ### Other information:
 * branch name: SEMA_4.0_Linux_SandBox/ACPI-EC
-* the internal latest commit ID: f590c7c495331fd6be3e554999a5cb33fba340ee 
+* the internal latest commit ID: d442f3e21d16512ff4e75bea5662347950d0e7d4 
 
