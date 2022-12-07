@@ -365,7 +365,7 @@ struct kobj_attribute attr0 = __ATTR_RO(nvmemcap);
 static struct nvmem_config adl_bmc_nvmem_config = {
     .name = "nvmem-sec",
     .read_only = false,
-    .word_size = 4,
+   // .word_size = 4,
     .stride = 4,
     .reg_read = adl_bmc_nvmem_read,
     .reg_write = adl_bmc_nvmem_write,
@@ -636,6 +636,6 @@ static struct platform_driver adl_bmc_nvmem_driver = {
 module_platform_driver(adl_bmc_nvmem_driver);
 
 
-MODULE_LICENSE("GPL");
+MODULE_LICENSE("Dual BSD/GPL");
 MODULE_AUTHOR("Adlink ");
 MODULE_DESCRIPTION("driver for storage");

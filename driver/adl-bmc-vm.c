@@ -168,6 +168,6 @@ static struct platform_driver adl_bmc_vm_driver = {
 module_platform_driver(adl_bmc_vm_driver);
 
 
-MODULE_LICENSE("GPL");
+MODULE_LICENSE("Dual BSD/GPL");
 MODULE_AUTHOR("Adlink ");
 MODULE_DESCRIPTION("Voltage Monitor driver");

@@ -1,3 +1,18 @@
+// Software License Agreement (BSD License)
+//
+// Copyright (c) 2022, ADLINK Technology, Inc
+// All rights reserved.
+//
+// Redistribution and use of this software in source and binary forms,
+// with or without modification, are permitted provided that the following conditions are met:
+//
+// * Redistributions of source code must retain the above copyright notice,
+//   this list of conditions and the following disclaimer.
+//
+// * Neither the name of ADLINK Technology nor the names of its contributors may be used
+//   to endorse or promote products derived from this software without specific
+//   prior written permission of ADLINK Technology, Inc.
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -297,7 +312,7 @@ uint32_t EApiStorageHexWrite(uint32_t Id,uint32_t Region, uint32_t Offset, char*
         int ret,i,fd;
 	struct secure data;
 	char *asciiString,*hex_buf;
-        char result[1028];
+        char result[2048];
 
 	for(i=0;i<Len*2;i++)
 	{
@@ -332,10 +347,24 @@ uint32_t EApiStorageHexWrite(uint32_t Id,uint32_t Region, uint32_t Offset, char*
         {
                 return EAPI_STATUS_UNSUPPORTED;
         }
-        if(Offset + Len > 2048)
-        {
-                return EAPI_STATUS_MORE_DATA;
-        }
+
+	if(Region == 2)
+	{
+        	if(Offset + Len > 2048)
+        	{
+			printf("The maximum byte length for hex_write is 2048\n");
+                	return EAPI_STATUS_MORE_DATA;
+        	}
+	}
+	else
+	{
+	
+        	if(Offset + Len > 1024)
+        	{
+			printf("The maximum byte length for hex_write is 1024\n");
+                	return EAPI_STATUS_MORE_DATA;
+        	}
+	}
 
         unsigned char *buffer;
 	

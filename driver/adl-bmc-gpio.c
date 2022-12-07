@@ -302,6 +302,6 @@ static struct platform_driver adl_ec_gpio_driver = {
 };
 module_platform_driver(adl_ec_gpio_driver);
 
-MODULE_LICENSE("GPL v2");
+MODULE_LICENSE("Dual BSD/GPL");
 MODULE_AUTHOR("ADLINK");
 MODULE_DESCRIPTION("ADLINK EC GPIO Driver");

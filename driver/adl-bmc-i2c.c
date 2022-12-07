@@ -1087,6 +1087,6 @@ static struct platform_driver adl_bmc_i2c_driver = {
 
 module_platform_driver(adl_bmc_i2c_driver);
 
-MODULE_LICENSE("GPL");
+MODULE_LICENSE("Dual BSD/GPL");
 MODULE_AUTHOR("Adlink ");
 MODULE_DESCRIPTION("ADLINK BMC I2C driver");

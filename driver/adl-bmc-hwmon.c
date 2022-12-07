@@ -992,6 +992,6 @@ module_platform_driver(adl_bmc_hwmon_driver);
 
 MODULE_AUTHOR("ADLINK");
 MODULE_DESCRIPTION("ADLINK BMC FAN-PWM Driver");
-MODULE_LICENSE("GPL");
+MODULE_LICENSE("Dual BSD/GPL");
 
 

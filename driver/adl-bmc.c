@@ -724,6 +724,6 @@ static void __exit adl_bmc_acpi_exit (void)
 module_init(adl_bmc_acpi_init);
 module_exit(adl_bmc_acpi_exit);
 
-MODULE_LICENSE("GPL");
+MODULE_LICENSE("Dual BSD/GPL");
 MODULE_AUTHOR("Adlink ");
 MODULE_DESCRIPTION("ACPI EC Driver");
