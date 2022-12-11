@@ -14,7 +14,7 @@
 * Ubuntu 18.04, 20.04, 22.04
 * Debian all versions
 * CentOS (except that Voltage Monitoring and GPIO Support)
-* Red Hat ((except that Voltage Monitoring and GPIO Support)
+* Red Hat (except that Voltage Monitoring and GPIO Support)
 
 
 ### Developer's Guide (how to use EAPI and Sysfs): 
