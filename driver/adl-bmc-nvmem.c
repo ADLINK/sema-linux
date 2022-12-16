@@ -1,11 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0
-/*
- * Driver for non volatile memory inside BMC, part of a mfd device
- *
- * Copyright (C) 2020 ADLINK Technology Inc.
- *
- */
-
 #include <linux/kernel.h>
 #include <linux/io.h>
 #include <linux/slab.h>
@@ -225,6 +217,6 @@ static struct platform_driver adl_bmc_nvmem_driver = {
 module_platform_driver(adl_bmc_nvmem_driver);
 
 
-MODULE_LICENSE("GPL");
+MODULE_LICENSE("Dual BSD/GPL");
 MODULE_AUTHOR("Adlink ");
 MODULE_DESCRIPTION("driver for storage");

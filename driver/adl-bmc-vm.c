@@ -1,11 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0
-/*
- * Voltage monitoring driver of BMC, part of a mfd device
- *
- * Copyright (C) 2020 ADLINK Technology Inc.
- *
- */
-
 #include <linux/err.h>
 #include <linux/of.h>
 #include <linux/export.h>
@@ -326,6 +318,6 @@ static struct platform_driver adl_bmc_vm_driver = {
 module_platform_driver(adl_bmc_vm_driver);
 
 
-MODULE_LICENSE("GPL");
+MODULE_LICENSE("Dual BSD/GPL");
 MODULE_AUTHOR("Adlink ");
 MODULE_DESCRIPTION("Voltage Monitor driver");

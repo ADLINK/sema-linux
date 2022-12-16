@@ -1,11 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0
-/*
- * Driver to extract board information from BMC
- *
- * Copyright (C) 2020 ADLINK Technology Inc.
- *
- */
-
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/init.h>
@@ -1368,7 +1360,7 @@ static struct platform_driver adl_bmc_boardinfo_driver = {
 
 module_platform_driver(adl_bmc_boardinfo_driver);
 
-MODULE_LICENSE("GPL");
+MODULE_LICENSE("Dual BSD/GPL");
 MODULE_AUTHOR("Adlink ");
 MODULE_DESCRIPTION("Board information driver");
 

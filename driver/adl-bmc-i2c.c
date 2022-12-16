@@ -1,11 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0
-/*
- * Driver for I2C bus inside of BMC , part of a mfd device
- *
- * Copyright (C) 2020 ADLINK Technology Inc.
- *
- */
-
 #define pr_fmt(fmt) "adlink-i2c: " fmt
 
 #include <linux/errno.h>
@@ -336,6 +328,6 @@ static struct platform_driver adl_bmc_i2c_driver = {
 
 module_platform_driver(adl_bmc_i2c_driver);
 
-MODULE_LICENSE("GPL");
+MODULE_LICENSE("Dual BSD/GPL");
 MODULE_AUTHOR("Adlink ");
 MODULE_DESCRIPTION("ADLINK BMC I2C driver");

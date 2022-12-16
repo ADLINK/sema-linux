@@ -1,11 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0
-/*
- * Driver for Watchdog timer inside of BMC , part of a mfd device
- *
- * Copyright (C) 2020 ADLINK Technology Inc.
- *
- */
-
 #include <linux/module.h>
 #include <linux/types.h>
 #include <linux/slab.h>
@@ -257,6 +249,6 @@ static struct platform_driver adl_bmc_wdt_driver = {
 	
 module_platform_driver(adl_bmc_wdt_driver);
 
-MODULE_LICENSE("GPL");
+MODULE_LICENSE("Dual BSD/GPL");
 MODULE_AUTHOR("Adlink ");
 MODULE_DESCRIPTION("Watchdog Timer driver");

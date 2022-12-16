@@ -1,11 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0
-/*
- * Driver for ADLINK SMBUS or I2C connected Board management controllers (BMC) devices
- *
- * Copyright (C) 2020 ADLINK Technology Inc.
- *
- */
-
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/init.h>
@@ -213,7 +205,7 @@ static struct i2c_driver adl_bmc_driver = {
 
 module_i2c_driver(adl_bmc_driver);
 
-MODULE_LICENSE("GPL");
+MODULE_LICENSE("Dual BSD/GPL");
 MODULE_AUTHOR("Adlink ");
 MODULE_DESCRIPTION("Board Management Controller driver");
 MODULE_VERSION(DRIVER_VERSION);
