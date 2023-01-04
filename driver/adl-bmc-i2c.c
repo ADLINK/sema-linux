@@ -52,7 +52,7 @@
 #define SEMA_EXT_IIC_EXT_COMMAND        0x10
 
 
-#define BMC_DELAY_PER_BYTE      1000
+#define BMC_DELAY_PER_BYTE      100
 #define BMC_DELAY(x)	udelay(BMC_DELAY_PER_BYTE * (x))
 
 
@@ -437,7 +437,7 @@ static int i2c_write_read_iic (struct i2c_msg *msg_wr, struct i2c_msg *msg_rd, i
     {
         return -ENODEV;
     }
-    mdelay((msg_wr->len + msg_rd->len)*1);
+    BMC_DELAY(msg_wr->len + msg_rd->len + 2);
  
     if((check_bmc_status_iic(&Status, 500))<0)
     {
