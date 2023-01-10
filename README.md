@@ -12,9 +12,9 @@
 
 ### Supported Operating System:
 * Ubuntu 18.04, 20.04, 22.04
-* Debian all versions
-* CentOS (except that GPIO Support)
-* Red Hat (except that GPIO Support)
+* Debian with all versions
+* CentOS with all versions (except that GPIO Support)
+* RedHat with all versions (except that GPIO Support)
 
 
 ### Developer's Guide (how to use EAPI and Sysfs): 
