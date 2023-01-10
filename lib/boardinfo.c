@@ -23,12 +23,25 @@
 #include "eapi.h"
 #include "common.h"
 #include <unistd.h>
+#include <sys/ioctl.h>
+
+#define GET_VOLT_AND_DESC	_IOR('a','1',struct data *)
+#define GET_VOLT_MONITOR_CAP	_IOR('a','2',uint8_t *)
 
 #define PLATFORMS_NUMBER 2
+#define MAX_ID		 7
+
+int dev_handle;
 
 char *Board[PLATFORMS_NUMBER] = {
 	"LEC-AL",
 	"Q7-AL"
+};
+
+struct data{
+int id;
+int volt;
+char volt_desc[10];
 };
 
 uint32_t IsFileExist(char *sysf)
@@ -293,139 +306,34 @@ uint32_t EApiBoardGetValue(uint32_t Id, uint32_t *pValue)
 }
 static int get_regulator_voltage(int id, uint32_t *mVolts, char *buf, uint32_t size)
 {
-	struct dirent *de;  // Pointer for directory entry 
-	char *regulator;
+	struct data vm;
+	int ret;
 
-	char *list[30] = {0};
-	int j = 0, first = 0, dont = 1;
-
-
-	// opendir() returns a pointer of DIR type.  
-	DIR *dr = opendir("/sys/class/regulator/"); 
-
-	if (dr == NULL)  // opendir returns NULL if couldn't open directory 
-		return -1;
-
-	while ((de = readdir(dr)) != NULL) {
-		if(strncmp(de->d_name, "regulator", strlen("regulator")) == 0) {
-			char sysfile_volt[288] = {0};
-			char sysfile_drv[388] = {0};
-			char value[256] = {0};
-			char drv[256] = {0};
-			
-			sprintf(sysfile_volt, "/sys/class/regulator/%s/name", de->d_name);	
-			if(read_sysfs_file(sysfile_volt, value, sizeof(value)) != 0) {
-				continue;
-			}
-
-			sprintf(sysfile_drv, "/sys/class/regulator/%s/device/modalias", de->d_name);
-			if(read_sysfs_file(sysfile_drv, drv, sizeof(drv)) != 0) {
-				continue;
-			}
-
-			if(strstr(drv, "adl-bmc-vm") == NULL)
-			{
-				continue;
-			}
-
-			int val = atoi(strstr(de->d_name, ".") + 1);
-			if(dont == 1 || val < first)
-			{
-				first = val;
-				dont = 0;
-			}
-		}
-	}
-	closedir(dr);
-
-	// opendir() returns a pointer of DIR type.  
-	dr = opendir("/sys/class/regulator/"); 
-
-	if (dr == NULL)  // opendir returns NULL if couldn't open directory 
-		return -1;
-
-	while ((de = readdir(dr)) != NULL) {
-		if(strncmp(de->d_name, "regulator", strlen("regulator")) == 0) {
-			char sysfile_volt[288] = {0};
-			char sysfile_drv[388] = {0};
-			char value[256] = {0};
-			char drv[256] = {0};
-			
-			sprintf(sysfile_volt, "/sys/class/regulator/%s/name", de->d_name);	
-			if(read_sysfs_file(sysfile_volt, value, sizeof(value)) != 0) {
-				continue;
-			}
-
-			sprintf(sysfile_drv, "/sys/class/regulator/%s/device/modalias", de->d_name);
-			if(read_sysfs_file(sysfile_drv, drv, sizeof(drv)) != 0) {
-				continue;
-			}
-
-			if(strstr(drv, "adl-bmc-vm") == NULL)
-			{
-				continue;
-			}
-
-			int val = atoi(strstr(de->d_name, ".") + 1);
-
-			val = val - first;
-			if(val < 0)
-			{
-				return -1;
-			}
-
-			list[val] = strdup(value);
-			j++;
-		}
-	}
-	closedir(dr);     
-
-	if((id < j) && id >= 0)
+	if(id >= MAX_ID)
 	{
-		regulator = list[id];
-	}
-	else
 		return -1;
-
-	// opendir() returns a pointer of DIR type.  
-	dr = opendir("/sys/class/regulator/"); 
-
-	if (dr == NULL)  // opendir returns NULL if couldn't open directory 
-		return -1;
-
-	while ((de = readdir(dr)) != NULL) {
-		if(strncmp(de->d_name, "regulator", strlen("regulator")) == 0) {
-			char sysfile_volt[288] = {0};
-			char sysfile_desc[282] = {0};
-			char value[256] = {0};
-			
-			sprintf(sysfile_volt, "/sys/class/regulator/%s/name", de->d_name);	
-			if(read_sysfs_file(sysfile_volt, value, sizeof(value)) != 0) {
-				continue;
-			}
-			
-			if(strncmp(value, regulator, strlen(regulator)) != 0) {
-				continue;
-			}
-			
-			sprintf(sysfile_volt, "/sys/class/regulator/%s/microvolts", de->d_name);
-			sprintf(sysfile_desc, "/sys/class/regulator/%s/name", de->d_name);
-			if(read_sysfs_file(sysfile_volt, value, sizeof(value)) != 0) {
-				return -1;
-			}
-			if(read_sysfs_file(sysfile_desc, buf, size) != 0) {
-				return -1;
-			}
-			*mVolts = atoi(value);
-			*mVolts /= 1000;
-			closedir(dr);     
-			return 0;
-		}
 	}
 
-	errno = EINVAL;
-	closedir(dr);     
-	return -1;
+	dev_handle = open("/dev/adl_vm",O_RDONLY);
+	
+	if(dev_handle < 0)
+	{
+		return -1;
+	}
+	
+	vm.id = id;
+	ret=ioctl(dev_handle , GET_VOLT_AND_DESC , &vm);
+
+	if(ret)
+	{
+		return EAPI_STATUS_ERROR;
+	}
+	*mVolts = vm.volt;
+	strcpy(buf,vm.volt_desc);
+	close(dev_handle);
+
+	return EAPI_STATUS_SUCCESS;
+
 }
 
 uint32_t EApiBoardGetVoltageMonitor(uint32_t id, uint32_t *mVolts, char *buf, uint32_t size)
@@ -444,6 +352,28 @@ uint32_t EApiBoardGetVoltageMonitor(uint32_t id, uint32_t *mVolts, char *buf, ui
 		return EAPI_STATUS_ERROR;
 	}
 	return EAPI_STATUS_SUCCESS;
+}
+
+uint32_t EApiBoardGetVoltageCap(uint32_t *value)
+{
+	uint32_t vm_cap;
+	int ret;
+
+        dev_handle = open("/dev/adl_vm",O_RDONLY);
+
+        if(dev_handle < 0)
+        {
+                return -1;
+        }
+	ret=ioctl(dev_handle , GET_VOLT_MONITOR_CAP, &vm_cap);
+	if(ret)
+	{
+		return EAPI_STATUS_ERROR;
+	}
+	*value=vm_cap;
+	close(dev_handle);
+	return EAPI_STATUS_SUCCESS;
+	
 }
 
 uint32_t EApiBoardGetErrorLog (uint32_t Pos, uint32_t *ErrorNumber, uint8_t  *Flags, uint8_t  *RestartEvent, uint32_t *PwrCycles, uint32_t *Bootcount, uint32_t *Time, uint8_t *Status, \

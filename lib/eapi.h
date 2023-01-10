@@ -149,6 +149,9 @@ uint32_t EApiBoardGetVoltageMonitor(uint32_t id, uint32_t *pVoltage, char *pBuf,
  * @param buf buffer pointer
  * @return 0 on success -1 on failure
  */
+ 
+uint32_t EApiBoardGetVoltageCap(uint32_t *value);
+ 
 uint32_t EApiBoardGetErrorLog (uint32_t position, uint32_t *ErrorNumber, uint8_t  *Flags, uint8_t  *RestartEvent, uint32_t *PwrCycles, uint32_t *Bootcount, uint32_t *Time,\
 	       	uint8_t *Status, signed char *CPUtemp, signed char *Boardtemp, uint32_t *TotalOnTime, uint8_t *BiosSel);
 

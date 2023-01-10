@@ -10,51 +10,51 @@
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/slab.h>
+#include <linux/cdev.h>
 
 #include "adl-bmc.h"
 
+#define GET_VOLT_AND_DESC	_IOR('a','1',struct data *)
+#define GET_VOLT_MONITOR_CAP	_IOR('a','2',uint8_t *)
+
+int vm_dev,vm_cap;
+struct class *class_adl_vm;
+struct cdev cdev;
+dev_t devdrv;
+int flag;
+char volt_desc[7][10];
+
+struct data
+{
+int id;
+int volt;
+char volt_desc[10];
+};
+
 struct adl_bmc_vm_data {
 	struct regulator_desc adl_bmc_vm_desc[16];
-	struct regulator_dev *adl_bmc_vm_rdev[16];
-	struct regulator *adl_bmc_vm_dev[16];
 	struct adl_bmc_dev *adl_dev;
 	char name_arr[16][256];
 	int cnt;
 };
 
-
-static int adl_bmc_vm_list_voltage(struct regulator_dev *rdev, unsigned selector)
+static int adl_bmc_vm_get_voltage(struct data *vm)
 {
-	debug_printk("func: %s\n", __func__);
-	return 0;
-}
+	int ret;
+	uint16_t buf=0,Addr;
 
-static int adl_bmc_vm_get_voltage(struct regulator_dev *rdev)
-{
-	int ret = 0;
-	uint16_t buff_hm=0;
-	unsigned char cmd_hm;
-	u64 vol_val;
+	Addr=(vm->id*2)+ADL_BMC_OFS_HW_MON_IN;
 
-	if (rdev->desc->id < 7) {
-		cmd_hm = ADL_BMC_OFS_HW_MON_IN + (rdev->desc->id * 2);
-	}
-	else
-		return -EINVAL;
-
-	debug_printk("cmd_hm %x\n",cmd_hm);
-
-	/*read the hwmon register for voltage*/
-	ret = adl_bmc_ec_read_device(cmd_hm, (uint8_t*)&buff_hm, 2, EC_REGION_1);
+	ret= adl_bmc_ec_read_device(Addr,(uint8_t*)&buf,2,EC_REGION_1);
 
 	if(ret < 0)
-		return -EINVAL;
+                return -EINVAL;
 
-	debug_printk("rdev->desc->id %x ==> %x\n", rdev->desc->id, buff_hm);
+	vm->volt=buf;
 
-	vol_val = buff_hm * 1000;
+	strcpy(vm->volt_desc,volt_desc[vm->id]);
 
-	return vol_val;
+	return 0;
 }
 
 static struct regulator_init_data adl_bmc_initdata = {
@@ -63,19 +63,100 @@ static struct regulator_init_data adl_bmc_initdata = {
 	},
 };
 
-static struct regulator_ops adl_bmc_vm_ops = {
-	.get_voltage = adl_bmc_vm_get_voltage,
-	.list_voltage = adl_bmc_vm_list_voltage,
-};
+int open(struct inode *inode, struct file *file)
+{
+	if(flag==0)
+	{
+		flag=1;
+		return 0;
+	}
+	else
+	{
+		return -EBUSY;
+	}
+	return 0;
+}
 
+int release(struct inode *inode , struct file *file)
+{
+	flag=0;
+	return 0;
+}
+
+static long int ioctl (struct file *file, unsigned cmd, unsigned long arg)
+{
+	struct data vm;
+	int RetVal,Cap;
+	
+	switch(cmd)
+	{
+		case GET_VOLT_AND_DESC:
+		{
+			if((RetVal = copy_from_user(&vm,(struct data *)arg,sizeof(vm)))!=0)
+			{
+				return -EFAULT;
+			}
+			RetVal=adl_bmc_vm_get_voltage(&vm);
+			if((RetVal = copy_to_user((struct data*) arg,&vm,sizeof(vm)))!=0)
+			{
+				return -EFAULT;
+			}
+		}
+		break;
+		case GET_VOLT_MONITOR_CAP:
+		{
+			if((RetVal = copy_from_user(&Cap,(uint8_t *)arg,sizeof(Cap)))!=0)
+			{
+				return -EFAULT;
+			}
+			
+			if((RetVal = copy_to_user((uint8_t *)arg,&vm_cap,sizeof(vm_cap)))!=0)
+			{
+				return -EFAULT;
+			}
+		}
+		break;
+		default:
+			return -1;
+	}
+	return 0;
+}
+
+struct file_operations fops={
+	.owner = THIS_MODULE,
+	.open = open,
+	.unlocked_ioctl = ioctl,
+	.release = release,
+};
 
 static int adl_bmc_vm_probe(struct platform_device *pdev)
 {
-	int ret, i, j = 0;
+	int i;
 	struct regulator_config config = { };
 	struct device *dev = &pdev->dev;
 	struct adl_bmc_vm_data *vm_data;
+	
+	vm_dev = alloc_chrdev_region(&devdrv, 0, 1, "adl_vm");
 
+	if(vm_dev < 0)
+        {
+                return -1;
+        }
+
+	class_adl_vm = class_create(THIS_MODULE, "adl_vm");
+
+	if (IS_ERR(class_adl_vm)) {
+                printk("Error in Class_create\n");
+        }
+	 
+	cdev_init(&cdev,&fops);
+
+	if(cdev_add(&cdev,devdrv,1))
+		printk("Error in Cdev_add\n");
+	
+	if(IS_ERR(device_create(class_adl_vm, NULL, devdrv, NULL, "adl_vm")))
+		printk("Error in create device file\n");
+	
 	vm_data = devm_kzalloc(dev, sizeof(struct adl_bmc_vm_data), GFP_KERNEL);
 	if(!vm_data)
 		return -ENOMEM;
@@ -86,9 +167,13 @@ static int adl_bmc_vm_probe(struct platform_device *pdev)
 
 	/*check voltage monitor capability*/
 	if (vm_data->adl_dev->Bmc_Capabilities[0] & ADL_BMC_CAP_VM)
+	{
+		vm_cap=1;
 		debug_printk("Voltage monitor is compatible for this platform\n");
+	}
 	else { 
-		debug_printk("Voltage monitor is compatible for this platform\n");
+		vm_cap=0;
+		debug_printk("Voltage monitor is not compatible for this platform\n");
 		return -EINVAL;
 	}
 
@@ -105,53 +190,29 @@ static int adl_bmc_vm_probe(struct platform_device *pdev)
 			break;
 		}
 		memset(vm_data->name_arr[i], 0, 256);
+		strcpy(volt_desc[i],vm_data->adl_dev->current_board.voltage_description[i]);
 		strcpy(vm_data->name_arr[i], vm_data->adl_dev->current_board.voltage_description[i]);
 		vm_data->adl_bmc_vm_desc[i].name = vm_data->name_arr[i];
 		vm_data->adl_bmc_vm_desc[i].id = i;
-		vm_data->adl_bmc_vm_desc[i].type = REGULATOR_VOLTAGE;
-		vm_data->adl_bmc_vm_desc[i].ops = &adl_bmc_vm_ops;
-
 	}
-
 	vm_data->cnt = i;
 	debug_printk("Final Count is %d\n", i);
-
-	for (i = 0; i < vm_data->cnt; i++) 
-	{
-		vm_data->adl_bmc_vm_rdev[i] = devm_regulator_register(&pdev->dev, &vm_data->adl_bmc_vm_desc[i], &config);
-		if (IS_ERR(vm_data->adl_bmc_vm_rdev[i])) {
-			ret = PTR_ERR(vm_data->adl_bmc_vm_rdev[i]);
-			pr_err("Failed to register regulator: %d\n", ret);
-			goto ret_failed;
-		}
-
-	}
-
-	platform_set_drvdata(pdev, vm_data);
-	debug_printk("Returning probe\n");
 	return 0;
 
-ret_failed:
-	for(j = 0; j < i; j++) {
-		devm_regulator_put(vm_data->adl_bmc_vm_dev[j]);
-		debug_printk("In for loop\n");
-	}
-
-	return ret;
 }
 
 static int adl_bmc_vm_remove(struct platform_device *pdev)
 {
-	int i;
 	struct adl_bmc_vm_data *vm_data = platform_get_drvdata(pdev);
 	debug_printk("Remove...............\n");
-
-	for (i = 0; i < vm_data->cnt; i++) 
-	{
-		devm_regulator_put(vm_data->adl_bmc_vm_dev[i]);
-	}
-
+	
 	devm_kfree(&pdev->dev, vm_data);
+
+	//for destroying the device and class file
+	device_destroy(class_adl_vm,devdrv);
+	class_destroy(class_adl_vm);
+	cdev_del(&cdev);
+	unregister_chrdev(devdrv,"adl_vm");
 
 	return 0;
 }
