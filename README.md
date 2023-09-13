@@ -12,9 +12,9 @@
 
 ### Supported Operating System:
 * Ubuntu 18.04, 20.04, 22.04
-* Debian with all versions
-* CentOS with all versions (except that GPIO Support)
-* RedHat with all versions (except that GPIO Support)
+* Debian all versions
+* CentOS (except that Voltage Monitoring and GPIO Support)
+* Red Hat ((except that Voltage Monitoring and GPIO Support)
 
 
 ### Developer's Guide (how to use EAPI and Sysfs): 
@@ -23,5 +23,5 @@
    
 ### Other information:
 * branch name: SEMA_4.0_Linux_SandBox/ACPI-EC
-* the internal latest commit ID: 34686bc7ae086805aaace6245350aa2e48c03f6c 
+* the internal latest commit ID: c7c651078bc40bb9f0b1fceb133b92e4e098b112 
 
