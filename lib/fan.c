@@ -410,7 +410,7 @@ int get_hwmon_num(void)
 
 	for (fan_no=0;fan_no <= max_hwmon; fan_no++)
 	{
-		sprintf(fan_sysfile, "/sys/class/hwmon/hwmon%d/device/driver/adl-bmc-hwmon/", fan_no);
+		sprintf(fan_sysfile, "/sys/class/hwmon/hwmon%d/device/driver/adl-ec-hwmon/", fan_no);
 		dir = opendir(fan_sysfile);
 		if(dir)
 		{

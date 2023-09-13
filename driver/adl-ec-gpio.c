@@ -5,7 +5,7 @@
 #include <linux/platform_device.h>
 #include <linux/fs.h>
 #include <linux/module.h>
-#include "adl-bmc.h"
+#include "adl-ec.h"
 
 #define ADL_BMC_OFS_GPIO_IN_PORT                 0x88
 #define ADL_BMC_OFS_GPIO_OUT_PORT                0x86
@@ -14,6 +14,8 @@
 #define ADL_BMC_OFS_GPIO_OUT_PORT_EXT            0x87
 #define ADL_BMC_OFS_GPIO_DIR_EXT		 0x85
 #define ADL_BMC_OFS_GPIO_CAP			 0x15
+
+#define GET_GPIO_DIR    _IOR('a','1',uint32_t *)
 
 dev_t devdrv;
 struct class *class_adl_gpio;
@@ -181,8 +183,31 @@ static int adl_gpio_request(struct gpio_chip *chip, unsigned nr)
         return 0;
 }
 
+static int adl_gpio_get_direction(uint32_t* value)
+{
+	uint8_t dir,cap = 0;
+	int ret;
+	ret = adl_bmc_ec_read_device(ADL_BMC_OFS_GPIO_CAP, &cap, 1,EC_REGION_1);
+        cap = cap & (1<<4);
+	
+	if(cap!=0)
+	{
+		ret = adl_bmc_ec_read_device(ADL_BMC_OFS_GPIO_DIR_EXT, &dir, 1, EC_REGION_1);
+		*value |= (dir & 0x0F);
+		*value <<= 8;
+		ret = adl_bmc_ec_read_device(ADL_BMC_OFS_GPIO_DIR, &dir, 1, EC_REGION_1);
+		*value |= dir;
+	}
+	else
+	{
+		ret = adl_bmc_ec_read_device(ADL_BMC_OFS_GPIO_DIR, &dir, 1, EC_REGION_1);
+		*value |= dir;
+	}
+	return 0;
+}
+
 static const struct gpio_chip adl_gpio_gc = {
-	.label = "adl-bmc-gpio",
+	.label = "adl-ec-gpio",
 	.owner = THIS_MODULE,
 	.get = adl_gpio_get,
 	.set = adl_gpio_set,
@@ -194,7 +219,7 @@ static const struct gpio_chip adl_gpio_gc = {
 };
 
 static const struct gpio_chip adl_gpio_gc_ext = {
-	.label = "adl-bmc-gpio",
+	.label = "adl-ec-gpio",
 	.owner = THIS_MODULE,
 	.get = adl_gpio_get,
 	.set = adl_gpio_set,
@@ -223,9 +248,40 @@ int release(struct inode *inode, struct file *file)
 	return 0;
 }
 
+static long int ioctl (struct file *file, unsigned cmd, unsigned long arg)
+{
+	int RetVal;
+	uint32_t gpio_dir;
+	switch(cmd)
+        {
+                case GET_GPIO_DIR:
+                {
+
+                        if((RetVal = copy_from_user(&gpio_dir,(uint32_t *)arg,sizeof(gpio_dir)))!=0)
+                        {
+                                return -EFAULT;
+                        }
+
+                        RetVal=adl_gpio_get_direction(&gpio_dir);
+
+                        if((RetVal = copy_to_user((uint32_t *) arg,&gpio_dir,sizeof(gpio_dir)))!=0)
+                        {
+                                return -EFAULT;
+                        }
+                }
+                break;
+
+                default:
+                        return -1;
+        }
+        return 0;
+	
+}
+
 struct file_operations fops = {
 	.owner = THIS_MODULE,
 	.open = open,
+	.unlocked_ioctl = ioctl,
 	.release = release,
 };
 
@@ -297,7 +353,7 @@ static struct platform_driver adl_ec_gpio_driver = {
 	.probe = adl_ec_gpio_probe,
 	.remove = adl_ec_gpio_remove,
 	.driver = {
-		.name	= "adl-bmc-gpio",
+		.name	= "adl-ec-gpio",
 	},
 };
 module_platform_driver(adl_ec_gpio_driver);

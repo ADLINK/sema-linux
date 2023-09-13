@@ -14,7 +14,7 @@
 //   prior written permission of ADLINK Technology, Inc.
 
 /**
- * @file adl-bmc.h 
+ * @file adl-ec.h 
  * @author 
  * @brief File containing the SEMA Linux 4.0 driver Read/Write Function Definitions
  *

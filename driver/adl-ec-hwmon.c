@@ -17,7 +17,7 @@
 #include <linux/io.h>
 #include <linux/delay.h>
 
-#include "adl-bmc.h"
+#include "adl-ec.h"
 
 struct adl_bmc_hwmon_data {
 	struct device *hwmon_dev;
@@ -846,6 +846,28 @@ static void adl_bmc_hwmon_remove_sysfs(struct platform_device *pdev)
 	}
 }
 
+static umode_t adl_is_visible(const void *data, enum hwmon_sensor_types type, u32 attr, int channel)
+{
+	return 0;
+}
+
+static const struct hwmon_ops adl_hwmon_ops = {
+	.is_visible = adl_is_visible,
+};
+
+static const struct hwmon_channel_info *adl_info[] = {
+	HWMON_CHANNEL_INFO(chip,
+			   HWMON_C_REGISTER_TZ | HWMON_C_UPDATE_INTERVAL),
+	HWMON_CHANNEL_INFO(temp,
+			   HWMON_T_INPUT | HWMON_T_MAX | HWMON_T_MAX_HYST),
+	NULL
+};
+
+static struct hwmon_chip_info adl_chip_info = {
+	.ops = &adl_hwmon_ops,
+	.info = adl_info,
+};
+
 static int adl_bmc_hwmon_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -938,7 +960,7 @@ static int adl_bmc_hwmon_probe(struct platform_device *pdev)
 	}
 
 	/* Register device */
-	hwmon_data->hwmon_dev = hwmon_device_register(dev);
+	hwmon_data->hwmon_dev = hwmon_device_register_with_info(dev,"adl_ec_hwmon",NULL,&adl_chip_info,NULL);
 	if (IS_ERR(hwmon_data->hwmon_dev)) {
 		err = PTR_ERR(hwmon_data->hwmon_dev);
 		dev_err(dev, "Class registration failed (%d)\n", err);
@@ -981,7 +1003,7 @@ static int adl_bmc_hwmon_remove(struct platform_device *pdev)
 
 static struct platform_driver adl_bmc_hwmon_driver = {
 	.driver = {
-		.name  = "adl-bmc-hwmon",
+		.name  = "adl-ec-hwmon",
 	},
 	.probe  = adl_bmc_hwmon_probe,
 	.remove = adl_bmc_hwmon_remove,

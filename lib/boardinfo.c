@@ -41,7 +41,7 @@ char *Board[PLATFORMS_NUMBER] = {
 struct data{
 int id;
 int volt;
-char volt_desc[10];
+char volt_desc[100];
 };
 
 uint32_t IsFileExist(char *sysf)
@@ -80,46 +80,46 @@ uint32_t EApiBoardGetStringA(uint32_t Id, char *pBuffer, uint32_t *pBufLen)
 	switch (Id)
 	{
 		case 1:
-			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/manufacturer_name");
+			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/manufacturer_name");
 			break;
 		case 2:
-			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/board_name");
+			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/board_name");
 			break;
 		case 3:
-			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/serial_number");
+			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/serial_number");
 			break;
 		case 4:
 			sprintf(sysfile, "/sys/class/dmi/id/bios_version");
 			break;
 		case 5:
-			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/bmc_boot_version");
+			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/bmc_boot_version");
 			break;
 		case 6:
-			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/restart_event_str");
+			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/restart_event_str");
 			break;
 		case 7:
-			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/hw_rev");
+			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/hw_rev");
 			break;
 		case 8:
-			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/bmc_application_version");
+			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/bmc_application_version");
 			break;
 		case 9:
-			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/last_repair_date");
+			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/last_repair_date");
 			break;
 		case 10:
-			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/manufactured_date");
+			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/manufactured_date");
 			break;
 		case 11:
-			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/mac_address");
+			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/mac_address");
 			break;
 		case 12:
-			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/second_hw_rev");
+			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/second_hw_rev");
 			break;
 		case 13:
-			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/second_ser_num");
+			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/second_ser_num");
 			break;
 		case 14:
-                        sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/platform_id");
+                        sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/platform_id");
 			break;
 		default:
 			status = EAPI_STATUS_UNSUPPORTED;
@@ -168,10 +168,10 @@ uint32_t EApiBoardGetValue(uint32_t Id, uint32_t *pValue)
 			*pValue = (EAPI_VERSION);
 			return EAPI_STATUS_SUCCESS;
 		case 2:
-			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/boot_counter_val");
+			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/boot_counter_val");
 			break;
 		case 3:
-			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/total_up_time");
+			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/total_up_time");
 			break;
 		case 4:
 			*pValue = EAPI_VER_CREATE(4,0,0);
@@ -188,25 +188,25 @@ uint32_t EApiBoardGetValue(uint32_t Id, uint32_t *pValue)
 			sprintf(sysfile, "/sys/class/hwmon/hwmon%d/device/sys1_cur_temp",hwmon_number);
 			break;
 		case 7:
-			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/voltage_vcore");
+			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/voltage_vcore");
 			break;
 		case 8:
-			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/voltage_2v5");
+			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/voltage_2v5");
 			break;
 		case 9:
-			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/voltage_3v3");
+			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/voltage_3v3");
 			break;
 		case 10:
-			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/voltage_vbat");
+			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/voltage_vbat");
 			break;
 		case 11:
-			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/voltage_5v");
+			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/voltage_5v");
 			break;
 		case 12:
-			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/voltage_5vsb");
+			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/voltage_5vsb");
 			break;
 		case 13:
-			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/voltage_12v");
+			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/voltage_12v");
 			break;
 		case 14:
 			sprintf(sysfile, "/sys/class/hwmon/hwmon%d/device/cpu_fan_speed", hwmon_number);
@@ -215,16 +215,16 @@ uint32_t EApiBoardGetValue(uint32_t Id, uint32_t *pValue)
 			sprintf(sysfile, "/sys/class/hwmon/hwmon%d/device/sys1_fan_speed", hwmon_number);
 			break;
 		case 16:
-			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/power_up_time");
+			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/power_up_time");
 			break;
 		case 17:
-			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/restart_event");
+			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/restart_event");
 			break;
 		case 18:
-			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/capabilities");
+			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/capabilities");
 			break;
 		case 19:
-			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/capabilities_ext");
+			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/capabilities_ext");
 			break;
 		case 20:
 			sprintf(sysfile, "/sys/class/hwmon/hwmon%d/device/sys1_min_temp", hwmon_number);
@@ -245,19 +245,19 @@ uint32_t EApiBoardGetValue(uint32_t Id, uint32_t *pValue)
 			sprintf(sysfile, "/sys/class/hwmon/hwmon%d/device/cpu_startup_temp", hwmon_number);
 			break;
 		case 26:
-			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/main_current");
+			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/main_current");
 			break;
 		case 27:
-			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/voltage_gfx_vcore");
+			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/voltage_gfx_vcore");
 			break;
 		case 28:
-			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/voltage_1v05");
+			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/voltage_1v05");
 			break;
 		case 29:
-			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/voltage_1v5");
+			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/voltage_1v5");
 			break;
 		case 30:
-			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/voltage_vin");
+			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/voltage_vin");
 			break;
 		case 31:
 			sprintf(sysfile, "/sys/class/hwmon/hwmon2/device/sys2_fan_speed");
@@ -278,13 +278,13 @@ uint32_t EApiBoardGetValue(uint32_t Id, uint32_t *pValue)
 			sprintf(sysfile, "/sys/class/hwmon/hwmon2/device/sys2_startup_temp");
 			break;
 		case 37:
-			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/power_cycles");
+			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/power_cycles");
 			break;
 		case 38:
-			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/bmc_flags");
+			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/bmc_flags");
 			break;
 		case 39:
-			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/bmc_status");
+			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/bmc_status");
 			break;
 		default:
 			status = EAPI_STATUS_UNSUPPORTED;
@@ -398,7 +398,7 @@ uint32_t EApiBoardGetErrorLog (uint32_t Pos, uint32_t *ErrorNumber, uint8_t  *Fl
 	memset(buf, 0, sizeof(buf));
 	/*store exception number to buf*/
 	sprintf(buf, "%u", Pos);
-	sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/error_log");
+	sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/error_log");
 
 	ret = write_sysfs_file(sysfile, buf, sizeof(buf));
 	if(ret < 0) {
@@ -459,7 +459,7 @@ uint32_t EApiBoardGetCurPosErrorLog (uint32_t *ErrorNumber, uint8_t  *Flags, uin
 
 	memset(res, 0, sizeof(res));
 	/*store exception number to buf*/
-	sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/cur_pos_error_log");
+	sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/cur_pos_error_log");
 
 	ret = read_sysfs_file(sysfile, pBuffer, sizeof(pBuffer));
 	if(ret < 0) {
@@ -511,7 +511,7 @@ uint32_t EApiBoardGetErrorNumDesc(uint32_t Pos, char *pBuf, uint32_t Size)
 	memset(buf, 0, sizeof(buf));
 	/*store exception number to buf*/
 	sprintf(buf, "%u", Pos);
-	sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/err_num_des");
+	sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/err_num_des");
 
 	ret = write_sysfs_file(sysfile, buf, sizeof(buf));
 	if(ret < 0) {
@@ -543,7 +543,7 @@ uint32_t EApiBoardGetExcepDesc(uint32_t exc_code, char *exc_desc, uint32_t size)
 
 	/*store exception number to buf*/
 	sprintf(buf, "%u", exc_code);
-	sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/exc_des");
+	sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/exc_des");
 
 	ret = write_sysfs_file(sysfile, buf, sizeof(buf));
 	if(ret < 0) {
@@ -569,7 +569,7 @@ uint32_t EApiGetBiosSource(uint8_t *data)
                 return EAPI_STATUS_INVALID_PARAMETER;
 
         memset(data, 0, sizeof(uint8_t));
-        sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/bios_source");
+        sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/bios_source");
         ret = read_sysfs_file(sysfile,(char *) data, sizeof(data));
         if(ret < 0) {
                 return EAPI_STATUS_READ_ERROR;
@@ -587,7 +587,7 @@ uint32_t EApiSetBiosSource(uint8_t data)
 
         memset(buf,0, sizeof(buf));
         sprintf(buf, "%d", data);
-        sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/bios_source");
+        sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/bios_source");
         ret = write_sysfs_file(sysfile, buf, strlen(buf));
         if(ret <0){
                 printf("write error\n");
@@ -607,7 +607,7 @@ uint32_t EApiGetBiosStatus(uint8_t *data)
                 return EAPI_STATUS_INVALID_PARAMETER;
 
         memset(data, 0, sizeof(uint8_t));
-        sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/bios_status");
+        sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/bios_status");
         ret = read_sysfs_file(sysfile,(char *) data, sizeof(data));
         if(ret < 0) {
                 return EAPI_STATUS_READ_ERROR;

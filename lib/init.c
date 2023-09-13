@@ -32,7 +32,7 @@ uint32_t EApiLibInitialize(void)
 
 	initialize_gpio();
 	
-	sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/board_name");
+	sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/board_name");
 	ret = read_sysfs_file(sysfile, res, sizeof(res));
 	if(ret < 0) {
 		return EAPI_STATUS_UNSUPPORTED;

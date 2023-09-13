@@ -11,21 +11,22 @@
 #include <linux/cdev.h>
 #include <linux/delay.h>
 #include <linux/seq_file.h>
+#include <linux/delay.h>
 
-#include "adl-bmc.h"
+#include "adl-ec.h"
 
 struct adl_bmc_dev *adl_bmc_dev;
 
 static const struct mfd_cell adl_bmc_devs[] = {
-    {.name = "adl-bmc-wdt"},
-    {.name = "adl-bmc-boardinfo"},
-    {.name = "adl-bmc-nvmem"},
-    {.name = "adl-bmc-nvmem-sec"},
-    {.name = "adl-bmc-bklight"},
-    {.name = "adl-bmc-vm"},
-    {.name = "adl-bmc-hwmon"},
-    {.name = "adl-bmc-i2c"},
-    {.name = "adl-bmc-gpio"},
+    {.name = "adl-ec-wdt"},
+    {.name = "adl-ec-boardinfo"},
+    {.name = "adl-ec-nvmem"},
+    {.name = "adl-ec-nvmem-sec"},
+    {.name = "adl-ec-bklight"},
+    {.name = "adl-ec-vm"},
+    {.name = "adl-ec-hwmon"},
+    {.name = "adl-ec-i2c"},
+    {.name = "adl-ec-gpio"},
 };
 
 /* EC commands */
@@ -95,280 +96,92 @@ struct board_info supported_device[] = {
 
 void delay(unsigned long int ticks)
 {
-    unsigned long int volatile t;
-    ticks = ticks * 100;
-
-    for (t = 0; t < ticks; ++t)
-    {
-	for (t = 0; t < ticks; ++t);
-    }
+	udelay(ticks);
 }
 EXPORT_SYMBOL(delay);
 
-#if 1
+static int wait_for_ec(uint8_t port, uint8_t mask, uint8_t cond)
+{
+	uint32_t i = 0;
+
+	while(1)
+	{
+		/* Maximum of 5msec timeout */
+		if(i > 500)
+		{
+			pr_err("Error: EC_TIMEOUT!!!\n");
+			return -ETIMEDOUT;
+		}
+
+		if((inb(port) & mask) == cond)
+			return 0;
+
+		delay(10);
+		i++;
+	}
+
+	return 0;
+}
 
 int ReadEc(unsigned short int RegionIndex, unsigned short int offset, unsigned char *data)
 {
-    unsigned short int EC_CTRL_PORT = (RegionIndex & 0xFF);
-    unsigned short int EC_DATA_PORT = ((RegionIndex >> 8) & 0xFF);
-    volatile int i, j, k, l;
+	int ret;
+	uint8_t EC_CTRL_PORT = (RegionIndex & 0xFF);
+	uint8_t EC_DATA_PORT = ((RegionIndex >> 8) & 0xFF);
 
-    if (data == NULL)
-    {
-	return -1;
-    }
-    for (i = 0; i < 100; i++)
-    {
-	outb(EC_SC_RD_CMD,EC_CTRL_PORT);
+	if (!data)
+		return -EINVAL;
+	
+	/* 1. Write EC_SC_RD_CMD to control port*/
+	outb(EC_SC_RD_CMD, EC_CTRL_PORT);
 
-	for (j = 0; j < 100; j++)
-	{
-	    if (!(inb(EC_CTRL_PORT) & EC_SC_IBF))
-	    {
-		outb((unsigned char)offset,EC_DATA_PORT);
+	/* 2. Wait for EC_SC_IBF to clear */
+	if((ret = wait_for_ec(EC_CTRL_PORT, EC_SC_IBF, 0)) < 0)
+		return ret;
+	
+	/* 3. Write offset address to data port */
+	outb((unsigned char)offset, EC_DATA_PORT);
 
-		for (k = 0; k < 100; k++)
-		{
-		    unsigned char Status = (inb(EC_CTRL_PORT) & EC_SC_IBFOROBF);
+	/* 4. Wait for EC_SC_OBF to set */
+	if((ret = wait_for_ec(EC_CTRL_PORT, EC_SC_IBFOROBF, EC_SC_OBF)) < 0)
+		return ret;
 
-		    for (l = 0; l < 100; l++)
-		    {
-			if ((Status & EC_SC_OBF) && !(Status & EC_SC_IBF))
-			{
-			    *data = inb(EC_DATA_PORT);
-			    return 0;
-			}
-			delay(100);
-		    }
-		    delay(100);
-		}
-	    }
-	    delay(100);
-	}
-    }
-    return -1;
+	/* 5. Read data from data port */
+	*data = inb(EC_DATA_PORT);
+
+	return 0;
 }
-
 
 int WriteEc(unsigned short int RegionIndex, unsigned short int offset, unsigned char data)
 {
-    volatile int i, j, k, l;
+	int ret;
+	uint8_t EC_CTRL_PORT = (RegionIndex & 0xFF);
+	uint8_t EC_DATA_PORT = ((RegionIndex >> 8) & 0xFF);
 
-    unsigned short int EC_CTRL_PORT = (RegionIndex & 0xFF);
-    unsigned short int EC_DATA_PORT = ((RegionIndex >> 8) & 0xFF);
-
-    for (i = 0; i < 100; i++)
-    {
+	/* 1. Write EC_SC_WR_CMD to control port*/
 	outb(EC_SC_WR_CMD, EC_CTRL_PORT);
 
-	for (j = 0; j < 100; j++)
-	{
-	    if (!(inb(EC_CTRL_PORT) & EC_SC_IBF))
-	    {
-		outb((unsigned char)offset, EC_DATA_PORT);
+	/* 2. Wait for EC_SC_IBF to clear */
+	if((ret = wait_for_ec(EC_CTRL_PORT, EC_SC_IBF, 0)) < 0)
+		return ret;
 
-		for (k = 0; k < 100; k++)
-		{
-		    if (!(inb(EC_CTRL_PORT) & EC_SC_IBF))
-		    {
-			outb((unsigned char)data, EC_DATA_PORT);
+	/* 3. Write offset address to data port */
+	outb((unsigned char)offset, EC_DATA_PORT);
 
-			for (l = 0; l < 100; l++)
-			{
-			    if (!(inb(EC_CTRL_PORT) & EC_SC_IBF))
-			    {
-				return 0;
-			    }
-			    delay(100);
-			}
-		    }
-		    delay(100);
-		}
-	    }
-	    delay(100);
-	}
-    }
-    return -1;
-}
-#else
+	/* 4. Wait for EC_SC_IBF to clear */
+	if((ret = wait_for_ec(EC_CTRL_PORT, EC_SC_IBF, 0)) < 0)
+		return ret;
 
+	/* 5. Write data to data port */
+	outb((unsigned char)data, EC_DATA_PORT);
 
-#define IBF 1
-#define OBF 0
-
-
-int ReadEc_(unsigned short int RegionIndex, unsigned short int offset, unsigned char *data)
-{
-	volatile int retry, limit = 100;
-	volatile unsigned char EC_SC_D, EC_DA_D;
-	
-	unsigned char EC_SC = (unsigned char)(RegionIndex & 0xFF);
-	unsigned char EC_DATA = (unsigned char)((RegionIndex >> 8) & 0xFF);
-
-	for (retry = 0; retry < limit; retry++)
-	{
-		EC_SC_D = inb(EC_SC);
-		if (!!(EC_SC_D & (1 << IBF)) == 0)
-		{
-			break;
-		}
-	}
-
-	if (limit == retry)
-	{
-		return -1;
-	}
-
-	outb(EC_SC_RD_CMD, EC_SC);
-
-	for (retry = 0; retry < limit; retry++)
-	{
-		EC_SC_D = inb(EC_SC);
-		if (!!(EC_SC_D & (1 << IBF)) == 0)
-		{
-			break;
-		}
-	}
-
-	if (limit == retry)
-	{
-		return -1;
-	}
-
-	outb((unsigned char)offset, EC_DATA);
-
-	for (retry = 0; retry < limit; retry++)
-	{
-		EC_SC_D = inb(EC_SC);
-		if (!!(EC_SC_D & (1 << IBF)) == 0)
-		{
-			break;
-		}
-	}
-
-	if (limit == retry)
-	{
-		return -1;
-	}
-
-	for (retry = 0; retry < limit; retry++)
-	{
-		EC_SC_D = inb(EC_SC);
-		if (!!(EC_SC_D & (1 << OBF)) == 1)
-		{
-			break;
-		}
-	}
-
-	if (limit == retry)
-	{
-		return -1;
-	}
-
-	EC_DA_D = inb(EC_DATA);
-
-	*data = EC_DA_D;
+	/* 6. Wait for EC_SC_IBF to clear */
+	if((ret = wait_for_ec(EC_CTRL_PORT, EC_SC_IBF, 0)) < 0)
+		return ret;
 
 	return 0;
 }
 
-int ReadEc(unsigned short int RegionIndex, unsigned short int offset, unsigned char *data)
-{
-	volatile int i, result = -1, retry = 100;
-	for (i = 0; i < retry; i++)
-	{
-		if ((result = ReadEc_(RegionIndex, offset, data)) == 0)
-		{
-			break;
-		}
-	}
-	return result;
-}
-
-int WriteEc_(unsigned short int RegionIndex, unsigned short int offset, unsigned char data)
-{
-	volatile int retry, limit = 100;
-	volatile unsigned char EC_SC_D;
-
-	unsigned char EC_SC = (unsigned char)(RegionIndex & 0xFF);
-	unsigned char EC_DATA = (unsigned char)((RegionIndex >> 8) & 0xFF);
-
-
-	for (retry = 0; retry < limit; retry++)
-	{
-		EC_SC_D = inb(EC_SC);
-		if (!!(EC_SC_D & (1 << IBF)) == 0)
-		{
-			break;
-		}
-	}
-
-	if (limit == retry)
-	{
-		return -1;
-	}
-
-	outb(EC_SC_WR_CMD, EC_SC);
-
-	for (retry = 0; retry < limit; retry++)
-	{
-		EC_SC_D = inb(EC_SC);
-		if (!!(EC_SC_D & (1 << IBF)) == 0)
-		{
-			break;
-		}
-	}
-
-	if (limit == retry)
-	{
-		return -1;
-	}
-
-	outb((unsigned char)offset, EC_DATA);
-
-	for (retry = 0; retry < limit; retry++)
-	{
-		EC_SC_D = inb(EC_SC);
-		if (!!(EC_SC_D & (1 << IBF)) == 0)
-		{
-			break;
-		}
-	}
-
-	if (limit == retry)
-	{
-		return -1;
-	}
-
-	outb(data, EC_DATA);
-
-	for (retry = 0; retry < limit; retry++)
-	{
-		EC_SC_D = inb(EC_SC);
-		if (!!(EC_SC_D & (1 << IBF)) == 0)
-		{
-			break;
-		}
-	}
-
-	return 0;
-}
-
-
-int WriteEc(unsigned short int RegionIndex, unsigned short int offset, unsigned char data)
-{
-	volatile int i, result = -1, retry = 100;
-	for (i = 0; i < retry; i++)
-	{
-		if ((result = WriteEc_(RegionIndex, offset, data)) == 0)
-		{
-			break;
-		}
-	}
-	return result;
-}
-
-#endif
 int adl_bmc_ec_read_device(u8 addr, u8 *dest, int len, unsigned int RegionIndex)
 {	
     volatile unsigned short i;
@@ -535,7 +348,7 @@ static int bmc_nvmem_read(unsigned int offset,void *val, size_t bytes)
 	return ret;
 }
 
-static int adl_bmc_acpi_probe(struct platform_device *pdev)
+static int adl_ec_acpi_probe(struct platform_device *pdev)
 {
     // check EC interface is valid
     struct path path;
@@ -667,7 +480,7 @@ static int adl_bmc_acpi_probe(struct platform_device *pdev)
     return mfd_add_devices(adl_bmc_dev->dev, -1, adl_bmc_devs, ARRAY_SIZE(adl_bmc_devs), NULL, 0, NULL);
 }
 
-static int adl_bmc_acpi_remove(struct platform_device *pdev)
+static int adl_ec_acpi_remove(struct platform_device *pdev)
 {
     debug_printk("==> %s\n",__func__);
 
@@ -682,47 +495,47 @@ static int adl_bmc_acpi_remove(struct platform_device *pdev)
 }
 
 
-static struct platform_driver adl_bmc_acpi_driver = {
+static struct platform_driver adl_ec_acpi_driver = {
     .driver = {
-	.name	= "adl-bmc-acpi",
+	.name	= "adl-ec-acpi",
     },
 
-    .probe		= adl_bmc_acpi_probe,
-    .remove		= adl_bmc_acpi_remove,
+    .probe		= adl_ec_acpi_probe,
+    .remove		= adl_ec_acpi_remove,
 };
 
-static void adl_bmc_acpi_release (struct device *dev)
+static void adl_ec_acpi_release (struct device *dev)
 {
     return;
 }
 
-static struct platform_device adl_bmc_acpi_device = {
-    .name = "adl-bmc-acpi",
+static struct platform_device adl_ec_acpi_device = {
+    .name = "adl-ec-acpi",
     .id = -1,
     .dev = {
-	.release = adl_bmc_acpi_release,
+	.release = adl_ec_acpi_release,
 	.platform_data = NULL,
     }
 };
 
-static int __init adl_bmc_acpi_init (void)
+static int __init adl_ec_acpi_init (void)
 {
-    if(platform_device_register(&adl_bmc_acpi_device) == 0)
-	return platform_driver_register(&adl_bmc_acpi_driver);
+    if(platform_device_register(&adl_ec_acpi_device) == 0)
+	return platform_driver_register(&adl_ec_acpi_driver);
     else
-	platform_device_unregister(&adl_bmc_acpi_device);
+	platform_device_unregister(&adl_ec_acpi_device);
 
     return -1;
 }
 
-static void __exit adl_bmc_acpi_exit (void)
+static void __exit adl_ec_acpi_exit (void)
 {
-    platform_device_unregister(&adl_bmc_acpi_device);
-    platform_driver_unregister(&adl_bmc_acpi_driver);
+    platform_device_unregister(&adl_ec_acpi_device);
+    platform_driver_unregister(&adl_ec_acpi_driver);
 }
 
-module_init(adl_bmc_acpi_init);
-module_exit(adl_bmc_acpi_exit);
+module_init(adl_ec_acpi_init);
+module_exit(adl_ec_acpi_exit);
 
 MODULE_LICENSE("Dual BSD/GPL");
 MODULE_AUTHOR("Adlink ");

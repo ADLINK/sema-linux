@@ -32,7 +32,7 @@ static char WATCHDOG_DEVICE[261];
 static int initialize_watchdog()
 {
 	struct dirent *de;
-	DIR *dr = opendir("/sys/bus/platform/devices/adl-bmc-wdt/watchdog"); 
+	DIR *dr = opendir("/sys/bus/platform/devices/adl-ec-wdt/watchdog"); 
 
 	if (dr == NULL)  // opendir returns NULL if couldn't open directory 
 		return -1;
@@ -76,7 +76,7 @@ uint32_t EApiWDogGetCap(uint32_t *pMaxDelay, uint32_t *pMaxEventTimeout, uint32_
 		*pMaxEventTimeout = 0;
 	}
 
-	sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-wdt/Capabilities/wdt_max_timeout");
+	sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-wdt/Capabilities/wdt_max_timeout");
 
 	ret = read_sysfs_file(sysfile, value, sizeof(value)); 
 	if (ret)
@@ -223,7 +223,7 @@ uint32_t EApiPwrUpWDogStart(uint32_t timeout)
 
 	WDOG_INIT();
 
-	sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-wdt/Capabilities/PwrUpWDog");
+	sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-wdt/Capabilities/PwrUpWDog");
         fp = fopen(sysfile, "r+");
         if(fp == NULL)
                 return EAPI_STATUS_INVALID_PARAMETER;
@@ -251,7 +251,7 @@ uint32_t EApiPwrUpWDogStop(void)
 
 	WDOG_INIT();
 
-	sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-wdt/Capabilities/PwrUpWDog");
+	sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-wdt/Capabilities/PwrUpWDog");
         fp = fopen(sysfile, "r+");
         if(fp == NULL)
                return EAPI_STATUS_UNSUPPORTED;

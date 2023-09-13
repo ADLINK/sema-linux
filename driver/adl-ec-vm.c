@@ -12,7 +12,7 @@
 #include <linux/slab.h>
 #include <linux/cdev.h>
 
-#include "adl-bmc.h"
+#include "adl-ec.h"
 
 #define GET_VOLT_AND_DESC	_IOR('a','1',struct data *)
 #define GET_VOLT_MONITOR_CAP	_IOR('a','2',uint8_t *)
@@ -22,19 +22,18 @@ struct class *class_adl_vm;
 struct cdev cdev;
 dev_t devdrv;
 int flag;
-char volt_desc[7][10];
+char *volt_desc[8];
 
 struct data
 {
 int id;
 int volt;
-char volt_desc[10];
+char volt_desc[100];
 };
 
 struct adl_bmc_vm_data {
 	struct regulator_desc adl_bmc_vm_desc[16];
 	struct adl_bmc_dev *adl_dev;
-	char name_arr[16][256];
 	int cnt;
 };
 
@@ -189,10 +188,8 @@ static int adl_bmc_vm_probe(struct platform_device *pdev)
 		{
 			break;
 		}
-		memset(vm_data->name_arr[i], 0, 256);
+		volt_desc[i] = devm_kzalloc(&(pdev->dev), (sizeof(char) *16), GFP_KERNEL);
 		strcpy(volt_desc[i],vm_data->adl_dev->current_board.voltage_description[i]);
-		strcpy(vm_data->name_arr[i], vm_data->adl_dev->current_board.voltage_description[i]);
-		vm_data->adl_bmc_vm_desc[i].name = vm_data->name_arr[i];
 		vm_data->adl_bmc_vm_desc[i].id = i;
 	}
 	vm_data->cnt = i;
@@ -219,7 +216,7 @@ static int adl_bmc_vm_remove(struct platform_device *pdev)
 
 static struct platform_driver adl_bmc_vm_driver = {
 	.driver		= {
-		.name		= "adl-bmc-vm",
+		.name		= "adl-ec-vm",
 	},
 	.probe		= adl_bmc_vm_probe,
 	.remove 	= adl_bmc_vm_remove,

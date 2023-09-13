@@ -6,7 +6,7 @@
 #include <linux/fb.h>
 #include <linux/slab.h>
 
-#include "adl-bmc.h"
+#include "adl-ec.h"
 
 #define ADL_BMC_MIN_BRIGHT 0
 #define ADL_BMC_MAX_BRIGHT 255
@@ -181,7 +181,7 @@ static int adl_bmc_bklight_remove(struct platform_device *pdev)
 
 static struct platform_driver adl_bmc_bklight_driver = {
 	.driver = {
-		.name	= "adl-bmc-bklight",
+		.name	= "adl-ec-bklight",
 	},
 
 	.probe		= adl_bmc_bklight_probe,

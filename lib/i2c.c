@@ -125,7 +125,7 @@ uint32_t EApiI2CReadTransfer(uint32_t Id, uint32_t Addr, uint32_t Cmd, void* pBu
 
 	memset(trxn.tBuffer, 0, sizeof(unsigned char)*50);
 
-	if((fd = open("/dev/bmc-i2c-eapi", O_RDWR)) < 0)
+	if((fd = open("/dev/ec-i2c-eapi", O_RDWR)) < 0)
 	{
 		return EAPI_STATUS_READ_ERROR;
 	}
@@ -227,7 +227,7 @@ uint32_t EApiI2CWriteTransfer(uint32_t Id, uint32_t Addr, uint32_t Cmd, void *pB
 
 	memset(trxn.tBuffer, 0, sizeof(unsigned char)*50);
 
-	if((fd = open("/dev/bmc-i2c-eapi", O_RDWR)) < 0)
+	if((fd = open("/dev/ec-i2c-eapi", O_RDWR)) < 0)
 	{
 		return EAPI_STATUS_READ_ERROR;
 	}
@@ -347,7 +347,7 @@ uint32_t EApiI2CWriteReadRaw(uint32_t Id, uint8_t Addr, void *pWBuffer, uint32_t
 
 	memset(trxn.tBuffer, 0, sizeof(unsigned char) * 50);
 
-	if((fd = open("/dev/bmc-i2c-eapi", O_RDWR)) < 0)
+	if((fd = open("/dev/ec-i2c-eapi", O_RDWR)) < 0)
 	{
 		return EAPI_STATUS_READ_ERROR;
 	}
@@ -416,7 +416,7 @@ uint32_t EApiI2CGetBusCap(uint32_t Id, uint32_t *pMaxBlkLen)
 
 	*pMaxBlkLen = MAX_BLOCK;
 
-	int fd = open("/sys/bus/platform/devices/adl-bmc-boardinfo/information/capabilities", O_RDONLY);
+	int fd = open("/sys/bus/platform/devices/adl-ec-boardinfo/information/capabilities", O_RDONLY);
 	if(fd < 0)
 	{
 		return EAPI_STATUS_READ_ERROR;
@@ -476,7 +476,7 @@ uint32_t EApiI2CGetBusSts(uint32_t Id, uint8_t *Bus_Sts)
 		return EAPI_STATUS_INVALID_PARAMETER;
 	}
 
-	if((fd = open("/dev/bmc-i2c-eapi", O_RDWR)) < 0)
+	if((fd = open("/dev/ec-i2c-eapi", O_RDWR)) < 0)
 	{
 		return EAPI_STATUS_UNSUPPORTED;
 	}
@@ -510,7 +510,7 @@ uint32_t EApiI2CProbeDevice(uint32_t Id, uint32_t Addr)
 		return EAPI_STATUS_UNSUPPORTED;
 	}
 
-	if((fd = open("/dev/bmc-i2c-eapi", O_RDWR)) < 0)
+	if((fd = open("/dev/ec-i2c-eapi", O_RDWR)) < 0)
 	{
 		return EAPI_STATUS_READ_ERROR;
 	}

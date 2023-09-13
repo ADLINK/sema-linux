@@ -24,7 +24,7 @@
 
 #include <linux/slab.h>
 
-#include "adl-bmc.h"
+#include "adl-ec.h"
 
 #define SEMA_C_I2C1             0x00010000                      ///< Bit 16: Ext. I2C bus #1 available
 #define SEMA_C_I2C2             0x00020000                      ///< Bit 17: Ext. I2C bus #2 available
@@ -1032,14 +1032,14 @@ static int adl_bmc_i2c_probe(struct platform_device *pdev)
 	return -1;
     }
 
-    adlink->class = class_create(THIS_MODULE, "adl-bmc-i2c-eapi");
+    adlink->class = class_create(THIS_MODULE, "adl-ec-i2c-eapi");
     if(adlink->class == NULL)
     {
 	unregister_chrdev_region(adlink->ldev, 1);
 	return -1;
     }
 
-    if(device_create(adlink->class, NULL, adlink->ldev, NULL, "bmc-i2c-eapi") == NULL)
+    if(device_create(adlink->class, NULL, adlink->ldev, NULL, "ec-i2c-eapi") == NULL)
     {
 	class_destroy(adlink->class);
 	unregister_chrdev_region(adlink->ldev, 1);
@@ -1078,7 +1078,7 @@ static int adl_bmc_i2c_remove(struct platform_device *pdev)
 
 static struct platform_driver adl_bmc_i2c_driver = {
     .driver = {
-	.name	= "adl-bmc-i2c",
+	.name	= "adl-ec-i2c",
     },
 
     .probe		= adl_bmc_i2c_probe,

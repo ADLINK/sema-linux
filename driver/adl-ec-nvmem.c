@@ -8,7 +8,7 @@
 #include <linux/nvmem-provider.h>
 #include <linux/delay.h>
 #include <linux/sysfs.h>
-#include "adl-bmc.h"
+#include "adl-ec.h"
 
 struct kobject *kobj_ref;
 unsigned int storagesize;
@@ -160,10 +160,10 @@ static int adl_bmc_nvmem_write(void *context, unsigned int offset, void *val, si
 {
     size_t size=0;
     int ret=0, i;
-
+    
     if((offset+bytes) > storagesize)
 	    return -EINVAL;
-
+    
     size = bytes;
     mutex_lock(&adl_dev->mx_nvmem);
     for(i = 0; size > 0; i += 32)
@@ -266,7 +266,7 @@ static int adl_bmc_nvmem_remove(struct platform_device *pdev)
 
 static struct platform_driver adl_bmc_nvmem_driver = {
     .driver = {
-	.name = "adl-bmc-nvmem",
+	.name = "adl-ec-nvmem",
     },
     .probe = adl_bmc_nvmem_probe,
     .remove = adl_bmc_nvmem_remove,

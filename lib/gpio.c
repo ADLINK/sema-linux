@@ -23,6 +23,7 @@
 #include <errno.h>
 #include "eapi.h"
 #include <common.h>
+#include <sys/ioctl.h>
 
 static int gpiobase = -1;
 static int ngpio = -1;
@@ -37,6 +38,8 @@ static int ngpio = -1;
 #define EAPI_GPIO_INPUT   1
 #define EAPI_GPIO_OUTPUT   0
 #define EAPI_GPIO_EXT	   0x010000000
+
+#define GET_GPIO_DIR    _IOR('a','1',uint32_t *)
 
 static int get_gpio_base(int *gpiobase, int *ngpio)
 {
@@ -60,7 +63,7 @@ static int get_gpio_base(int *gpiobase, int *ngpio)
 			if(read_sysfs_file(sysfile, value, sizeof(value)) != 0) {
 				continue;
 			}
-			if(strncmp(value, "adl-bmc-gpio", strlen("adl-bmc-gpio")) != 0) {
+			if(strncmp(value, "adl-ec-gpio", strlen("adl-ec-gpio")) != 0) {
 				continue;
 			}
 			sprintf(sysfile, "/sys/class/gpio/%s/base", de->d_name);
@@ -85,35 +88,29 @@ static int get_gpio_base(int *gpiobase, int *ngpio)
 
 int initialize_gpio(void)
 {
-	int gpio,ret;
-	
+	int gpio,ret,fd;
+	uint16_t bit = 0;
+	uint32_t value = 0;
 	if((gpiobase == -1) || (ngpio == -1)) {
 		ret = get_gpio_base(&gpiobase, &ngpio);
 		if(ret < 0) {
 			return -1;
 		}
 	}
-	if(open("/dev/gpio_adl",O_RDONLY) >= 0)
+	if((fd=open("/dev/gpio_adl",O_RDONLY)) >= 0)
 	{
 		for(gpio = gpiobase; gpio < (gpiobase + ngpio); gpio++) {
 			char export[256];
-			char label[256];
-          		char boardname[11];
 			sprintf(export, "echo %d > /sys/class/gpio/export", gpio);
 			system(export);
-			sprintf(label, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/board_name");
-                        ret = read_sysfs_file(label,boardname,sizeof(boardname));
-			if((strstr(boardname,"HPC") || strstr(boardname,"hpc"))==0)
-			{
-			if(gpiobase + 3 >= gpio)
+			ret = ioctl(fd , GET_GPIO_DIR , &value);
+			bit = gpio - gpiobase;
+			value >>= bit;
+			if(value & 1)
 				sprintf(export, "echo in > /sys/class/gpio/gpio%d/direction", gpio);
 			else 
 				sprintf(export, "echo out > /sys/class/gpio/gpio%d/direction", gpio);
-			}
-			else
-			{
-			 	sprintf(export, "echo in > /sys/class/gpio/gpio%d/direction", gpio);
-			}
+			value = 0;
 			system(export);
 		}
 	}
@@ -197,7 +194,7 @@ uint32_t EApiGPIOGetDirectionCaps(uint32_t Id, uint32_t *pInputs, uint32_t *pOut
         char boardname[11];
 	if (Id > 8)
         {
-                sprintf(label, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/board_name");
+                sprintf(label, "/sys/bus/platform/devices/adl-ec-boardinfo/information/board_name");
                 status = read_sysfs_file(label,boardname,sizeof(boardname));
 		if((strstr(boardname,"HPC") || strstr(boardname,"hpc"))==0)
                 {
@@ -249,7 +246,7 @@ uint32_t EApiGPIOGetDirection(uint32_t Id, uint32_t Bitmask, uint32_t *pDirectio
 	//	return status;
 	if (Bitmask > 0xff)
 	{
- 		sprintf(label, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/board_name");
+ 		sprintf(label, "/sys/bus/platform/devices/adl-ec-boardinfo/information/board_name");
 		gpio = read_sysfs_file(label,boardname,sizeof(boardname));
 		if((strstr(boardname,"HPC") || strstr(boardname,"hpc"))==0)
 		{
@@ -291,7 +288,7 @@ uint32_t EApiGPIOSetDirection(uint32_t Id, uint32_t Bitmask, uint32_t Direction)
 
 	if (Bitmask > 0xff)
 	{
-		sprintf(label, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/board_name");
+		sprintf(label, "/sys/bus/platform/devices/adl-ec-boardinfo/information/board_name");
                 gpio = read_sysfs_file(label,boardname,sizeof(boardname));
 		if((strstr(boardname,"HPC") || strstr(boardname,"hpc"))==0)
 	       	{
@@ -329,7 +326,7 @@ uint32_t EApiGPIOGetLevel(uint32_t Id, uint32_t Bitmask, uint32_t *pLevel)
 
 	if (Bitmask > 0xff)
 	{
-		sprintf(label, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/board_name");
+		sprintf(label, "/sys/bus/platform/devices/adl-ec-boardinfo/information/board_name");
                 gpio = read_sysfs_file(label,boardname,sizeof(boardname));
 		if((strstr(boardname,"HPC") || strstr(boardname,"hpc"))==0)
 	       	{
@@ -364,7 +361,7 @@ uint32_t EApiGPIOSetLevel(uint32_t Id, uint32_t Bitmask, uint32_t Level)
 
 	if (Bitmask > 0xff)
 	{
-		sprintf(label, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/board_name");
+		sprintf(label, "/sys/bus/platform/devices/adl-ec-boardinfo/information/board_name");
                 gpio = read_sysfs_file(label,boardname,sizeof(boardname));
 		if((strstr(boardname,"HPC") || strstr(boardname,"hpc"))==0)
 		{

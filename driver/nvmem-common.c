@@ -13,7 +13,7 @@
 //   to endorse or promote products derived from this software without specific
 //   prior written permission of ADLINK Technology, Inc.
 
-#include "adl-bmc.h"
+#include "adl-ec.h"
 
 
 int StatusCheck(void)

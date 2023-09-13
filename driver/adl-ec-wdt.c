@@ -7,7 +7,7 @@
 #include <linux/watchdog.h>
 #include <linux/platform_device.h>
 
-#include "adl-bmc.h"
+#include "adl-ec.h"
 
 
 #define WDT_TIMEOUT   		10
@@ -38,7 +38,6 @@ static int adl_bmc_wdt_write(struct watchdog_device *wdt, unsigned short val)
 
 	ret = adl_bmc_ec_write_device(ADL_BMC_OFS_SET_WD_CURR, ((u8*)(&buff[0])), 2, EC_REGION_1);
 	ret = adl_bmc_ec_write_device(ADL_BMC_OFS_SET_WD, ((u8*)(&buff[0])), 2, EC_REGION_1);
-	printk("came here\n");
 
 	if (ret < 0) {
 		debug_printk("EC write error: %d\n", ret);
@@ -262,7 +261,7 @@ static int adl_bmc_wdt_remove(struct platform_device *pdev)
 
 static struct platform_driver adl_bmc_wdt_driver = {
 	.driver = {
-		.name = "adl-bmc-wdt",
+		.name = "adl-ec-wdt",
 	},
 	.probe = adl_bmc_wdt_probe,
 	.remove = adl_bmc_wdt_remove,

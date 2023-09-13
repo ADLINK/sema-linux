@@ -10,7 +10,7 @@
 #include <linux/device.h>
 #include <linux/string.h>
 
-#include "adl-bmc.h"
+#include "adl-ec.h"
 
 #define MAX_PATH 260
 
@@ -214,14 +214,15 @@ int get_voltage_value(unsigned char ch, uint16_t *pValue)
 
 int get_voltage_description(const char *Buffer, uint8_t *ch)
 {
-    uint8_t i;
-
+    uint8_t i,len;		
+    len = strlen(Buffer);
+    
     if(ch == NULL)
 	return -1;
     
     for(i = 0; i < (ADL_MAX_HW_MTR_INPUT - 1) ; i++)
     {	
-	if(strcmp(Buffer, adl_dev->current_board.voltage_description[i]) == 0)
+	if(strncmp(Buffer, adl_dev->current_board.voltage_description[i], len) == 0)
 	{
 	    *ch = i;
 	    debug_printk("ch %d %s\n", *ch, Voltage[i]);
@@ -1372,7 +1373,7 @@ static int boardinfo_remove(struct platform_device *pdev)
 
 static struct platform_driver adl_bmc_boardinfo_driver = {
     .driver = {
-	.name = "adl-bmc-boardinfo",
+	.name = "adl-ec-boardinfo",
     },
 
     .probe = boardinfo_probe,

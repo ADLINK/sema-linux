@@ -43,7 +43,7 @@ static char NVMEM_DEVICE[285];
 static int initialize_nvmem()
 {
 	struct dirent *de;
-        DIR *dr = opendir("/sys/bus/platform/devices/adl-bmc-nvmem");
+        DIR *dr = opendir("/sys/bus/platform/devices/adl-ec-nvmem");
 
         if (dr == NULL)  // opendir returns NULL if couldn't open directory 
                 return -1;
@@ -67,7 +67,7 @@ static int initialize_nvmem()
 static int initialize_nvmem_sec()
 {
         struct dirent *de;
-        DIR *dr = opendir("/sys/bus/platform/devices/adl-bmc-nvmem-sec");
+        DIR *dr = opendir("/sys/bus/platform/devices/adl-ec-nvmem-sec");
 
         if (dr == NULL)  // opendir returns NULL if couldn't open directory 
                 return -1;
@@ -101,7 +101,7 @@ uint32_t EApiStorageCap(uint32_t Id, uint32_t *pStorageSize, uint32_t *pBlockLen
 	if(Id > 1 && Id < 0)
                 return EAPI_STATUS_UNSUPPORTED;
 
-	sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-nvmem/capabilities/nvmemcap");
+	sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-nvmem/capabilities/nvmemcap");
 
         status = read_sysfs_file(sysfile, buf, sizeof(buf));
 	if (status)
@@ -165,7 +165,7 @@ uint32_t EApiStorageAreaRead(uint32_t Id,uint32_t Region, uint32_t Offset, void 
 
 	data.Region=Region;
 	
-        if((fd = open("/dev/bmc-nvmem-eapi", O_RDWR)) < 0)
+        if((fd = open("/dev/ec-nvmem-eapi", O_RDWR)) < 0)
 	{
 	
 		return -1;
@@ -260,7 +260,7 @@ uint32_t EApiStorageAreaWrite(uint32_t Id,uint32_t Region, uint32_t Offset, char
 
 	data.Region=Region;
 	
-        if((fd = open("/dev/bmc-nvmem-eapi", O_RDWR)) < 0)
+        if((fd = open("/dev/ec-nvmem-eapi", O_RDWR)) < 0)
 	{
 		return -1;
 	}
@@ -313,7 +313,6 @@ uint32_t EApiStorageHexWrite(uint32_t Id,uint32_t Region, uint32_t Offset, char*
 	struct secure data;
 	char *asciiString,*hex_buf;
         char result[2048];
-
 	for(i=0;i<Len*2;i++)
 	{
 		if(isxdigit(Buf[i])==0)
@@ -372,7 +371,7 @@ uint32_t EApiStorageHexWrite(uint32_t Id,uint32_t Region, uint32_t Offset, char*
 
         data.Region=Region;
 
-        if((fd = open("/dev/bmc-nvmem-eapi", O_RDWR)) < 0)
+        if((fd = open("/dev/ec-nvmem-eapi", O_RDWR)) < 0)
         {
                 return -1;
         }
@@ -392,9 +391,9 @@ uint32_t EApiStorageHexWrite(uint32_t Id,uint32_t Region, uint32_t Offset, char*
         {
                 return EAPI_STATUS_WRITE_ERROR;
         }
-
         lseek(fd,Offset,SEEK_SET);
-        ret = write(fd,buffer,Len);
+        
+	ret = write(fd,buffer,Len);
         if (ret > 0)
         {
                 close(fd);
@@ -424,7 +423,7 @@ uint32_t EApiStorageLock(uint32_t Id,uint32_t Region)
 	}
 	data.Region=Region;
 
-        if((fd = open("/dev/bmc-nvmem-eapi", O_RDWR)) < 0)
+        if((fd = open("/dev/ec-nvmem-eapi", O_RDWR)) < 0)
 	{
 		return -1;
 	}
@@ -450,7 +449,7 @@ uint32_t EApiStorageUnLock(uint32_t Id,uint32_t Region,uint32_t Permission, char
 
 	memcpy(data.passcode,passcode,strlen(passcode));
 
-        if((fd = open("/dev/bmc-nvmem-eapi", O_RDWR)) < 0)
+        if((fd = open("/dev/ec-nvmem-eapi", O_RDWR)) < 0)
         {
                 return -1;
         }
