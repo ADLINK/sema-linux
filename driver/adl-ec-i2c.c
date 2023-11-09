@@ -21,6 +21,7 @@
 #include <linux/ioctl.h>
 #include <linux/fs.h>
 #include <linux/uaccess.h>
+#include <linux/version.h>
 
 #include <linux/slab.h>
 
@@ -49,10 +50,11 @@
 
 #define SEMA_EXT_IIC_READ               0x01
 #define SEMA_EXT_IIC_BLOCK              0x02
+#define SEMA_EXT_IIC_WRITE_READ         0x03
 #define SEMA_EXT_IIC_EXT_COMMAND        0x10
 
 
-#define BMC_DELAY_PER_BYTE      1000
+#define BMC_DELAY_PER_BYTE      100
 #define BMC_DELAY(x)	udelay(BMC_DELAY_PER_BYTE * (x))
 
 
@@ -101,34 +103,16 @@ static int check_bmc_status_free(unsigned char *status, int retry_count)
 	{
 		if (adl_bmc_ec_read_device(EC_RW_ADDR_IIC_BMC_STATUS, status, 1, EC_REGION_2) == 0)
 		{
-			if (!!(*status & 0x4) != 1 && ((*status & 0x1) == 0))
+			if ((*status & 0x5) == 0x00)
 			{
 				return 0;
 			}
 		}
+		udelay(50);
 	}
 
 	return -1;
 }
-
-static int check_iic_txn_status(unsigned char *status, int retry_count)
-{
-	register int i;
-
-	for (i = 0; i < retry_count; i++)
-	{
-		if (adl_bmc_ec_read_device(EC_RO_ADDR_IIC_TXN_STATUS, status, 1, EC_REGION_2) == 0)
-		{
-			if((*status & 0x2C) == 0)
-			{
-				return 0;
-			}
-		}
-	}
-
-	return -1;
-}
-
 
 static int check_bmc_status_iic(unsigned char *status, int retry_count)
 {
@@ -136,7 +120,6 @@ static int check_bmc_status_iic(unsigned char *status, int retry_count)
 
 	for (i = 0; i < retry_count; i++)
 	{
-		udelay(50);
 		if (adl_bmc_ec_read_device(EC_RW_ADDR_IIC_BMC_STATUS, status, 1, EC_REGION_2) == 0)
 		{
 			if ((*status & 0x09) == 0)
@@ -144,6 +127,7 @@ static int check_bmc_status_iic(unsigned char *status, int retry_count)
 				return 0;
 			}
 		}
+		udelay(50);
 	}
 /*
 	if (i < retry_count && !!(*status & 0x8) != 1)
@@ -153,6 +137,25 @@ static int check_bmc_status_iic(unsigned char *status, int retry_count)
 */
 	return -ENODEV;
 
+}
+
+static int check_bmc_txn_status(unsigned char *status, int retry_count)
+{
+        register int i;
+
+        for (i = 0; i < retry_count; i++)
+        {
+                if (adl_bmc_ec_read_device(EC_RO_ADDR_IIC_TXN_STATUS, status, 1, EC_REGION_2) == 0)
+                {
+                        if((*status & 0x80) != 0)
+                        {
+                                return 0;
+                        }
+                }
+		udelay(50);
+        }
+
+        return -1;
 }
 
 int ProbeDevice(struct eapi_txn *trxn)
@@ -169,7 +172,7 @@ int ProbeDevice(struct eapi_txn *trxn)
 		return -1;
 	}
 
-	Status = 1 << 2;
+	Status = 0x05;
 	if (adl_bmc_ec_write_device(EC_RW_ADDR_IIC_BMC_STATUS, &Status, 1, EC_REGION_2) != 0)
 	{
 		return -1;
@@ -195,7 +198,6 @@ int ProbeDevice(struct eapi_txn *trxn)
 
 int eapi_read_transaction()
 {
-
 	u8 buffer[32];
 	unsigned char Status;
 	int i;
@@ -231,26 +233,24 @@ int eapi_read_transaction()
 		return -1;
 	}
 	//4. Start read transaction
-	buffer[0] = 0x4;
-        if (adl_bmc_ec_write_device(EC_RW_ADDR_IIC_BMC_STATUS, buffer, 1, EC_REGION_2) != 0)
+	buffer[0] = 0x05;
+        if (adl_bmc_ec_write_device(EC_RW_ADDR_IIC_ENABLE, buffer, 1, EC_REGION_2) != 0)
         {
 		return -1;
 	}
-
-	//5. check the transaction is completed. 
-        if((check_bmc_status_free(&Status, 100)) < 0)
-                return -1;
-
 	
-	//6. check if the I2C transaction is completed.
-	if((check_iic_txn_status(&Status, 20)) < 0)
-		return -1;
+	BMC_DELAY(buf.Length);
+	
+    	//5. Checking the I2C status 
+    	if((check_bmc_txn_status(&Status, 400)) < 0)
+       	 return -1;
 
-	//7. Read EC Data
+	//6. Read EC Data
 	if (adl_bmc_ec_read_device(EC_RW_ADDR_IIC_BUFFER, buffer, buf.Length, EC_REGION_2) != 0)
        	{
 		return -1;
 	}
+
 #if DEBUG_I2C
 	for (i=0;i<10;i++)
 		printk("%x ",buffer[i]);
@@ -295,35 +295,85 @@ int eapi_transaction(struct eapi_txn *trxn)
     }
 
     //0x10 4. Initiate I2C transaction
-    Status = 1 << 2;
-    if (adl_bmc_ec_write_device(EC_RW_ADDR_IIC_BMC_STATUS, &Status, 1, EC_REGION_2) != 0)
+    Status = 0x05;
+    if (adl_bmc_ec_write_device(EC_RW_ADDR_IIC_ENABLE, &Status, 1, EC_REGION_2) != 0)
     {
 	return -1;
     }
+    BMC_DELAY(trxn->Length);
 
-    //5. Check transaction is completed - BMC_STATUS
-    if((check_bmc_status_free(&Status, 20)) < 0)
-        return -1;
-
-    
-    //6. check if the I2C transaction is completed.
-    if((check_iic_txn_status(&Status, 20)) < 0)
-        return -1;
-
-
-    //7. check the transaction 
-    //Need to remove later.
-    if(trxn->Type == SEMA_EXT_IIC_READ)
-    {
-	if(adl_bmc_ec_read_device(EC_RW_ADDR_IIC_BUFFER, buf.tBuffer, trxn->Length, EC_REGION_2) != 0)
-	{
-	    return -1;
-	}
-    }
+    //5. Checking the I2C status 
+    if((check_bmc_txn_status(&Status, 400)) < 0)
+       return -1;
 
     return 0;
 }
 
+int eapi_rw_transaction(struct eapi_txn *trxn)
+{
+    unsigned char start=0x05; 
+    unsigned char buffer[50] = {0}; 
+    unsigned char Status;
+    volatile int i;
+    //Check if the i2c bus is free
+    if((check_bmc_status_free(&Status, 20)) < 0)
+                return -1;
+
+    buffer[0] = EC_IIC_TRANS;
+    buffer[1] = EC_IIC_TYPE_STREAM_RW;
+    buffer[2] = buf.tBuffer[3];
+    buffer[3] = buf.tBuffer[5];
+    buffer[4] = buf.tBuffer[6];
+    buffer[5] = buf.tBuffer[2];
+    
+    adl_bmc_ec_write_device(EC_RW_ADDR_IIC_IF_TYPE,&(buffer[0]),1,EC_REGION_2); 
+    adl_bmc_ec_write_device(EC_RW_ADDR_IIC_RW_TYPE,&(buffer[1]),1,EC_REGION_2); 
+    adl_bmc_ec_write_device(EC_RW_ADDR_IIC_CHANNEL,&(buffer[2]),1,EC_REGION_2); 
+    adl_bmc_ec_write_device(EC_RW_ADDR_IIC_ADDRESS,&(buffer[3]),1,EC_REGION_2); 
+    adl_bmc_ec_write_device(EC_RW_ADDR_IIC_STREAM_WR_LEN,&(buffer[4]),1,EC_REGION_2);
+    adl_bmc_ec_write_device(EC_RW_ADDR_IIC_STREAM_RD_LEN,&(buffer[5]),1,EC_REGION_2); 
+    
+    for(i=0; i<buffer[4]; i++)
+    {
+	buffer[i+6] = trxn->tBuffer[i+7];
+    }
+	    
+    if (adl_bmc_ec_write_device(EC_RW_ADDR_IIC_BUFFER, &(buffer[6]), buffer[4], EC_REGION_2) != 0)
+    {
+       	 return -ENODEV;
+    }
+
+    if (adl_bmc_ec_write_device(EC_RW_ADDR_IIC_ENABLE, &start, 1, EC_REGION_2) != 0) /*Start Transaction*/
+    {
+         return -ENODEV;
+    }
+	
+    BMC_DELAY(buffer[4] + buffer[5]);
+
+    if(buffer[5] == 0)
+    {
+    	if((check_bmc_txn_status(&Status, 400)) < 0)
+    	{
+    		return -1;
+    	}
+    }
+    else
+    {
+ 	if((check_bmc_status_free(&Status, 400)) < 0) 
+	{
+                return -1;
+	}
+    }
+
+    if (adl_bmc_ec_read_device(EC_RW_ADDR_IIC_STREAM_RD_BUF, buffer, buffer[5], EC_REGION_2) != 0)
+    {
+	return -ENODEV;
+    }
+    
+    memcpy(buf.tBuffer, buffer, trxn->Length);
+    
+    return 0;
+}
 
 int bmc_i2c_status(struct eapi_txn *trxn)
 {
@@ -360,15 +410,20 @@ long ioctl(struct file *file, unsigned int cmd, unsigned long data)
 			}
 			mutex_unlock(&i2c_lock);
 			return -1;
-		case EAPI_TRXN:
+		case EAPI_TRXN: 
 			if (buf.Type == SEMA_EXT_IIC_READ)
-			{	    
+			{		
 				eapi_read_transaction();
 			}
-			else
+			else if (buf.Type == SEMA_EXT_IIC_BLOCK)
 			{
 				eapi_transaction((struct eapi_txn*)&buf);
 			}
+			else
+			{
+				eapi_rw_transaction((struct eapi_txn*)&buf);
+			}
+
 			if((RetVal=copy_to_user((void*)data, &buf, sizeof(struct eapi_txn)))!=0)
 			{
 				return EFAULT;
@@ -437,8 +492,9 @@ static int i2c_write_read_iic (struct i2c_msg *msg_wr, struct i2c_msg *msg_rd, i
     {
         return -ENODEV;
     }
-    mdelay((msg_wr->len + msg_rd->len)*1);
- 
+    
+    BMC_DELAY(msg_wr->len + msg_rd->len);
+
     if((check_bmc_status_iic(&Status, 500))<0)
     {
 		return -ENODEV;
@@ -448,6 +504,7 @@ static int i2c_write_read_iic (struct i2c_msg *msg_wr, struct i2c_msg *msg_rd, i
     {
 		return -ENODEV;
     }
+    
     for(i=0; i<msg_rd->len; i++)
     {
     	msg_rd->buf[i] = buf[i];
@@ -491,14 +548,13 @@ static int i2c_write_iic (struct i2c_msg *msg, int bus)
 	return -ENODEV;
     }
 
-    Status = 0;
-    adl_bmc_ec_write_device(EC_RO_ADDR_IIC_TXN_STATUS, &Status, 1, EC_REGION_2);
-
-    Status = 1 << 2;
+    Status = 0x05;
     if (adl_bmc_ec_write_device(EC_RW_ADDR_IIC_BMC_STATUS, &Status, 1, EC_REGION_2) != 0)
     {
 	return -ENODEV;
     }
+
+    BMC_DELAY(msg->len);
 
     if((check_bmc_status_iic(&Status, 500))<0)
 		return -ENODEV;
@@ -541,22 +597,18 @@ static int i2c_read_iic(struct i2c_msg *msg, int bus)
 	    return -1;
 	}
 
-	Status = 0;
-	adl_bmc_ec_write_device(EC_RO_ADDR_IIC_TXN_STATUS, &Status, 1, EC_REGION_2);
-
-	Status = 1 << 2;
+	Status = 0x05;
 	if (adl_bmc_ec_write_device(EC_RW_ADDR_IIC_BMC_STATUS, &Status, 1, EC_REGION_2) != 0)
 	{
 	    return -1;
 	}
-	
-	BMC_DELAY(msg->len);
+
+    	BMC_DELAY(msg->len);
 
     	if((check_bmc_status_iic(&Status, 200))<0)
 	{
 		return -ENODEV;
 	}
-	mdelay(5);
 	
 	ret = adl_bmc_ec_read_device(EC_RW_ADDR_IIC_BUFFER, buf, msg->len, EC_REGION_2);
 
@@ -1032,12 +1084,21 @@ static int adl_bmc_i2c_probe(struct platform_device *pdev)
 	return -1;
     }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,4,0)
+    adlink->class = class_create("adl-ec-i2c-eapi");
+    if(adlink->class == NULL)
+    {
+	unregister_chrdev_region(adlink->ldev, 1);
+	return -1;
+    }
+#else
     adlink->class = class_create(THIS_MODULE, "adl-ec-i2c-eapi");
     if(adlink->class == NULL)
     {
 	unregister_chrdev_region(adlink->ldev, 1);
 	return -1;
     }
+#endif
 
     if(device_create(adlink->class, NULL, adlink->ldev, NULL, "ec-i2c-eapi") == NULL)
     {

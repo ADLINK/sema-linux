@@ -12,6 +12,7 @@
 #include <linux/delay.h>
 #include <linux/seq_file.h>
 #include <linux/delay.h>
+#include <linux/version.h>
 
 #include "adl-ec.h"
 
@@ -389,11 +390,19 @@ static int adl_ec_acpi_probe(struct platform_device *pdev)
 	return -ENODEV;
     }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,4,0)
+    if((cl = class_create("sema")) == NULL)
+    {
+	unregister_chrdev_region(sema, 1);
+	return -ENODEV;
+    }
+#else
     if((cl = class_create(THIS_MODULE, "sema")) == NULL)
     {
 	unregister_chrdev_region(sema, 1);
 	return -ENODEV;
     }
+#endif
 
     if(device_create(cl, NULL, sema, NULL, "sema") == NULL)
     {

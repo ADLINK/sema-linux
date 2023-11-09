@@ -11,7 +11,8 @@
 #include <linux/kernel.h>
 #include <linux/slab.h>
 #include <linux/cdev.h>
-
+#include <linux/version.h>
+#include <linux/delay.h>
 #include "adl-ec.h"
 
 #define GET_VOLT_AND_DESC	_IOR('a','1',struct data *)
@@ -142,7 +143,11 @@ static int adl_bmc_vm_probe(struct platform_device *pdev)
                 return -1;
         }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,4,0)
+	class_adl_vm = class_create("adl_vm");
+#else
 	class_adl_vm = class_create(THIS_MODULE, "adl_vm");
+#endif
 
 	if (IS_ERR(class_adl_vm)) {
                 printk("Error in Class_create\n");
@@ -189,6 +194,7 @@ static int adl_bmc_vm_probe(struct platform_device *pdev)
 			break;
 		}
 		volt_desc[i] = devm_kzalloc(&(pdev->dev), (sizeof(char) *16), GFP_KERNEL);
+		udelay(1);
 		strcpy(volt_desc[i],vm_data->adl_dev->current_board.voltage_description[i]);
 		vm_data->adl_bmc_vm_desc[i].id = i;
 	}

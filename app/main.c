@@ -45,7 +45,9 @@ struct {
 	uint32_t CmdType;
 	uint32_t cmd;
 	void* pBuffer;
+	void* pWrBuffer;
 	uint32_t nByteCnt;
+	uint32_t WByteCnt;
 }I2CFuncArgs;
 unsigned int string_to_hex(char *string)
 {
@@ -229,19 +231,19 @@ void ShowHelp(int condition)
 	{
 		printf("\n- Generic I2C Read/Write:\n");
 		printf("  1. semautil /i2c  bus_cap\n");
-		printf("  2. semautil /i2c  probe_device [bus id]\n");
-		printf("  3. semautil /i2c  write_raw	 [bus id] [address] [length] byte0 byte1 byte2 ...\n");
-		printf("  3. semautil /i2c  read_raw	 [bus id] [address] [length]\n");
-		printf("  4. semautil /i2c  read_xfer	 [bus id] [address] [cmd type] [cmd] [length]\n");
-		printf("  5. semautil /i2c  write_xfer	 [bus id] [address] [cmd type] [cmd] [length] byte0 byte1 byte2 ...\n");
-		printf("  6. semautil /i2c  get_status\n");
+		printf("  2. semautil /i2c  probe_device   [bus id]\n");
+		printf("  3. semautil /i2c  write_raw	   [bus id] [address] [wr length] [cmd] byte0 byte1 ...\n");
+		printf("  4. semautil /i2c  read_raw	   [bus id] [address] [cmd] [re length]\n");
+		printf("  5. semautil /i2c  raw_xfer 	   [bus id] [address] [wr length] [rd length] byte0 byte1 byte2...\n");
+		printf("  6. semautil /i2c  read_xfer	   [bus id] [address] [cmd type] [cmd] [length]\n");
+		printf("  7. semautil /i2c  write_xfer	   [bus id] [address] [cmd type] [cmd] [length] byte0 byte1 byte2 ...\n");
+		printf("  8. semautil /i2c  get_status\n");
 
 		printf("  [Bus Id]:\n");
 		printf("    ID\tSEMA EAPI ID\t\t\tDescription\n");
 		printf("    1\tEAPI_ID_I2C_EXTERNAL_1\t\tBaseboard I2C Interface 1\n");
 		printf("    2\tEAPI_ID_I2C_EXTERNAL_2\t\tBaseboard I2C Interface 2\n");
 		printf("    3\tEAPI_ID_I2C_EXTERNAL_3\t\tBaseboard I2C Interface 3\n");
-		
 		printf("    4\tEAPI_ID_I2C_LVDS_2\t\tLVDS \\ EDP 2 Interface\n");
 
 		printf("  [Command type]:\n");
@@ -1222,12 +1224,7 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 
 	if (IsI2CReXf)
 	{
-		   if ((sts = EApiI2CProbeDevice(I2CFuncArgs.BusID - 1, I2CFuncArgs.Address)) != 0)
-		   {
-		   printf("\nSlave device not found with this address %02x\n\n", I2CFuncArgs.Address >> 1);
-		   sts = 0;
-		   }
-		   else if ((sts = EApiI2CReadTransfer(I2CFuncArgs.BusID - 1, I2CFuncArgs.Address, I2CFuncArgs.cmd, I2CFuncArgs.pBuffer, I2CFuncArgs.nByteCnt, I2CFuncArgs.nByteCnt)) == 0)
+		if ((sts = EApiI2CReadTransfer(I2CFuncArgs.BusID - 1, I2CFuncArgs.Address, I2CFuncArgs.cmd, I2CFuncArgs.pBuffer, I2CFuncArgs.nByteCnt, I2CFuncArgs.nByteCnt)) == 0)
 		{
 			unsigned int i;
 			printf("Read data:\n\n");
@@ -1244,13 +1241,7 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 
 	if (IsI2CWrXf)
 	{
-		   if ((sts = EApiI2CProbeDevice(I2CFuncArgs.BusID - 1, I2CFuncArgs.Address)) != 0)
-		   {
-		   printf("\nSlave device not found with this address %02x\n\n", I2CFuncArgs.Address >> 1);
-		   sts = 0;
-		   }
-
-		   else if ((sts = EApiI2CWriteTransfer(I2CFuncArgs.BusID - 1, I2CFuncArgs.Address, I2CFuncArgs.cmd, I2CFuncArgs.pBuffer, I2CFuncArgs.nByteCnt)) == 0)
+		if ((sts = EApiI2CWriteTransfer(I2CFuncArgs.BusID - 1, I2CFuncArgs.Address, I2CFuncArgs.cmd, I2CFuncArgs.pBuffer, I2CFuncArgs.nByteCnt)) == 0)
 		{
 			printf("\nThe I2C Write Transfer command is completed\n\n");
 		}
@@ -1261,12 +1252,7 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 
 	if (IsI2CReRaw)
 	{
-		if ((sts = EApiI2CProbeDevice(I2CFuncArgs.BusID - 1, I2CFuncArgs.Address)) != 0)
-		  {
-		  printf("\nSlave device not found with this address %02x\n\n", I2CFuncArgs.Address >> 1);
-		  sts = 0;
-		  }
-		if((sts = EApiI2CWriteReadRaw(I2CFuncArgs.BusID - 1, I2CFuncArgs.Address, NULL, 0, I2CFuncArgs.pBuffer, I2CFuncArgs.nByteCnt + 1, I2CFuncArgs.nByteCnt + 1)) == 0)
+		if((sts = EApiI2CWriteReadRaw(I2CFuncArgs.BusID - 1, I2CFuncArgs.Address, I2CFuncArgs.pWrBuffer, I2CFuncArgs.WByteCnt, I2CFuncArgs.pBuffer, I2CFuncArgs.nByteCnt, I2CFuncArgs.nByteCnt)) == 0)
 		{
 			unsigned int i;
 			printf("Read data:\n\n");
@@ -1283,12 +1269,7 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 
 	if (IsI2CWrRaw)
 	{
-		if ((sts = EApiI2CProbeDevice(I2CFuncArgs.BusID - 1, I2CFuncArgs.Address)) != 0)
-		  {
-		  printf("\nSlave device not found with this address %02x\n\n", I2CFuncArgs.Address >> 1);
-		  sts = 0;
-		  }
-		  else if ((sts = EApiI2CWriteReadRaw(I2CFuncArgs.BusID - 1, I2CFuncArgs.Address, I2CFuncArgs.pBuffer, I2CFuncArgs.nByteCnt + 1, NULL, 0, 0)) == 0)
+		if ((sts = EApiI2CWriteReadRaw(I2CFuncArgs.BusID - 1, I2CFuncArgs.Address, I2CFuncArgs.pWrBuffer, I2CFuncArgs.WByteCnt,I2CFuncArgs.pBuffer, I2CFuncArgs.nByteCnt, I2CFuncArgs.nByteCnt)) == 0)
 		{
 			printf("\nData Written Successfully\n\n");
 		}
@@ -1682,9 +1663,9 @@ signed int ParseArgs(int argc, char* argv[])
 					return -3;
 				}
 				I2CFuncArgs.Address = I2CFuncArgs.Address << 1;
-				I2CFuncArgs.nByteCnt = atoi(argv[5]);
-				I2CFuncArgs.pBuffer = calloc(I2CFuncArgs.nByteCnt, sizeof(unsigned char));
-				if (I2CFuncArgs.pBuffer == NULL)
+				I2CFuncArgs.WByteCnt = atoi(argv[5]);
+				I2CFuncArgs.pWrBuffer = calloc(I2CFuncArgs.WByteCnt, sizeof(unsigned char));
+				if (I2CFuncArgs.pWrBuffer == NULL)
 				{
 					return -3;
 				}
@@ -1699,11 +1680,11 @@ signed int ParseArgs(int argc, char* argv[])
 					eRet = -3;
 				}
 
-				if (argc != I2CFuncArgs.nByteCnt + 6)
+				if (argc != I2CFuncArgs.WByteCnt + 6)
 				{
 					printf("Wrong arguments \n");
 					printf("\nUsage :\n");
-					printf("  semautil /i2c  write_raw	 [bus id] [address] [length] byte0 byte1 byte2 ...\n");
+					printf("  semautil /i2c  write_raw	 [bus id] [address] [wr length] [cmd] byte0 byte1 ...\n");
 
 					printf("  [Bus Id]:\n");
 					printf("    ID\tSEMA EAPI ID\t\t\tDescription\n");
@@ -1714,15 +1695,15 @@ signed int ParseArgs(int argc, char* argv[])
 				}
 				else
 				{
-					if (I2CFuncArgs.nByteCnt > 29 || I2CFuncArgs.nByteCnt <= 0)
+					if (I2CFuncArgs.WByteCnt > 29 || I2CFuncArgs.WByteCnt <= 0)
 					{
 						printf("\nInvalid Size maximum write size is 29 bytes, min 1 byte.\n");
 						eRet = -3;
 						return eRet;
 					}
-					for (i = 0; i < I2CFuncArgs.nByteCnt; i++)
+					for (i = 0; i < I2CFuncArgs.WByteCnt; i++)
 					{
-						((unsigned char*)(I2CFuncArgs.pBuffer))[i] = string_to_hex(argv[6 + i]);
+						((unsigned char*)(I2CFuncArgs.pWrBuffer))[i] = string_to_hex(argv[6 + i]);
 					}
 				}
 			}
@@ -1730,7 +1711,7 @@ signed int ParseArgs(int argc, char* argv[])
 			{
 				printf("Wrong arguments \n");
 				printf("\nUsage :\n");
-				printf("  semautil /i2c  write_raw	 [bus id] [address] [length] byte0 byte1 byte2 ...\n");
+				printf("  semautil /i2c  write_raw	 [bus id] [address] [wr length] [cmd] byte0 byte1 ...\n");
 
 				printf("  [Bus Id]:\n");
 				printf("    ID\tSEMA EAPI ID\t\t\tDescription\n");
@@ -1742,23 +1723,39 @@ signed int ParseArgs(int argc, char* argv[])
 		}
 		else if (argc > 2 && (strcasecmp(argv[2], "read_raw") == 0))
 		{
-			if (argc == 6)
+			if (argc >= 7)
 			{
 				IsI2CReRaw = TRUE;
 				I2CFuncArgs.BusID = atoi(argv[3]);
 				I2CFuncArgs.Address = string_to_hex(argv[4]);
+				I2CFuncArgs.pWrBuffer = malloc(32);
 				if( I2CFuncArgs.Address < 0 || I2CFuncArgs.Address > 127)
 				{
 					return -3;
 				}
 				I2CFuncArgs.Address = I2CFuncArgs.Address << 1;
-				I2CFuncArgs.nByteCnt = atoi(argv[5]); 
-				if (I2CFuncArgs.nByteCnt > 32 || I2CFuncArgs.nByteCnt <= 0)
+				int i,j;
+				for(i = 5,j = 0; i < (argc-1); i++,j++)
 				{
-					printf("\nInvalid Size maximum read size is 32 bytes, min 1 byte.\n");
+					((unsigned char*)(I2CFuncArgs.pWrBuffer))[j] = string_to_hex(argv[i]);
+				}
+				I2CFuncArgs.WByteCnt = j;
+				I2CFuncArgs.nByteCnt = atoi(argv[argc-1]); 
+
+				if (I2CFuncArgs.WByteCnt > 32 || I2CFuncArgs.WByteCnt <= 0)
+				{
+					printf("\nInvalid Size maximum write size is 32 bytes, min 1 byte.\n");
 					eRet = -3;
 					return eRet;
 				}
+				
+				if (I2CFuncArgs.nByteCnt > 32 || I2CFuncArgs.nByteCnt <= 0)
+                                {
+                                        printf("\nInvalid Size maximum read size is 32 bytes, min 1 byte.\n");
+                                        eRet = -3;
+                                        return eRet;
+                                }
+
 				I2CFuncArgs.pBuffer = calloc(I2CFuncArgs.nByteCnt, sizeof(unsigned char));
 				if (I2CFuncArgs.pBuffer == NULL)
 				{
@@ -1779,7 +1776,7 @@ signed int ParseArgs(int argc, char* argv[])
 			{
 				printf("Wrong arguments \n");
 				printf("\nUsage :\n");
-				printf("  semautil /i2c  read_raw	 [bus id] [address] [length]\n");
+				printf("  semautil /i2c  read_raw	 [bus id] [address] [cmd] [re length]\n");
 
 				printf("\n  [Bus Id]:\n");
 				printf("    ID\tSEMA EAPI ID\t\t\tDescription\n");
@@ -1789,6 +1786,124 @@ signed int ParseArgs(int argc, char* argv[])
 				eRet = -3;
 			}
 		}
+		else if (argc > 2 && (strcasecmp(argv[2], "raw_xfer") == 0))
+                {
+			if (argc >= 7)
+                        {
+				int i;
+				I2CFuncArgs.BusID = atoi(argv[3]);
+				if (I2CFuncArgs.BusID < 1 || I2CFuncArgs.BusID > 5)
+                                {
+                                        printf("Invalid BusID\n");
+                                        printf("  \n[Bus Id]:\n");
+                                        printf("    ID\tSEMA EAPI ID\t\t\tDescription\n");
+                                        printf("    1\tEAPI_ID_I2C_EXTERNAL_1\t\tBaseboard I2C Interface 1\n");
+                                        printf("    2\tEAPI_ID_I2C_EXTERNAL_2\t\tBaseboard I2C Interface 2\n");
+                                        printf("    3\tEAPI_ID_I2C_EXTERNAL_3\t\tBaseboard I2C Interface 3\n");
+                                        eRet = -3;
+                                }
+                                I2CFuncArgs.Address = string_to_hex(argv[4]);
+				if( I2CFuncArgs.Address < 0 || I2CFuncArgs.Address > 127)
+                                {
+                                        return -3;
+                                }
+                                I2CFuncArgs.Address = I2CFuncArgs.Address << 1;
+				I2CFuncArgs.WByteCnt = atoi(argv[5]);
+				I2CFuncArgs.nByteCnt = atoi(argv[6]);
+
+                                if (I2CFuncArgs.nByteCnt > 32 || I2CFuncArgs.nByteCnt < 0)
+                                {
+                                        printf("\nInvalid Size maximum read size is 32 bytes, min 1 byte.\n");
+                                        eRet = -3;
+                                        return eRet;
+                                }
+
+				if(I2CFuncArgs.nByteCnt == 0)
+				{
+					IsI2CWrRaw = TRUE;
+					I2CFuncArgs.pWrBuffer = calloc(I2CFuncArgs.WByteCnt, sizeof(unsigned char));
+                               	        if (I2CFuncArgs.pWrBuffer == NULL)
+                                	{
+                                        	return -3;
+                                	}
+					if (argc != I2CFuncArgs.WByteCnt + 7)
+                                	{
+                                        	printf("Wrong arguments \n");
+                                        	printf("\nUsage :\n");
+                                        	printf("  semautil /i2c  raw_xfer [bus id] [address] [wr length] [rd length] byte0 byte1 byte2...\n");
+
+                                     		printf("  [Bus Id]:\n");
+                                       		printf("    ID\tSEMA EAPI ID\t\t\tDescription\n");
+                                        	printf("    1\tEAPI_ID_I2C_EXTERNAL_1\t\tBaseboard I2C Interface 1\n");
+                                        	printf("    2\tEAPI_ID_I2C_EXTERNAL_2\t\tBaseboard I2C Interface 2\n");
+                                        	printf("    3\tEAPI_ID_I2C_EXTERNAL_3\t\tBaseboard I2C Interface 3\n");
+                                        	eRet = -3;
+                                	}
+					else
+                                	{
+                                        	if (I2CFuncArgs.WByteCnt > 32 || I2CFuncArgs.WByteCnt <= 0)
+                                        	{
+                                                	printf("\nInvalid Size maximum write size is 32 bytes, min 1 byte.\n");
+                                                	eRet = -3;
+                                                	return eRet;
+                                        	}		
+                                        	for (i = 0; i < I2CFuncArgs.WByteCnt; i++)
+                                        	{
+                                                	((unsigned char*)(I2CFuncArgs.pWrBuffer))[i] = string_to_hex(argv[7 + i]);
+                                        	}
+                                	}
+				}
+				else
+				{
+					IsI2CReRaw = TRUE;
+					I2CFuncArgs.pWrBuffer = calloc(I2CFuncArgs.WByteCnt, sizeof(unsigned char));
+                                        if (I2CFuncArgs.pWrBuffer == NULL)
+                                        {
+                                                return -3;
+                                        }
+					for(i = 0; i < I2CFuncArgs.WByteCnt; i++ )
+					{
+						((unsigned char*)(I2CFuncArgs.pWrBuffer))[i] = string_to_hex(argv[7 + i]);
+					}
+
+					if(argc != I2CFuncArgs.WByteCnt + 7)
+					{
+						printf("Wrong arguments \n");
+                                                printf("\nUsage :\n");
+                                                printf("  semautil /i2c  raw_xfer [bus id] [address] [wr length] [rd length] byte0 byte1 byte2...\n");
+
+                                                printf("  [Bus Id]:\n");
+                                                printf("    ID\tSEMA EAPI ID\t\t\tDescription\n");
+                                                printf("    1\tEAPI_ID_I2C_EXTERNAL_1\t\tBaseboard I2C Interface 1\n");
+                                                printf("    2\tEAPI_ID_I2C_EXTERNAL_2\t\tBaseboard I2C Interface 2\n");
+                                                printf("    3\tEAPI_ID_I2C_EXTERNAL_3\t\tBaseboard I2C Interface 3\n");
+						eRet = -3;
+					}
+					else
+					{
+						I2CFuncArgs.pBuffer = calloc(I2CFuncArgs.nByteCnt, sizeof(unsigned char));
+                                                if (I2CFuncArgs.pBuffer == NULL)
+                                                {
+                                                        return -3;
+                                                }
+					}
+				}
+			}
+		        else
+			{
+				printf("Wrong arguments \n");
+                                printf("\nUsage :\n");
+                                printf("  semautil /i2c  raw_xfer [bus id] [address] [wr length] [rd length] byte0 byte1 byte2...\n");
+
+                                printf("\n  [Bus Id]:\n");
+                                printf("    ID\tSEMA EAPI ID\t\t\tDescription\n");
+                                printf("    1\tEAPI_ID_I2C_EXTERNAL_1\t\tBaseboard I2C Interface 1\n");
+                                printf("    2\tEAPI_ID_I2C_EXTERNAL_2\t\tBaseboard I2C Interface 2\n");
+                                printf("    3\tEAPI_ID_I2C_EXTERNAL_3\t\tBaseboard I2C Interface 3\n");
+                                eRet = -3;
+			}	
+		
+                }
 		else if (argc > 2 && (strcasecmp(argv[2], "read_xfer") == 0))
 		{
 			if (argc == 8 || argc == 7)
@@ -2059,12 +2174,13 @@ signed int ParseArgs(int argc, char* argv[])
 			printf("Wrong arguments \n");
 			printf("\n- Generic I2C Read/Write:\n");
 			printf("  1. semautil /i2c  bus_cap\n");
-			printf("  2. semautil /i2c  probe_device [bus id]\n");
-			printf("  3. semautil /i2c  write_raw	 [bus id] [address] [length] byte0 byte1 byte2 ...\n");
-			printf("  3. semautil /i2c  read_raw	 [bus id] [address] [length]\n");
-			printf("  4. semautil /i2c  read_xfer	 [bus id] [address] [cmd type] [cmd] [read lentgh]\n");
-			printf("  5. semautil /i2c  write_xfer	 [bus id] [address] [cmd type] [cmd] [length] byte0 byte1 byte2 ...\n");
-			printf("  6. semautil /i2c  get_status\n");
+			printf("  2. semautil /i2c  probe_device   [bus id]\n");
+			printf("  3. semautil /i2c  write_raw	   [bus id] [address] [wr length] [cmd] byte0 byte1 ...\n");
+			printf("  4. semautil /i2c  read_raw	   [bus id] [address] [cmd] [re length]\n");
+			printf("  5. semautil /i2c  raw_xfer 	   [bus id] [address] [wr length] [rd length] byte0 byte1 byte2...\n");
+			printf("  6. semautil /i2c  read_xfer	   [bus id] [address] [cmd type] [cmd] [read lentgh]\n");
+			printf("  7. semautil /i2c  write_xfer	   [bus id] [address] [cmd type] [cmd] [length] byte0 byte1 byte2 ...\n");
+			printf("  8. semautil /i2c  get_status\n");
 
 			printf("  \n[Bus Id]:\n");
 			printf("    ID\tSEMA EAPI ID\t\t\tDescription\n");

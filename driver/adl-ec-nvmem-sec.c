@@ -12,6 +12,7 @@
 #include <linux/fs.h>
 #include <linux/cdev.h>
 #include <linux/ioctl.h>
+#include <linux/version.h>
 #include "adl-ec.h"
 #define EAPI_STOR_LOCK       _IOWR('a', 1, unsigned long)
 #define EAPI_STOR_UNLOCK       _IOWR('a', 2, unsigned long)
@@ -574,7 +575,12 @@ static int adl_bmc_nvmem_probe(struct platform_device *pdev)
         return -1;
     }
 
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(6,4,0)
+    adlink->class = class_create("adl-ec-nvmem-eapi");
+#else
     adlink->class = class_create(THIS_MODULE, "adl-ec-nvmem-eapi");
+#endif
+
     if(adlink->class == NULL)
     {
         unregister_chrdev_region(adlink->ldev, 1);

@@ -5,6 +5,7 @@
 #include <linux/platform_device.h>
 #include <linux/fs.h>
 #include <linux/module.h>
+#include <linux/version.h>
 #include "adl-ec.h"
 
 #define ADL_BMC_OFS_GPIO_IN_PORT                 0x88
@@ -298,7 +299,12 @@ static int adl_ec_gpio_probe(struct platform_device *pdev)
 		return -1;
 	}
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,4,0)
+	class_adl_gpio = class_create("gpio_adl");
+#else
 	class_adl_gpio = class_create(THIS_MODULE, "gpio_adl");
+#endif
+
 	if (IS_ERR(class_adl_gpio)) {
 		printk("Error in Class_create\n");
 	}
