@@ -215,8 +215,7 @@ int get_voltage_description_ext(unsigned char Ch , char *Buffer , bool truncate)
 			if (ret <= 0 && i == 15)
 				return -1;
 			if (ret != 16){
-				printk("bool3\n");
-				return -1;
+			 return -1;
 			}
 
 			buf[ret] = 0;
@@ -262,7 +261,7 @@ int get_voltage(char ch,int stsize, const char **cmp, uint32_t* pValue)
 				j--;                                     
 		}
 		buffer[j] = 0;
-		printk("%s\n", buffer);		
+			
 	}
 	else
 	{
