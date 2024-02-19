@@ -24,12 +24,13 @@
 #include <ctype.h>
 #include <conv.h>
 #include <eapi.h>
+#include <uuid/uuid.h>
 
 
 
 char*			ExeName;
 uint8_t	SetWatchdog, TriggerWatchdog, StopWatchdog, WatchDogCap,IsPwrUpWDogStart, IsPwrUpWDogStop;
-uint8_t	StorageCap, StorageAreaRead, StorageAreaWrite, StorageAreaLock, StorageAreaUnLock,StorageHexWrite, StorgeHexRead;;
+uint8_t	StorageCap, StorageAreaRead, StorageAreaWrite, StorageAreaLock, StorageAreaUnLock,StorageHexWrite, StorgeHexRead,GUIDWrite, GUIDRead;
 uint8_t	SmartFanTempSet, SmartFanTempGet, SmartFanTempSetSrc, SmartFanTempGetSrc, SmartFanPWMSet;
 uint8_t	SmartFanModeGet, SmartFanModeSet, SmartFanPWMGet;
 uint8_t	GetStringA, GetValue, GetVoltageMonitor,GetVoltageMonitorCap;
@@ -57,6 +58,14 @@ unsigned int string_to_hex(char *string)
 		sscanf(string, "%x", &data);
 	}
 	return data;
+}
+int guid_string_to_bytes(const char* guid_string, char* guid_bytes) {
+
+	for (int i = 0, j = 0; i < 36; i += 2) {
+		char hex[3] = { guid_string[i], guid_string[i + 1], '\0' };
+		sscanf(hex, "%hhX", &guid_bytes[j++]);
+	}
+	return 1;
 }
 static void errno_exit(const char *s) 
 {
@@ -280,6 +289,12 @@ void ShowHelp(int condition)
 		printf("  If Bit 2 is ON : Dual BIOS selected\n");
 	
         }
+	if (condition == 13 || condition == 0)
+	{
+		printf("- UUID :\n");
+		printf("  1. semautil /c guid_generate_write\n");
+		printf("  2. semautil /c guid_read\n");	
+	}
 	 
 }
 int DispatchCMDToSEMA(int argc,char *argv[])
@@ -398,9 +413,18 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 		Id = atoi(argv[3]);
 		ret = EApiBoardGetValue(Id, &Value);
 		if (ret){
+				
+		if(ret==EAPI_STATUS_UNSUPPORTED){
+				printf("Failed : Unsupported function.\n");
+				return 0;				
+	        }
+		else
+			{
 			printf("Get EApi information failed\n");
 			errno_exit("EApiBoardGetValue");
+			}
 		}
+		
 		printf("%d\n",Value);
 	}
 	if (GetStringA)
@@ -824,6 +848,76 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 		printf("\n");
 
 	}
+	if(GUIDWrite)
+	{
+		if(argc != 3){
+			printf("Wrong arguments\n");
+                        exit(-1);
+		}
+		uuid_t uuid;
+		char* passcode;
+		char uuid_str[37];
+		char buffer[32]={0};
+		char uuidbyte[16]= {0};
+		uuid_generate_time(uuid);
+		uuid_unparse(uuid,uuid_str);
+
+		printf("Generated UUIDv4: %s \n",uuid_str);
+
+		int j=0;
+		for(int i=0; i<37;i++){
+			if(isxdigit(uuid_str[i])){
+			buffer[j]=uuid_str[i];
+			j=j+1;
+			}
+		}
+		ret =guid_string_to_bytes(buffer,uuidbyte);
+
+		Id = EAPI_ID_STORAGE_STD;
+                region = 3;
+                Offset = 0x100;
+
+                ByteCnt = strlen(uuidbyte);
+		permission = 2;	
+		passcode="ADEC";
+		
+		ret= EApiStorageUnLock(Id, region, permission, passcode);
+		if(ret==EAPI_STATUS_SUCCESS){
+		ret = EApiGUIDWrite(Id, region, Offset, uuidbyte, ByteCnt);
+                if (ret) {
+                        printf("Get EApi information failed\n");
+                        errno_exit("EApiGUIDWrite");
+                	}
+		printf("Bytes Written Successfully\n");
+		}
+		ret = EApiStorageLock(Id, region);
+	}
+	
+	if(GUIDRead)
+	{
+                if (argc != 3) {
+                        printf("Wrong arguments\n");
+                        exit(-1);
+                }
+                Id = EAPI_ID_STORAGE_STD;
+                memset(memcap, 0, sizeof(memcap));
+                region= 3;
+                Offset = 0x100;
+                ByteCnt = 16;
+                BufLen = sizeof(memcap);
+
+                ret = EApiStorageHexRead(Id, region, Offset, memcap, BufLen, ByteCnt);
+                if (ret) {
+                        printf("Get EApi information failed\n");
+                        errno_exit("EApiStorageHexRead");
+                }
+		printf("Read Buffer : ");
+		for(int i=0;i<ByteCnt;i++)
+		{
+                	printf("0x%02X ", memcap[i]);
+		}
+		printf("\n");
+	}
 	if(StorageAreaLock)
 	{
 		if (argc != 4) {
@@ -1113,6 +1207,10 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 			printf("Get EApi information failed\n");
 			errno_exit("EApiBoardGetVoltageMonitor");
 		}
+		if(strstr("Current Input Current",Vmbuf) !=NULL){
+			printf("Current: %u mA\nDescription: %s\n",Voltage, Vmbuf);
+		}
+		else		
 		printf("Voltage: %u mv\nDescription: %s\n",Voltage, Vmbuf);
 	}
 	
@@ -2224,6 +2322,21 @@ signed int ParseArgs(int argc, char* argv[])
                 }
         }
 
+	else if (strcasecmp(argv[1], "/c") == 0)
+	{
+		if (argc == 3 && (strcasecmp(argv[2], "guid_generate_write") == 0))
+		{
+			GUIDWrite = TRUE;
+		}
+		else if (argc == 3 && (strcasecmp(argv[2], "guid_read") == 0))
+		{
+			GUIDRead = TRUE;
+		}
+		 else
+                {
+                        help_condition = 13;
+                }
+	}
 
 	else
 	{

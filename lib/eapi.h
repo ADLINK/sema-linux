@@ -266,6 +266,8 @@ uint32_t EApiStorageLock(uint32_t Id,uint32_t Region);
 
 uint32_t EApiStorageUnLock(uint32_t Id,uint32_t Region,uint32_t Permission, char *passcode);
 
+uint32_t EApiGUIDWrite(uint32_t Id, uint32_t Region, uint32_t Offset, char* Buf, uint32_t Len);
+
 
 /*
  *

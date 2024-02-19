@@ -745,21 +745,6 @@ static ssize_t bmc_flags_show(struct kobject *kobj, struct kobj_attribute *attr,
     return sprintf(buf, "%u\n", buff);
 }
 
-static ssize_t bmc_status_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
-{
-    int ret;
-    uint8_t buff=0;
-
-    ret = adl_bmc_ec_read_device(ADL_BMC_OFS_RD_BMC_STATUS, &buff, 1, EC_REGION_1);
-
-    if (ret < 0)
-	return ret;
-
-    debug_printk("%s ==> %x\n", __func__, buff);
-
-    return sprintf(buf, "%u\n", buff);
-}
-
 static ssize_t bmc_boot_version_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
 	return -EINVAL;    
@@ -1125,7 +1110,6 @@ struct kobj_attribute attr20 = __ATTR_RO(capabilities_ext);
 struct kobj_attribute attr21 = __ATTR_RO(main_current);
 struct kobj_attribute attr22 = __ATTR_RO(power_cycles);
 struct kobj_attribute attr23 = __ATTR_RO(bmc_flags);
-struct kobj_attribute attr24 = __ATTR_RO(bmc_status);
 
 struct kobj_attribute attr25 = __ATTR_RO(bmc_boot_version);
 struct kobj_attribute attr26 = __ATTR_RO(restart_event_str);
@@ -1266,9 +1250,7 @@ static int boardinfo_probe(struct platform_device *pdev)
     ret = sysfs_create_file(kobj_ref, &attr23.attr); 
     if (ret < 0)
 	goto ret_err;
-    ret = sysfs_create_file(kobj_ref, &attr24.attr); 
-    if (ret < 0)
-	goto ret_err;
+    
     ret = sysfs_create_file(kobj_ref, &attr25.attr); 
     if (ret < 0)
 	goto ret_err;
@@ -1349,7 +1331,6 @@ static int boardinfo_remove(struct platform_device *pdev)
     sysfs_remove_file(kernel_kobj, &attr21.attr);
     sysfs_remove_file(kernel_kobj, &attr22.attr);
     sysfs_remove_file(kernel_kobj, &attr23.attr);
-    sysfs_remove_file(kernel_kobj, &attr24.attr);
     sysfs_remove_file(kernel_kobj, &attr25.attr);
     sysfs_remove_file(kernel_kobj, &attr26.attr);
     sysfs_remove_file(kernel_kobj, &attr27.attr);

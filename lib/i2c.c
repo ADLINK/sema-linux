@@ -122,6 +122,7 @@ uint32_t EApiI2CReadTransfer(uint32_t Id, uint32_t Addr, uint32_t Cmd, void* pBu
 
 	if((fd = open("/dev/ec-i2c-eapi", O_RDWR)) < 0)
 	{
+		
 		return EAPI_STATUS_READ_ERROR;
 	}
 		trxn.Type = SEMA_EXT_IIC_BLOCK;
@@ -144,6 +145,7 @@ uint32_t EApiI2CReadTransfer(uint32_t Id, uint32_t Addr, uint32_t Cmd, void* pBu
 
 	if(ret != EAPI_STATUS_SUCCESS)
 	{
+		close(fd);
 		return EAPI_STATUS_ERROR;
 	}
 		
@@ -162,6 +164,7 @@ uint32_t EApiI2CReadTransfer(uint32_t Id, uint32_t Addr, uint32_t Cmd, void* pBu
 
 	if(ioctl(fd, EAPI_TRXN, &trxn) < 0)
 	{
+		close(fd);
 		return EAPI_STATUS_UNSUPPORTED;
 	}
 
@@ -169,6 +172,7 @@ uint32_t EApiI2CReadTransfer(uint32_t Id, uint32_t Addr, uint32_t Cmd, void* pBu
 		((unsigned char*)pBuffer)[i] = trxn.tBuffer[i];
 	}
 #endif
+	close(fd);
 	return EAPI_STATUS_SUCCESS;
 }
 
@@ -213,6 +217,7 @@ uint32_t EApiI2CWriteTransfer(uint32_t Id, uint32_t Addr, uint32_t Cmd, void *pB
 
 	if((fd = open("/dev/ec-i2c-eapi", O_RDWR)) < 0)
 	{
+		
 		return EAPI_STATUS_READ_ERROR;
 	}
 
@@ -252,9 +257,11 @@ uint32_t EApiI2CWriteTransfer(uint32_t Id, uint32_t Addr, uint32_t Cmd, void *pB
 
 	if(ioctl(fd, EAPI_TRXN, &trxn) < 0)
 	{
+		close(fd);
 		return EAPI_STATUS_UNSUPPORTED;
 	}
-
+	
+	close(fd);
 	return EAPI_STATUS_SUCCESS;
 }
 
@@ -270,6 +277,7 @@ uint32_t EApiI2CGetBusCap(uint32_t Id, uint32_t *pMaxBlkLen)
 	int fd = open("/sys/bus/platform/devices/adl-ec-boardinfo/information/capabilities", O_RDONLY);
 	if(fd < 0)
 	{
+		
 		return EAPI_STATUS_READ_ERROR;
 	}
 
@@ -279,6 +287,7 @@ uint32_t EApiI2CGetBusCap(uint32_t Id, uint32_t *pMaxBlkLen)
 	uint32_t m_nSemaCaps;
 	if(read(fd, buffer, 10) < 0)
 	{
+		close(fd);
 		return EAPI_STATUS_UNSUPPORTED;
 	}
 
@@ -289,6 +298,7 @@ uint32_t EApiI2CGetBusCap(uint32_t Id, uint32_t *pMaxBlkLen)
 		case SEMA_EXT_IIC_BUS_1:
 			if (m_nSemaCaps & SEMA_C_I2C1)
 			{
+				close(fd);
 				return EAPI_STATUS_SUCCESS;
 			}
 			break;
@@ -296,6 +306,7 @@ uint32_t EApiI2CGetBusCap(uint32_t Id, uint32_t *pMaxBlkLen)
 		case SEMA_EXT_IIC_BUS_2:
 			if (m_nSemaCaps & SEMA_C_I2C2)
 			{
+				close(fd);
 				return EAPI_STATUS_SUCCESS;
 			}
 			break;
@@ -303,15 +314,18 @@ uint32_t EApiI2CGetBusCap(uint32_t Id, uint32_t *pMaxBlkLen)
 		case SEMA_EXT_IIC_BUS_3:
                         if (m_nSemaCaps & SEMA_C_I2C3)
                         {
+				close(fd);
                                 return EAPI_STATUS_SUCCESS;
                         }
                         break;
 
 		default:
 			*pMaxBlkLen = 0;
+			close(fd);
 			return EAPI_STATUS_UNSUPPORTED;
 	}
 	*pMaxBlkLen = 0;
+	close(fd);
 	return EAPI_STATUS_UNSUPPORTED;
 }
 
@@ -329,15 +343,18 @@ uint32_t EApiI2CGetBusSts(uint32_t Id, uint8_t *Bus_Sts)
 
 	if((fd = open("/dev/ec-i2c-eapi", O_RDWR)) < 0)
 	{
+		
 		return EAPI_STATUS_UNSUPPORTED;
 	}
 
 	if(ioctl(fd, BMC_I2C_STS, &trxn) < 0)
 	{
+		close(fd);
 		return EAPI_STATUS_UNSUPPORTED;
 	}
 
 	*Bus_Sts = trxn.tBuffer[0];
+	close(fd);
 	return EAPI_STATUS_SUCCESS;
 }
 
@@ -363,6 +380,7 @@ uint32_t EApiI2CProbeDevice(uint32_t Id, uint32_t Addr)
 
 	if((fd = open("/dev/ec-i2c-eapi", O_RDWR)) < 0)
 	{
+		
 		return EAPI_STATUS_READ_ERROR;
 	}
 
@@ -379,17 +397,22 @@ uint32_t EApiI2CProbeDevice(uint32_t Id, uint32_t Addr)
 
 	if(ioctl(fd, PROBE_DEV, &trxn) < 0)
 	{
+		close(fd);
 		return EAPI_STATUS_UNSUPPORTED;
 	}
 
         if(trxn.tBuffer[1] & ~2)
 	{
+		close(fd);
 		return EAPI_STATUS_UNSUPPORTED;
 	}
 
 	if (trxn.tBuffer[0] != 0)
+	{
+		close(fd);
 		return EAPI_STATUS_UNSUPPORTED;
-
+	}
+	close(fd);
 	return EAPI_STATUS_SUCCESS;
 }
 
@@ -435,6 +458,7 @@ uint32_t EApiI2CWriteReadRaw(uint32_t Id, uint8_t Addr, void *pWBuffer, uint32_t
 	memset(trxn.tBuffer, 0, sizeof(unsigned char) * 50);
         if((fd = open("/dev/ec-i2c-eapi", O_RDWR)) < 0)
         {
+		
                 return EAPI_STATUS_READ_ERROR;
         }
         trxn.tBuffer[0] = 0x4;      /*IF TYPE*/
@@ -458,6 +482,7 @@ uint32_t EApiI2CWriteReadRaw(uint32_t Id, uint8_t Addr, void *pWBuffer, uint32_t
 	trxn.Type = SEMA_EXT_IIC_WRITE_READ;
 	if(ioctl(fd, EAPI_TRXN, &trxn) < 0)
         {
+		close(fd);
                 return -1;
         }
         /*Read data in buffer as per ReadBCnt*/
@@ -469,5 +494,6 @@ uint32_t EApiI2CWriteReadRaw(uint32_t Id, uint8_t Addr, void *pWBuffer, uint32_t
                         ((unsigned char*)pRBuffer)[i] = trxn.tBuffer[i];
                 }
         }
+	close(fd);
         return EAPI_STATUS_SUCCESS;
 }

@@ -49,7 +49,7 @@ enum ec_command {
 
 struct board_info default_device = {
 	"Common",
-	{"RTC", "5VSB", "VIN", "3.3V", "VMEM", "3.3VSB", "VCORE"},
+	{"RTC", "5VSB", "VIN", "3.3V", "VMEM", "3.3VSB", "VCORE","Current Input Current"},
 	{ "NOERROR", NULL, "NO_SUSCLK", "NO_SLP_S5", "NO_SLP_S4", "NO_SLP_S3",\
 		"BIOS_FAIL", "RESET_FAIL", "RESETIN_FAIL", "NO_CB_PWROK", "CRITICAL_TEMP",\
 			"POWER_FAIL", "VOLTAGE_FAIL", "RSMRST_FAIL", "NO_VDDQ_PG", "NO_V1P05A_PG", \
@@ -62,7 +62,7 @@ struct board_info default_device = {
 struct board_info supported_device[] = {
 	{
 		"EL",
-		{"RTC", "5VSB", "VIN", "3.3V", "VMEM", "3.3VSB", "VCORE"},
+		{"RTC", "5VSB", "VIN", "3.3V", "VMEM", "3.3VSB", "VCORE","Current Input Current"},
 		{ "NOERROR", NULL, "NO_SUSCLK", "NO_SLP_S5", "NO_SLP_S4", "NO_SLP_S3",\
 		  "BIOS_FAIL", "RESET_FAIL", "RESETIN_FAIL", "NO_CB_PWROK", "CRITICAL_TEMP",\
 		  "POWER_FAIL", "VOLTAGE_FAIL", "RSMRST_FAIL", "NO_VDDQ_PG", "NO_V1P05A_PG", \
@@ -73,7 +73,7 @@ struct board_info supported_device[] = {
 	},
 	{
 		"TL",
-		{"RTC", "5VSB", "VIN", "3.3V", "VMEM", "3.3VSB", "VCORE"},
+		{"RTC", "5VSB", "VIN", "3.3V", "VMEM", "3.3VSB", "VCORE","Current Input Current"},
 		{ "NOERROR", NULL, "NO_SUSCLK", "NO_SLP_S5", "NO_SLP_S4", "NO_SLP_S3",\
 		  "BIOS_FAIL", "RESET_FAIL", "RESETIN_FAIL", "NO_CB_PWROK", "CRITICAL_TEMP",\
 		  "POWER_FAIL", "VOLTAGE_FAIL", "RSMRST_FAIL", "NO_VDDQ_PG", "NO_V1P05A_PG", \
@@ -84,7 +84,7 @@ struct board_info supported_device[] = {
 	},
 	{
 		"AR",
-		{"RTC", "5VSB", "VIN", "3.3V", "VMEM", "3.3VSB", "VCORE"},
+		{"RTC", "5VSB", "VIN", "3.3V", "VMEM", "3.3VSB", "VCORE","Current Input Current"},
 		{ "NOERROR", NULL, "NO_SUSCLK", "NO_SLP_S5", "NO_SLP_S4", "NO_SLP_S3",\
 		  "BIOS_FAIL", "RESET_FAIL", "RESETIN_FAIL", "NO_CB_PWROK", "CRITICAL_TEMP",\
 		  "POWER_FAIL", "VOLTAGE_FAIL", "NO_RSMRST_PG", "NO_VDDQ_PG", "NO_V1P05A_PG", \
@@ -149,6 +149,7 @@ int ReadEc(unsigned short int RegionIndex, unsigned short int offset, unsigned c
 
 	/* 5. Read data from data port */
 	*data = inb(EC_DATA_PORT);
+	
 
 	return 0;
 }
@@ -191,9 +192,12 @@ int adl_bmc_ec_read_device(u8 addr, u8 *dest, int len, unsigned int RegionIndex)
     {   
 	if (ReadEc(RegionIndex, addr + i, &(dest[i])) != 0)
 	{
+	
 	    return -1;
 	}
+	
     }
+    
 #if 0
     printk("%s-- addr %x\n", __func__, addr); 
     for (i=0;i<len;i++)
@@ -436,7 +440,7 @@ static int adl_ec_acpi_probe(struct platform_device *pdev)
 
     for(i = 0; i < sizeof(supported_device)/sizeof(supported_device[0]); i++)
     {
-	if(strstr(buffer,supported_device[i].device_name) != NULL)
+       	if(strstr(buffer,supported_device[i].device_name) != NULL)
 	{
 	    adl_bmc_dev->current_board = supported_device[i];
 	    found = 1;

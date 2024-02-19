@@ -29,7 +29,7 @@
 #define GET_VOLT_MONITOR_CAP	_IOR('a','2',uint8_t *)
 
 #define PLATFORMS_NUMBER 2
-#define MAX_ID		 7
+#define MAX_ID		 8
 
 int dev_handle;
 
@@ -283,9 +283,7 @@ uint32_t EApiBoardGetValue(uint32_t Id, uint32_t *pValue)
 		case 38:
 			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/bmc_flags");
 			break;
-		case 39:
-			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/bmc_status");
-			break;
+		
 		default:
 			status = EAPI_STATUS_UNSUPPORTED;
 			return status;
@@ -311,7 +309,7 @@ static int get_regulator_voltage(int id, uint32_t *mVolts, char *buf, uint32_t s
 
 	if(id >= MAX_ID)
 	{
-		return -1;
+	 return -1;
 	}
 
 	dev_handle = open("/dev/adl_vm",O_RDONLY);
@@ -330,6 +328,7 @@ static int get_regulator_voltage(int id, uint32_t *mVolts, char *buf, uint32_t s
 	}
 	*mVolts = vm.volt;
 	strcpy(buf,vm.volt_desc);
+	
 	close(dev_handle);
 
 	return EAPI_STATUS_SUCCESS;
@@ -345,7 +344,7 @@ uint32_t EApiBoardGetVoltageMonitor(uint32_t id, uint32_t *mVolts, char *buf, ui
 	{
 		return EAPI_STATUS_INVALID_PARAMETER;
        	}
-
+	
 	ret = get_regulator_voltage(id, mVolts, buf, size);
 	if(ret==-1)
 	{

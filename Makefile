@@ -48,7 +48,7 @@ app_clean:
 	@rm -f semautil wdogtest app/*.o lib/*.o lib/*.so
 
 semautil: $(APP_OBJS)
-	@gcc -g -o $@ $^ -Llib -lsema
+	@gcc -g -o $@ $^ -Llib -lsema -luuid
 
 wdogtest: $(WDOG_OBJS)
 	@gcc $^ -g -o $@

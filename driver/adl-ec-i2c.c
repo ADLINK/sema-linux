@@ -241,6 +241,9 @@ int eapi_read_transaction()
 	
 	BMC_DELAY(buf.Length);
 	
+	if((check_bmc_status_free(&Status, 100)) < 0)
+    		return -1;
+	
     	//5. Checking the I2C status 
     	if((check_bmc_txn_status(&Status, 400)) < 0)
        	 return -1;

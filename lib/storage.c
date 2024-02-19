@@ -406,6 +406,56 @@ uint32_t EApiStorageHexWrite(uint32_t Id,uint32_t Region, uint32_t Offset, char*
 
         return status;
 }
+uint32_t EApiGUIDWrite(uint32_t Id,uint32_t Region, uint32_t Offset, char* Buf, uint32_t Len)
+{
+        uint32_t status = EAPI_STATUS_SUCCESS;
+        int ret,fd;
+	struct secure data;
+        
+	NVMEM_SEC_INIT();
+        if(Offset + Len > 1024)
+        	{
+			printf("The maximum byte length for GUIDWrite is 1024\n");
+                	return EAPI_STATUS_MORE_DATA;
+        	}
+
+        data.Region=Region;
+
+        if((fd = open("/dev/ec-nvmem-eapi", O_RDWR)) < 0)
+        {
+                return -1;
+        }
+        if(ioctl(fd, EAPI_STOR_REGION, &data ) < 0)
+        {
+                close(fd);
+                return EAPI_STATUS_UNSUPPORTED;
+        }
+        else
+        {
+                close(fd);
+        }
+	
+	fd = open(NVMEM_DEVICE, O_WRONLY);
+
+        if (fd < 0)
+        {
+                return EAPI_STATUS_WRITE_ERROR;
+        }
+
+        lseek(fd,Offset,SEEK_SET);
+        ret = write(fd,Buf,Len);
+        if (ret > 0)
+        {
+                close(fd);
+        }
+        else
+        {
+                close(fd);
+                return EAPI_STATUS_WRITE_ERROR;
+        }
+
+        return status;
+}
 
 uint32_t EApiStorageAreaClear(uint32_t Id,uint32_t Region)
 {
