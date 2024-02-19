@@ -9,6 +9,7 @@
 * COM-HPC-cADP, COM-HPC-sIDH
 * LEC-EL
 * nanoX-EL
+* Q7-EL
 
 ### Supported Operating System:
 * Ubuntu 18.04, 20.04, 22.04
@@ -23,5 +24,5 @@
    
 ### Other information:
 * branch name: SEMA_4.0_Linux_SandBox/ACPI-EC
-* the internal latest commit ID: 4facaf3fb2a36631ddd08ea01b25f507ab2063ca 
+* the internal latest commit ID: 71e9bf19cf64e6d7b54cbf81a811f000243c1cb3 
 
