@@ -1,42 +1,20 @@
-<br>
-
-What is SEMA?
------
-<img src="https://cdn.adlinktech.com/webupd/en/Upload/ProductNews/logo_sema.png" alt="sema_logo" width="20%" align="right"  />
-
+# What is SEMA?
 
 **The Smart Embedded Management Agent (SEMA®)**
 
-Downtime of devices or systems is not acceptable in today's industries. To help customers to analyze their systems and take counter measures for preventive maintenance. We provide the solution which is able to monitor and collect system performance and status information from the hardware in a timely.
+Downtime of devices or systems is not acceptable in today's industries. To help customers analyze their systems and take countermeasures for preventive maintenance, we provide a solution that can promptly monitor and collect system performance and status information from the hardware.
 
-A Board Management Controller is embedded on our hardware and collects all relevant technical information from the chipset through the different communication interfaces such as eSPI, I2C and SMBus.
+A Board Management Controller is embedded in our hardware and collects all relevant technical information from the chipset through different communication interfaces, such as eSPI, I2C, and SMBus.
 
-SEMA® middleware is on the top of Board controller that provides a ready-made application that shows the data in user-friendly graphic interfaces, suitable for supervision and troubleshooting.
-
-
-Important Notice 
------
-
-SEMA4.0 would be designed the abstraction layer to integrate the different controllers (EC, TivaBMC and LiteBMC) and this integration will be ready in Q4 2022. 
-
-Prior to the release of SEMA 4.0 integration, **please check which platform/hardware you're using first and then select the corresponding branch on GitHub**
-
-| **SEMA® - EC controller**<br> click [here](https://github.com/ADLINK/sema-linux/tree/sema-ec) to download the latest release                         | **SEMA® - TivaBMC controller**<br> click [here](https://github.com/ADLINK/sema-linux/tree/sema-bmc) to download the latest release |
-| :----------------------------------------------------------- | :------------------------------------------------------------ |
-| - cExpress-TL , cExpress-EL, cExpress-AR<br>- Express-ID7, Express-ADP, Express-TL <br>- COM-HPC-cADP, COM-HPC-sIDH <br>- LEC-EL <br>- NanoX-EL                | - Express-CF/CFE, Express-KL/KLE, Express-SL/SLE, Express-DN7, Express-BD7 <br>- cExpress-WL, cExpress-KL, cExpress-SL, cExpress-AL<br>- nanoX-AL<br>- LEC-AL<br>- Q7-AL<br>- LEC-PX30 |
+SEMA® middleware is on top of the Board controller. It provides a ready-made application that shows the data in user-friendly graphic interfaces suitable for supervision and troubleshooting.
 
 
-Architecture Overview
------
 
-Here is the architecture of SEMA 4.0 as below:
+## 1. Architecture Overview
 
- 
-
-![image-20220422162134957](Readme.assets/image-20220422162134957.png)
- 
-
-
+<p align="center">
+<img src="readme.assets/picture1.png" width="50%"/>
+</p>
 
 * Modularization implementation in SEMA drivers and each driver can be individually installed based on your needs.
 
@@ -51,37 +29,36 @@ Here is the architecture of SEMA 4.0 as below:
 
     With the exposure of Sysfs interfaces, it can be easier and straightforward to access the board controller.  
 
-    
-
-**Note:** All of source code is free to use which including SEMA driver, EAPI library, and utility.
-
-<br>
+> **Note:** All of source code is free to use which including SEMA driver, EAPI library, and utility.
 
 
-Features Set
------
-
-* Power Consumption
-* User Area Access
-* I2C Control 
-* Temperatures (CPU and Board)
-* Board Information (Serial Number, Part Number, Firmware Version...)
-* Fan Control
-* GPIO Control 
-* Watch Dog  
 
 
-Support Operating System
------
-* Windows OS: Windows 10 64bit
-* Linux OS: Ubuntu 18.04/20.04. 
-   <br> **Note:** since kernel functions of Ubuntu 22.04 was different from older versions to cause the malfunction of SEMA4.0. It will be fixed in the middle of July.
+## 2. Features Set
+SEMA® is designed to monitor and access the following features on ADLINK boards.
+
+1. Power consumption
+2. User area access
+3. I2C control
+4. Monitoring the temperature of the CPU and board
+5. Accessing board information(Serial number, Part number, Version of the firmware)
+6. Fan control
+7. GPIO access for the expander(PCA9535, SX1509)
+8. Watchdog
+
+
+
+
+## 3. Support Operating System
+* Ubuntu 18.04, 20.04, 22.04
 * Yocto Linux: see sema4.0 branch of [meta-adlink-sema](https://github.com/ADLINK/meta-adlink-sema) for more details
 * VxWorks (by request)
 * QNX (by request)
 
 
 
+## 4. Supported Hardware
 
-
-#### 
+| SEMA® - EC controller                                        | SEMA® - TivaBMC controller                                   |
+| :----------------------------------------------------------- | :----------------------------------------------------------- |
+| - cExpress-TL , cExpress-EL, cExpress-AR<br>- Express-ID7, Express-ADP, Express-TL <br>- COM-HPC-cADP, COM-HPC-sIDH <br>- LEC-EL <br>- NanoX-EL | - Express-CF/CFE, Express-KL/KLE, Express-SL/SLE, Express-DN7, Express-BD7 <br>- cExpress-WL, cExpress-KL, cExpress-SL, cExpress-AL<br>- nanoX-AL<br>- LEC-AL<br>- Q7-AL<br>- LEC-PX30 |
