@@ -65,4 +65,4 @@ SEMA® is designed to monitor and access the following features on ADLINK boards
 
 ## 5. Software Documentation
 
-- [SEMA Installation Guide for Linux](https://github.com/kkraman02/sema-linux/wiki/)
+- [SEMA Installation Guide for Linux](https://github.com/ADLINK/sema-linux/wiki)
