@@ -49,7 +49,7 @@ SEMA® is designed to monitor and access the following features on ADLINK boards
 
 
 
-## 3. Support Operating System
+## 3. Supported Operating System
 * Ubuntu 18.04, 20.04, 22.04
 * Yocto Linux: see sema4.0 branch of [meta-adlink-sema](https://github.com/ADLINK/meta-adlink-sema) for more details
 * VxWorks (by request)
