@@ -6,6 +6,7 @@
 #include <linux/kernel.h>
 #include <linux/watchdog.h>
 #include <linux/platform_device.h>
+#include <linux/fs.h>
 
 #include "adl-ec.h"
 
@@ -14,21 +15,27 @@
 #define WDT_MIN_TIMEOUT   	1
 #define WDT_MAX_TIMEOUT   	65535
 
-static struct adl_bmc_dev *adl_dev;
+#define SET_WDT_TIMEOUT    	_IOWR('a', '1',uint16_t *)
+#define GET_WDT_TIMEOUT       	_IOWR('a', '2', uint16_t *)
+#define TRIGGER_WDT       	_IOWR('a', '3', uint16_t *)
+#define STOP_WDT_TIMEOUT       	_IOWR('a', '4', uint16_t *)
 
-static bool nowayout = WATCHDOG_NOWAYOUT;
-module_param(nowayout, bool, 0);
-MODULE_PARM_DESC(nowayout, "Watchdog cannot be stopped once started "
-		"(default=" __MODULE_STRING(WATCHDOG_NOWAYOUT) ")");
+static struct adl_bmc_dev *adl_dev;
 
 struct adl_bmc_wdt {
 	struct watchdog_device wdt;
 	struct kobject *kobj_ref;
 };
 
+dev_t devdrv;
+struct class *class_adl_wdt;
+int first_dev;
+struct cdev cdev;
+
+int flag;
 #define WDT_TO_ADL_BMC_WDT(_wdt) (container_of(_wdt, struct adl_bmc_wdt, wdt))
 
-static int adl_bmc_wdt_write(struct watchdog_device *wdt, unsigned short val)
+static int adl_bmc_wdt_write(unsigned short val)
 {
 	int ret = 0;
 	unsigned char buff[2];
@@ -49,66 +56,35 @@ static int adl_bmc_wdt_write(struct watchdog_device *wdt, unsigned short val)
 
 }
 
-static int adl_bmc_wdt_set_timeout(struct watchdog_device *wdt, unsigned int timeout)
+static unsigned int adl_bmc_wdt_get_timeleft(unsigned short* val)
+{
+        int ret;
+        unsigned char buff[32];
+
+        debug_printk("get timeleft.................\n");
+
+        ret = adl_bmc_ec_read_device(ADL_BMC_OFS_SET_WD_CURR, (u8*)buff, 2, EC_REGION_1);
+
+        if (ret < 0) {
+                debug_printk("i2c write error: %d\n", ret);
+                return ret;
+        }
+
+        *val = (unsigned short)buff[1] << 8 | buff[0];
+
+        return ret;
+}
+
+static int adl_bmc_wdt_set_timeout(unsigned short value)
 {
 	debug_printk("set timeout.................\n");
-	wdt->timeout = timeout;
-
-	return adl_bmc_wdt_write(wdt, timeout);
+	return adl_bmc_wdt_write(value);
 }
 
-static unsigned int adl_bmc_wdt_get_timeleft(struct watchdog_device *wdt)
+static int adl_bmc_wdt_stop(unsigned short value)
 {
-	int ret; 
-	unsigned int count;
-	unsigned char buff[32];
-
-	debug_printk("get timeleft.................\n");
-
-	ret = adl_bmc_ec_read_device(ADL_BMC_OFS_SET_WD, (u8*)buff, 2, EC_REGION_1);
-
-	if (ret < 0) {
-		debug_printk("i2c write error: %d\n", ret);
-		return ret;
-	}
-
-	count = (unsigned int)buff[1] << 8 | buff[0];
-
-	return count;
+	return adl_bmc_wdt_write(value);
 }
-
-static int adl_bmc_wdt_start(struct watchdog_device *wdt)
-{
-	debug_printk("start.................\n");
-
-	return adl_bmc_wdt_write(wdt, wdt->timeout);	
-}
-
-static int adl_bmc_wdt_ping(struct watchdog_device *wdt)
-{
-	return adl_bmc_wdt_write(wdt, wdt->timeout);
-}
-
-static int adl_bmc_wdt_stop(struct watchdog_device *wdt)
-{
-	wdt->timeout = 0;
-	return adl_bmc_wdt_write(wdt, wdt->timeout);
-}
-
-static const struct watchdog_info adl_bmc_wdt_info = {
-	.options = WDIOF_SETTIMEOUT | WDIOF_MAGICCLOSE | WDIOF_KEEPALIVEPING, 
-	.identity = "ADL BMC Watchdog",
-};
-
-static const struct watchdog_ops adl_bmc_wdt_ops = {
-	.owner           = THIS_MODULE,
-	.start           = adl_bmc_wdt_start,
-	.stop            = adl_bmc_wdt_stop,
-	.ping            = adl_bmc_wdt_ping,
-	.set_timeout     = adl_bmc_wdt_set_timeout,
-	.get_timeleft    = adl_bmc_wdt_get_timeleft,
-};
-
 
 static ssize_t wdt_min_timeout_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
@@ -187,6 +163,88 @@ static ssize_t sysfs_store_PwrUpWDog(struct kobject *kobj, struct kobj_attribute
 	return count;
 }
 
+int open(struct inode *inode, struct file *file)
+{
+        if(flag == 0)
+        {
+                flag = 1;
+                return 0;
+        }
+        else
+        {
+                return -EBUSY;
+        }
+}
+
+int release(struct inode *inode, struct file *file)
+{
+        flag = 0;
+        return 0;
+}
+
+static long int ioctl (struct file *file, unsigned cmd, unsigned long arg)
+{
+        int RetVal;
+        uint16_t timeout;
+        switch(cmd)
+        {
+                case SET_WDT_TIMEOUT:
+                {
+                        if((RetVal = copy_from_user(&timeout,(uint16_t *)arg,sizeof(timeout)))!=0)
+                        {
+                                return -EFAULT;
+                        }
+
+                        RetVal=adl_bmc_wdt_set_timeout(timeout);
+                }
+                break;
+		case GET_WDT_TIMEOUT:
+                {
+                        if((RetVal = copy_from_user(&timeout,(uint16_t *)arg,sizeof(timeout)))!=0)
+                        {
+                                return -EFAULT;
+                        }
+
+                        RetVal= adl_bmc_wdt_get_timeleft(&timeout);
+
+                        if((RetVal = copy_to_user((uint16_t *) arg,&timeout,sizeof(timeout)))!=0)
+                        {
+                                return -EFAULT;
+                        }
+                }
+                break;
+                case TRIGGER_WDT:
+                {
+                        if((RetVal = copy_from_user(&timeout, (uint16_t *) arg, sizeof(timeout)))!=0)
+                        {
+                                return -EFAULT;
+                        }
+                        RetVal=adl_bmc_wdt_set_timeout(timeout);
+		}        
+                break;
+                case STOP_WDT_TIMEOUT:
+                {
+                        if((RetVal = copy_from_user(&timeout, (uint16_t *) arg, sizeof(timeout)))!=0)
+                        {
+                                return -EFAULT;
+                        }
+                        RetVal=adl_bmc_wdt_stop(timeout);
+                }
+                break;
+ 		default:
+                        return -1;
+        }
+        return 0;
+}
+
+
+struct file_operations fops = {
+        .owner = THIS_MODULE,
+        .open = open,
+        .unlocked_ioctl = ioctl,
+        .release = release,
+};
+
 struct kobj_attribute attr0 = __ATTR_RO(wdt_min_timeout);
 struct kobj_attribute attr1 = __ATTR_RO(wdt_max_timeout);
 struct kobj_attribute attr2 = __ATTR(PwrUpWDog, 0660, sysfs_show_PwrUpWDog, sysfs_store_PwrUpWDog);
@@ -199,28 +257,33 @@ static int adl_bmc_wdt_probe(struct platform_device *pdev)
 	awdt = kzalloc(sizeof(*awdt), GFP_KERNEL);
 	if (!awdt)
 		return -ENOMEM;
+	
+	first_dev = alloc_chrdev_region(&devdrv, 0, 1, "watchdog_adl");
+        if(first_dev < 0)
+        {
+                return -1;
+        }
+
+        class_adl_wdt = class_create(THIS_MODULE, "watchdog_adl");
+        if (IS_ERR(class_adl_wdt)) {
+                printk("Error in Class_create\n");
+        }
+
+        cdev_init(&cdev, &fops);
+
+        if(cdev_add(&cdev, devdrv, 1))
+        {
+                printk("Error in Cdev_add\n");
+        }
+
+        if(IS_ERR(device_create(class_adl_wdt, NULL, devdrv, NULL, "watchdog_adl")))
+        {
+                printk("Error in device create\n");
+        }
 
 	adl_dev = dev_get_drvdata(pdev->dev.parent);
 
-	awdt->wdt.info               = &adl_bmc_wdt_info;
-	awdt->wdt.ops                = &adl_bmc_wdt_ops;
-	awdt->wdt.status             = 0;
-	awdt->wdt.timeout            = 0;
-	awdt->wdt.min_timeout        = WDT_MIN_TIMEOUT;
-	awdt->wdt.max_timeout        = WDT_MAX_TIMEOUT;
-	awdt->wdt.parent = &pdev->dev;
-
-	watchdog_set_nowayout(&awdt->wdt, false); //nowayout);
 	platform_set_drvdata(pdev, awdt);
-
-	/*Adding Watchdog Stop on Reboot*/
-
-	watchdog_stop_on_reboot(&awdt->wdt);
-
-	ret = watchdog_register_device(&awdt->wdt);
-	if (ret)
-		return ret;
-
 
 	awdt->kobj_ref = kobject_create_and_add("Capabilities", &pdev->dev.kobj);
 
@@ -233,9 +296,9 @@ static int adl_bmc_wdt_probe(struct platform_device *pdev)
 		debug_printk(KERN_ERR "Error sysfs attr1\n");
 		return ret;
 	}
-
+	
 	if((ret = sysfs_create_file(awdt->kobj_ref, &attr2.attr))) {
-		debug_printk(KERN_ERR "Error sysfs attr1\n");
+		debug_printk(KERN_ERR "Error sysfs attr2\n");
 		return ret;
 	}
 
@@ -245,6 +308,11 @@ static int adl_bmc_wdt_probe(struct platform_device *pdev)
 static int adl_bmc_wdt_remove(struct platform_device *pdev)
 {
 	struct adl_bmc_wdt *awdt = platform_get_drvdata(pdev);
+	
+	device_destroy(class_adl_wdt, devdrv);
+        class_destroy(class_adl_wdt);
+        cdev_del(&cdev);
+        unregister_chrdev(devdrv, "watchdog_adl");
 
 	sysfs_remove_file(kernel_kobj, &attr0.attr);
 	sysfs_remove_file(kernel_kobj, &attr1.attr);
@@ -252,7 +320,6 @@ static int adl_bmc_wdt_remove(struct platform_device *pdev)
 	kobject_put(awdt->kobj_ref);
 
 	debug_printk(" %s called.......\n", __func__);
-	watchdog_unregister_device(&awdt->wdt);
 
 	kfree(awdt);
 	return 0;

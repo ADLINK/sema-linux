@@ -26,20 +26,21 @@
 #include <eapi.h>
 #include <uuid/uuid.h>
 
-
+#define Version	"ADLINK-SEMA-EC-LINUX-V4_R3_24_04_17"
 
 char*			ExeName;
 uint8_t	SetWatchdog, TriggerWatchdog, StopWatchdog, WatchDogCap,IsPwrUpWDogStart, IsPwrUpWDogStop;
 uint8_t	StorageCap, StorageAreaRead, StorageAreaWrite, StorageAreaLock, StorageAreaUnLock,StorageHexWrite, StorgeHexRead,GUIDWrite, GUIDRead;
 uint8_t	SmartFanTempSet, SmartFanTempGet, SmartFanTempSetSrc, SmartFanTempGetSrc, SmartFanPWMSet;
 uint8_t	SmartFanModeGet, SmartFanModeSet, SmartFanPWMGet;
-uint8_t	GetStringA, GetValue, GetVoltageMonitor,GetVoltageMonitorCap;
+uint8_t	GetStringA, GetValue, GetVoltageMonitor,GetVoltageMonitorCap, GetSEMAVersion;
 uint8_t	VgaGetBacklightEnable, VgaSetBacklightEnable, VgaGetBacklightBrightness, VgaSetBacklightBrightness;
 uint8_t	GPIOGetDirectionCaps, GPIOGetDirection, GPIOSetDirection, GPIOGetLevel, GPIOSetLevel;
 uint8_t GetErrorLog, GetErrorNumberDescription, GetCurrentPosErrorLog, GetExceptionDescription;
 uint8_t IsI2CCap, IsI2CProb, IsI2CWrRaw, IsI2CReRaw, IsI2CReXf, IsI2CWrXf, IsI2CSts;
-
 uint8_t SetBiosSource, GetBiosSource,GetBiosStatus, srcdata;
+
+
 struct {
 	uint8_t BusID;
 	uint8_t Address;
@@ -80,6 +81,8 @@ void ShowHelp(int condition)
 		printf("Usage:\n");
 		printf("- Display this screen:\n");
 		printf("	semautil /h\n\n");
+		printf("- Get SEMA Version:\n");
+		printf("	semautil version\n\n");
 	}
 	if (condition == 1 || condition == 0)
 	{
@@ -501,7 +504,7 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 			printf("Get EApi information failed\n");
 			errno_exit("EApiWDogStop");
 		}
-		printf("Watchdog Stoped Successfully\n");
+		printf("Watchdog Stopped Successfully\n");
 	}
 
 	if (IsPwrUpWDogStart)
@@ -1459,6 +1462,11 @@ int DispatchCMDToSEMA(int argc,char *argv[])
                         printf("Get EApi information failed\n");
                 return sts;
 	}
+
+	if(GetSEMAVersion)
+	{
+		printf("\nSEMA Version : %s\n\n",Version);
+	}
 	return 0;
 }
 
@@ -2337,7 +2345,10 @@ signed int ParseArgs(int argc, char* argv[])
                         help_condition = 13;
                 }
 	}
-
+	else if (strcasecmp(argv[1], "version") == 0)
+	{
+		GetSEMAVersion = TRUE;
+	}
 	else
 	{
 		ShowHelp(help_condition);

@@ -27,30 +27,12 @@
 #include <eapi.h>
 #include <common.h>
 
-static char WATCHDOG_DEVICE[261];
+#define SET_WDT_TIMEOUT            _IOWR('a','1',uint16_t*)
+#define GET_WDT_TIMEOUT		   _IOWR('a','2',uint16_t*)
+#define TRIGGER_WDT        	   _IOWR('a','3',uint16_t*)
+#define STOP_WDT_TIMEOUT           _IOWR('a','4',uint16_t*)
 
-static int initialize_watchdog()
-{
-	struct dirent *de;
-	DIR *dr = opendir("/sys/bus/platform/devices/adl-ec-wdt/watchdog"); 
-
-	if (dr == NULL)  // opendir returns NULL if couldn't open directory 
-		return -1;
-
-	memset(WATCHDOG_DEVICE, 0, sizeof(WATCHDOG_DEVICE));
-	while ((de = readdir(dr)) != NULL) {
-		if(strncmp(de->d_name, "watchdog", strlen("watchdog")) == 0) {
-			sprintf(WATCHDOG_DEVICE, "/dev/%s", de->d_name);
-			closedir(dr);
-			return 0;
-		}
-	}
-	closedir(dr);     
-
-	return -1;
-}
-
-#define WDOG_INIT() if(initialize_watchdog() < 0) return -1;
+int wdt_handle;
 
 uint32_t EApiWDogGetCap(uint32_t *pMaxDelay, uint32_t *pMaxEventTimeout, uint32_t *pMaxResetTimeout)
 {
@@ -59,12 +41,9 @@ uint32_t EApiWDogGetCap(uint32_t *pMaxDelay, uint32_t *pMaxEventTimeout, uint32_
 	char value[256] = { 0 };
         int tout = 0, ret; 
 
-	WDOG_INIT();
-
         if(pMaxDelay==NULL && pMaxEventTimeout==NULL && pMaxResetTimeout==NULL){
                 return EAPI_STATUS_INVALID_PARAMETER;
         }
-
 
 	if (pMaxDelay)
 	{
@@ -83,7 +62,7 @@ uint32_t EApiWDogGetCap(uint32_t *pMaxDelay, uint32_t *pMaxEventTimeout, uint32_
 		return EAPI_STATUS_READ_ERROR;
 
 	sscanf(value, "%d", &tout);
-        *pMaxResetTimeout = tout * 1000;
+        *pMaxResetTimeout = tout;
 
         return status;
 }
@@ -91,9 +70,8 @@ uint32_t EApiWDogGetCap(uint32_t *pMaxDelay, uint32_t *pMaxEventTimeout, uint32_
 uint32_t EApiWDogStart(uint32_t Delay, uint32_t EventTimeout, uint32_t ResetTimeout)
 {
 	uint32_t status = EAPI_STATUS_SUCCESS;
-	int fd, ret, i, tout;
 	unsigned long flags;
-
+	unsigned short tout;
 
 	if(Delay>0){
                 return EAPI_STATUS_INVALID_PARAMETER;
@@ -106,105 +84,84 @@ uint32_t EApiWDogStart(uint32_t Delay, uint32_t EventTimeout, uint32_t ResetTime
         if(ResetTimeout>UINT16_MAX){
                 return EAPI_STATUS_INVALID_PARAMETER;
         }
+	
+	wdt_handle = open("/dev/watchdog_adl", O_RDONLY);
+        if (wdt_handle < 0) {
+                return EAPI_STATUS_UNSUPPORTED;
+        }
 
-	WDOG_INIT();
-
-	char sysfile[256];	
-	char value[256] = { 0 };
-	char buf[20] = { 0 };
-	for (i = 0; i < strlen(WATCHDOG_DEVICE) - 4; i++) 
-	{
-	        buf[i] = WATCHDOG_DEVICE[i+5];
-	}
-	sprintf(sysfile, "/sys/class/watchdog/%s/timeout", buf);
-
-	ret = read_sysfs_file(sysfile, value, sizeof(value)); 
-	if (ret)
-		return EAPI_STATUS_READ_ERROR;
-
-	tout = atoi(value);	
-	if (tout)
+	if(ioctl(wdt_handle, GET_WDT_TIMEOUT ,&tout))
+        {
+		close(wdt_handle);
+                return EAPI_STATUS_WRITE_ERROR;
+        }
+	
+	if (tout){
+		close(wdt_handle);
 		return EAPI_STATUS_RUNNING;
-
-
-	fd = open(WATCHDOG_DEVICE, O_WRONLY);
-	if (fd < 0) {
-		return EAPI_STATUS_UNSUPPORTED;
 	}
 
 	flags = ResetTimeout; 
 
-	ret = ioctl(fd, WDIOC_SETTIMEOUT, &flags);
-
-	if (!ret){
-		close(fd);
-	}
-	else {
-		close(fd);
-		return EAPI_STATUS_UNSUPPORTED;
-	}
+	if(ioctl(wdt_handle, SET_WDT_TIMEOUT ,(uint16_t *)&flags))
+        {
+		close(wdt_handle);
+                return EAPI_STATUS_WRITE_ERROR;
+        }
 	
+	close(wdt_handle);
         return status;
 }
 
 uint32_t EApiWDogTrigger(void)
 {
 	uint32_t status = EAPI_STATUS_SUCCESS;
-	int fd, ret, i, tout = 0;
+       	unsigned short tout = 0;
 
-	WDOG_INIT();
-
-	char sysfile[256];	
-	char value[256] = { 0 };
-	char buf[20] = { 0 };
-	for (i = 0; i < strlen(WATCHDOG_DEVICE) - 4; i++) 
-	{
-	        buf[i] = WATCHDOG_DEVICE[i+5];
-	}
-	sprintf(sysfile, "/sys/class/watchdog/%s/timeout", buf);
-
-	ret = read_sysfs_file(sysfile, value, sizeof(value)); 
-	if (ret)
-		return EAPI_STATUS_READ_ERROR;
-
-	tout = atoi(value);	
+	wdt_handle = open("/dev/watchdog_adl", O_RDONLY);
+        if (wdt_handle < 0) {
+                return EAPI_STATUS_UNSUPPORTED;
+        }
+	
+	if(ioctl(wdt_handle, GET_WDT_TIMEOUT ,&tout))
+        {
+                close(wdt_handle);
+                return EAPI_STATUS_WRITE_ERROR;
+        }
+	
 	if (tout == 0)
+	{
+		close(wdt_handle);
 		return EAPI_STATUS_ERROR;
-
-	fd = open(WATCHDOG_DEVICE, O_WRONLY);
-	if (fd < 0) {
-		return EAPI_STATUS_UNSUPPORTED;
 	}
 
-	ret = ioctl(fd, WDIOC_SETTIMEOUT, &tout);
-	if (!ret)
-		close(fd);
-	else {
-	        close(fd);	
-		return EAPI_STATUS_UNSUPPORTED;
-	}
+	if(ioctl(wdt_handle, TRIGGER_WDT ,&tout))
+        {
+                close(wdt_handle);
+                return EAPI_STATUS_WRITE_ERROR;
+        }
 
+        close(wdt_handle);
         return status;
 }
 
 uint32_t EApiWDogStop(void)
 {
 	uint32_t status = EAPI_STATUS_SUCCESS;
-	int fd, ret;
-	const char v = 'V';
+	unsigned short tout = 0;
 
-	WDOG_INIT();
-
-	fd = open(WATCHDOG_DEVICE, O_WRONLY);
-	if (fd < 0) {
-		return EAPI_STATUS_UNSUPPORTED;
-	}
+	wdt_handle = open("/dev/watchdog_adl", O_RDWR);
+        if (wdt_handle < 0) {
+                return EAPI_STATUS_UNSUPPORTED;
+        }
 	
-	ret = write(fd, &v, 1);
-	if (ret < 0)
-		return EAPI_STATUS_WRITE_ERROR;
+	if(ioctl(wdt_handle, STOP_WDT_TIMEOUT ,&tout))
+        {
+                close(wdt_handle);
+                return EAPI_STATUS_WRITE_ERROR;
+        }
 
-	close(fd);
+	close(wdt_handle);
         return status;
 }
 
@@ -220,8 +177,6 @@ uint32_t EApiPwrUpWDogStart(uint32_t timeout)
 		errno = EINVAL;
 		return EAPI_STATUS_INVALID_PARAMETER;
 	}
-
-	WDOG_INIT();
 
 	sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-wdt/Capabilities/PwrUpWDog");
         fp = fopen(sysfile, "r+");
@@ -248,8 +203,6 @@ uint32_t EApiPwrUpWDogStop(void)
 	char value[256];
 	uint32_t timeout= 0;
 	int ret;
-
-	WDOG_INIT();
 
 	sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-wdt/Capabilities/PwrUpWDog");
         fp = fopen(sysfile, "r+");

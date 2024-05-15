@@ -30,7 +30,7 @@ clean: driver_clean app_clean
 install: all driver_install app_install
 
 driver_install:
-	@if grep "Debian" /etc/os-release; then mkdir -p /lib/modules/`uname -r`/build/certs; fi 
+	@FILE=/lib/modules/`uname -r`/build/certs; if [ ! -f $FILE ]; then mkdir -p /lib/modules/`uname -r`/build/certs; fi 
 	@openssl req -new -nodes -utf8 -sha512 -days 36500 -batch -x509 -config x509.genkey -outform PEM -out signing_key.x509 -keyout signing_key.pem > /dev/null
 	@cp signing_key.pem /lib/modules/`uname -r`/build/certs/
 	@cp signing_key.x509 /lib/modules/`uname -r`/build/certs/
