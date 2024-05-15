@@ -10,6 +10,7 @@
 * LEC-EL
 * nanoX-EL
 * Q7-EL
+* Express-VR7
 
 ### Supported Operating System:
 * Ubuntu 18.04, 20.04, 22.04
@@ -24,5 +25,5 @@
    
 ### Other information:
 * branch name: SEMA_4.0_Linux_SandBox/ACPI-EC
-* the internal latest commit ID: 71e9bf19cf64e6d7b54cbf81a811f000243c1cb3 
+* the internal latest commit ID: 6a181a0d13438be3b960bc62555b62fe4b141eec
 
