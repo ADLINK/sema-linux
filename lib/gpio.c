@@ -24,6 +24,7 @@
 #include "eapi.h"
 #include <common.h>
 #include <sys/ioctl.h>
+#include <sys/stat.h>
 
 static int gpiobase = -1;
 static int ngpio = -1;
@@ -40,6 +41,14 @@ static int ngpio = -1;
 #define EAPI_GPIO_EXT	   0x010000000
 
 #define GET_GPIO_DIR    _IOR('a','1',uint32_t *)
+#define SET_GPIO_INT	_IOWR('a','2',uint32_t *)
+#define GET_GPIO_INT	_IOWR('a','3',uint32_t *)
+#define CLR_GPIO_INT	_IOWR('a','4',uint32_t *)
+
+struct gpiostruct{
+	int gpio;
+	int val;
+};
 
 static int get_gpio_base(int *gpiobase, int *ngpio)
 {
@@ -100,19 +109,25 @@ int initialize_gpio(void)
 	if((fd=open("/dev/gpio_adl",O_RDONLY)) >= 0)
 	{
 		for(gpio = gpiobase; gpio < (gpiobase + ngpio); gpio++) {
-			char export[256];
-			sprintf(export, "echo %d > /sys/class/gpio/export", gpio);
-			system(export);
-			ret = ioctl(fd , GET_GPIO_DIR , &value);
-			bit = gpio - gpiobase;
-			value >>= bit;
-			if(value & 1)
-				sprintf(export, "echo in > /sys/class/gpio/gpio%d/direction", gpio);
-			else 
-				sprintf(export, "echo out > /sys/class/gpio/gpio%d/direction", gpio);
-			value = 0;
-			system(export);
+			char export[256],path[100];
+			struct stat stats;
+			sprintf(path, "/sys/class/gpio/gpio%d" , gpio);
+			if(stat(path, &stats) != 0)
+			{
+				sprintf(export, "echo %d > /sys/class/gpio/export", gpio);
+				system(export);
+				ret = ioctl(fd , GET_GPIO_DIR , &value);
+				bit = gpio - gpiobase;
+				value >>= bit;
+				if(value & 1)
+					sprintf(export, "echo in > /sys/class/gpio/gpio%d/direction", gpio);
+				else 
+					sprintf(export, "echo out > /sys/class/gpio/gpio%d/direction", gpio);
+				value = 0;
+				system(export);
+			}
 		}
+		close(fd);
 	}
 
 	return 0;
@@ -388,4 +403,68 @@ uint32_t EApiGPIOSetLevel(uint32_t Id, uint32_t Bitmask, uint32_t Level)
 	}
 
         return status;
+}
+
+uint32_t EApiSetGpioInterrupt(uint32_t trigger)
+{
+	uint32_t status = EAPI_STATUS_SUCCESS;
+	int fd;
+
+	if((fd = open("/dev/gpio_adl", O_RDWR)) < 0)
+	{	
+		return EAPI_STATUS_READ_ERROR;
+	}
+	
+	if(ioctl(fd, SET_GPIO_INT, &trigger) < 0)
+	{
+		close(fd);
+		return EAPI_STATUS_WRITE_ERROR;
+	}
+	close(fd);
+	return status;
+}
+
+uint32_t EApiReadGpioInterrupt(uint32_t Id, uint32_t* value)
+{
+	uint32_t status = EAPI_STATUS_SUCCESS, nVal;
+	int fd;
+
+	nVal = Id;
+	
+	if((fd = open("/dev/gpio_adl", O_RDWR)) < 0)
+	{	
+		return EAPI_STATUS_READ_ERROR;
+	}
+
+	if(ioctl(fd, GET_GPIO_INT, &nVal) < 0)
+	{
+		close(fd);
+		return EAPI_STATUS_WRITE_ERROR;
+	}
+	
+	nVal = nVal & (1 << Id);
+	*value = nVal; 
+
+	close(fd);	
+	return status;
+}
+
+uint32_t EApiClearGpioInterrupt()
+{
+	uint32_t status = EAPI_STATUS_SUCCESS,Val = 0;
+	int fd;
+	
+	if((fd = open("/dev/gpio_adl", O_RDWR)) < 0)
+	{	
+		return EAPI_STATUS_READ_ERROR;
+	}
+
+	if(ioctl(fd, CLR_GPIO_INT, &Val) < 0)
+	{
+		close(fd);
+		return EAPI_STATUS_WRITE_ERROR;
+	}
+	
+	close(fd);
+	return status;
 }

@@ -6,6 +6,7 @@
 #include <linux/kernel.h>
 #include <linux/watchdog.h>
 #include <linux/platform_device.h>
+#include <linux/version.h>
 #include <linux/fs.h>
 
 #include "adl-ec.h"
@@ -264,7 +265,12 @@ static int adl_bmc_wdt_probe(struct platform_device *pdev)
                 return -1;
         }
 
-        class_adl_wdt = class_create(THIS_MODULE, "watchdog_adl");
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,4,0)
+	 class_adl_wdt = class_create("watchdog_adl");
+#else
+	 class_adl_wdt = class_create(THIS_MODULE, "watchdog_adl");
+#endif
+       
         if (IS_ERR(class_adl_wdt)) {
                 printk("Error in Class_create\n");
         }

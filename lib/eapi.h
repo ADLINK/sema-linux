@@ -375,8 +375,9 @@ uint32_t EApiGPIOGetLevel(uint32_t Id, uint32_t Bitmask, uint32_t *pLevel);
  * @return 0 On Success, -1 On Failure.
  */
 uint32_t EApiGPIOSetLevel(uint32_t Id, uint32_t Bitmask, uint32_t Level);
-
-
+uint32_t EApiSetGpioInterrupt(uint32_t trigger);
+uint32_t EApiReadGpioInterrupt(uint32_t Id, uint32_t* value);
+uint32_t EApiClearGpioInterrupt();
 
 /*
  *

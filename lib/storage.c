@@ -311,8 +311,9 @@ uint32_t EApiStorageHexWrite(uint32_t Id,uint32_t Region, uint32_t Offset, char*
         uint32_t status = EAPI_STATUS_SUCCESS;
         int ret,i,fd;
 	struct secure data;
-	char *asciiString,*hex_buf;
+	char *hex_buf;
         char result[2048];
+
 	for(i=0;i<Len*2;i++)
 	{
 		if(isxdigit(Buf[i])==0)
@@ -321,8 +322,8 @@ uint32_t EApiStorageHexWrite(uint32_t Id,uint32_t Region, uint32_t Offset, char*
 			return EAPI_STATUS_UNSUPPORTED;
 		}
 	}
-	asciiString = Buf;
-	Conv_String2HexByte(asciiString,result);
+
+	Conv_String2HexByte(Buf,result);
 	hex_buf = result;
 
         if(Region==1)
@@ -411,13 +412,18 @@ uint32_t EApiGUIDWrite(uint32_t Id,uint32_t Region, uint32_t Offset, char* Buf, 
         uint32_t status = EAPI_STATUS_SUCCESS;
         int ret,fd;
 	struct secure data;
+	char *hex_buf;
+        char result[2048];
         
 	NVMEM_SEC_INIT();
         if(Offset + Len > 1024)
-        	{
-			printf("The maximum byte length for GUIDWrite is 1024\n");
-                	return EAPI_STATUS_MORE_DATA;
-        	}
+        {
+		printf("The maximum byte length for GUIDWrite is 1024\n");
+               	return EAPI_STATUS_MORE_DATA;
+        }
+
+	Conv_String2HexByte(Buf,result);
+	hex_buf = result;
 
         data.Region=Region;
 
@@ -443,7 +449,7 @@ uint32_t EApiGUIDWrite(uint32_t Id,uint32_t Region, uint32_t Offset, char* Buf, 
         }
 
         lseek(fd,Offset,SEEK_SET);
-        ret = write(fd,Buf,Len);
+        ret = write(fd,hex_buf,Len);
         if (ret > 0)
         {
                 close(fd);

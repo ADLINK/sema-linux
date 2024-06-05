@@ -35,7 +35,7 @@ uint8_t	SmartFanTempSet, SmartFanTempGet, SmartFanTempSetSrc, SmartFanTempGetSrc
 uint8_t	SmartFanModeGet, SmartFanModeSet, SmartFanPWMGet;
 uint8_t	GetStringA, GetValue, GetVoltageMonitor,GetVoltageMonitorCap, GetSEMAVersion;
 uint8_t	VgaGetBacklightEnable, VgaSetBacklightEnable, VgaGetBacklightBrightness, VgaSetBacklightBrightness;
-uint8_t	GPIOGetDirectionCaps, GPIOGetDirection, GPIOSetDirection, GPIOGetLevel, GPIOSetLevel;
+uint8_t	GPIOGetDirectionCaps, GPIOGetDirection, GPIOSetDirection, GPIOGetLevel, GPIOSetLevel, GPIOEnableInterrupt, GPIOGetInterrupt, GPIOClearInterrupt;
 uint8_t GetErrorLog, GetErrorNumberDescription, GetCurrentPosErrorLog, GetExceptionDescription;
 uint8_t IsI2CCap, IsI2CProb, IsI2CWrRaw, IsI2CReRaw, IsI2CReXf, IsI2CWrXf, IsI2CSts;
 uint8_t SetBiosSource, GetBiosSource,GetBiosStatus, srcdata;
@@ -60,14 +60,7 @@ unsigned int string_to_hex(char *string)
 	}
 	return data;
 }
-int guid_string_to_bytes(const char* guid_string, char* guid_bytes) {
 
-	for (int i = 0, j = 0; i < 36; i += 2) {
-		char hex[3] = { guid_string[i], guid_string[i + 1], '\0' };
-		sscanf(hex, "%hhX", &guid_bytes[j++]);
-	}
-	return 1;
-}
 static void errno_exit(const char *s) 
 {
 	fprintf(stderr, "%s error %d, %s\n", s, errno, strerror(errno));
@@ -172,13 +165,20 @@ void ShowHelp(int condition)
 	if (condition == 8 || condition == 0)
 	{
 		printf("- GPIO:\n");
-		printf("  1. semautil /g get_direction_cap [ID]\n");
-		printf("  2. semautil /g get_direction     [GPIO Bit]\n");
-		printf("  3. semautil /g set_direction     [GPIO Bit] [0 - Output or 1 - Input]\n");
-		printf("  4. semautil /g get_level         [GPIO Bit]\n");
-		printf("  5. semautil /g set_level         [GPIO Bit] [0 - Low or 1 - High]\n");
+		printf("  1. semautil /g get_direction_cap   [ID]\n");
+		printf("  2. semautil /g get_direction       [GPIO Bit]\n");
+		printf("  3. semautil /g set_direction       [GPIO Bit] [0 - Output or 1 - Input]\n");
+		printf("  4. semautil /g get_level           [GPIO Bit]\n");
+		printf("  5. semautil /g set_level           [GPIO Bit] [0 - Low or 1 - High]\n");
+		printf("  6. semautil /g gpio_interrupt	     [TRIGGER ID]\n");
+		printf("  7. semautil /g gpio_interrupt_read [GPIO Bit]\n");
+		printf("  8. semautil /g gpio_interrupt_clear \n\n");
 		printf("       GPIO set/write parameters:\n");
 		printf("       GPIO Bit  1-16 \n");
+		printf("       Trigger ID:\n");
+		printf("       1 - Edge trigger\n");
+		printf("       2 - Low trigger\n");
+		printf("       3 - High trigger\n");
 		printf("       Note: GPIO access may not be available on all platforms\n\n");
 	}
 	if (condition == 9 || condition == 0)
@@ -861,8 +861,7 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 		char* passcode;
 		char uuid_str[37];
 		char buffer[32]={0};
-		char uuidbyte[16]= {0};
-		uuid_generate_time(uuid);
+		uuid_generate_random(uuid);
 		uuid_unparse(uuid,uuid_str);
 
 		printf("Generated UUIDv4: %s \n",uuid_str);
@@ -874,19 +873,18 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 			j=j+1;
 			}
 		}
-		ret =guid_string_to_bytes(buffer,uuidbyte);
-
+	
 		Id = EAPI_ID_STORAGE_STD;
                 region = 3;
                 Offset = 0x100;
 
-                ByteCnt = strlen(uuidbyte);
+                ByteCnt = strlen(buffer);
 		permission = 2;	
 		passcode="ADEC";
 		
 		ret= EApiStorageUnLock(Id, region, permission, passcode);
 		if(ret==EAPI_STATUS_SUCCESS){
-		ret = EApiGUIDWrite(Id, region, Offset, uuidbyte, ByteCnt);
+		ret = EApiGUIDWrite(Id, region, Offset, buffer, ByteCnt/2);
                 if (ret) {
                         printf("Get EApi information failed\n");
                         errno_exit("EApiGUIDWrite");
@@ -1121,6 +1119,102 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 		printf("GPIO Level updated successfully\n");
 	}
 
+	if(GPIOEnableInterrupt)
+	{
+		uint32_t Id;
+		if(argc!=4)
+		{
+			printf("Wrong arguments\n");
+			exit(-1);
+		}
+		
+		Id = atoi(argv[3]);
+
+		switch(Id)
+		{
+			case 1:
+			{
+				ret = EApiSetGpioInterrupt(0x01);
+				if (ret) {
+					printf("Get EApi information failed\n");
+					errno_exit("EapiSetGpioInterrupt");
+				}
+				printf("\n Edge Trigger Interrupt is Enabled \n\n");
+			}
+			break;
+			case 2:
+			{
+				ret = EApiSetGpioInterrupt(0x04);
+				if (ret) {
+					printf("Get EApi information failed\n");
+					errno_exit("EapiSetGpioInterrupt");
+				}
+				printf("\n Low level Trigger Interrupt is Enabled \n\n");
+			}
+			break;
+			case 3:
+			{
+				ret = EApiSetGpioInterrupt(0x08);
+				if (ret) {
+					printf("Get EApi information failed\n");
+					errno_exit("EapiSetGpioInterrupt");
+				}
+				printf("\n High level Trigger Interrupt is Enabled \n\n");
+			}
+			break;
+			default:
+				printf("\n Enter the Id(1 - 3) to enable the interrupt\n\n");
+				return 0;
+			break;
+		}
+	}
+	
+	if(GPIOGetInterrupt)
+	{
+		uint32_t val,Id;
+		if(argc!=4)
+		{
+			printf("Wrong arguments\n");
+			exit(-1);
+		}
+		
+		Id = atoi(argv[3]);
+
+		if(Id < 1 || Id > 8)
+		{
+			printf("GPIO pin number should be 1-8 or 1-12\n");
+                        printf("Note: GPIO access may not be available on all platforms\n\n");
+                        return -1;
+		}
+
+		ret = EApiReadGpioInterrupt(Id - 1, &val);
+		if (ret) {
+				printf("Get EApi information failed\n");
+				errno_exit("EapiReadGpioInterrupt");
+			}
+
+		if(val != 0)
+			printf("\n Interrupt is generated for pin %d , Value : High \n", Id);
+		else
+			printf("\n Interrupt is generated for pin %d , Value : Low \n", Id);
+		
+	}
+	
+	if(GPIOClearInterrupt)
+	{
+		if(argc!=3)
+		{
+			printf("Wrong arguments\n");
+			exit(-1);
+		}
+		
+		ret = EApiClearGpioInterrupt();
+		if (ret) {
+			printf("Get EApi information failed\n");
+			errno_exit("EapiClearGpioInterrupt");
+		}
+		printf("\n Interrupt is Cleared \n\n");
+	}
 
 	if (GetErrorLog)
 	{
@@ -1674,6 +1768,18 @@ signed int ParseArgs(int argc, char* argv[])
 		else if (argc == 5 && (strcasecmp(argv[2], "set_level") == 0))
 		{
 			GPIOSetLevel = TRUE;
+		}
+		else if (argc == 4 && (strcasecmp(argv[2], "gpio_interrupt") == 0))
+		{
+			GPIOEnableInterrupt = TRUE;
+		}
+		else if (argc == 4 && (strcasecmp(argv[2], "gpio_interrupt_read") == 0))
+		{
+			GPIOGetInterrupt = TRUE;
+		}
+		else if (argc == 3 && (strcasecmp(argv[2], "gpio_interrupt_clear") == 0))
+		{
+			GPIOClearInterrupt = TRUE;
 		}
 		else
 		{

@@ -72,12 +72,14 @@ int WtLockUnlock(uint8_t * pDataIn_data,uint32_t Region)
         uint8_t pDataIn_[] = { 0x2, 0x4, 3, (uint8_t)(Region + 1), 0, 0 };
         if (adl_bmc_ec_write_device(EC_WO_ADDR_IIC_CMD_START, pDataIn_, 6, EC_REGION_2) == 0)
         {
-            delay(100);
+            delay(150);
             if (adl_bmc_ec_write_device(EC_RW_ADDR_IIC_BUFFER, pDataIn_data, 3,EC_REGION_2) == 0)
             {
+		delay(150);
                 pDataIn_[0] = 4;
                 if (adl_bmc_ec_write_device(EC_RW_ADDR_IIC_BMC_STATUS, pDataIn_, 1,EC_REGION_2) == 0)
                 {
+		    delay(150);
                     for (j = 0; j < 10; j++)
                     {
                         if (adl_bmc_ec_read_device(EC_RW_ADDR_IIC_BMC_STATUS, pDataIn_, 1,EC_REGION_2) == 0)
@@ -87,7 +89,7 @@ int WtLockUnlock(uint8_t * pDataIn_data,uint32_t Region)
                                 return 0;
                             }
                         }
-                        delay(100);
+                        delay(150);
                     }
                 }
             }
