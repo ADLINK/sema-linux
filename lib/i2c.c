@@ -115,6 +115,9 @@ uint32_t EApiI2CReadTransfer(uint32_t Id, uint32_t Addr, uint32_t Cmd, void* pBu
         {
                 trxn.Bus = 3;
         }
+	else if (Id == EAPI_ID_I2C_LVDS_2) {
+                trxn.Bus = 4;
+	}
 	else
 		return EAPI_STATUS_UNSUPPORTED;
 
@@ -209,6 +212,9 @@ uint32_t EApiI2CWriteTransfer(uint32_t Id, uint32_t Addr, uint32_t Cmd, void *pB
 	else if (Id == SEMA_EAPI_ID_I2C_EXTERNAL_2)
         {
                 trxn.Bus = 3;
+        }
+	else if (Id == EAPI_ID_I2C_LVDS_2) {
+                trxn.Bus = 4;
         }
 	else
 		return EAPI_STATUS_INVALID_PARAMETER;
@@ -318,6 +324,13 @@ uint32_t EApiI2CGetBusCap(uint32_t Id, uint32_t *pMaxBlkLen)
                                 return EAPI_STATUS_SUCCESS;
                         }
                         break;
+		case SEMA_EXT_IIC_BUS_4:
+			if(m_nSemaCaps & SEMA_C_I2C4)
+			{
+				close(fd);
+				return EAPI_STATUS_SUCCESS;
+			}
+			break;
 
 		default:
 			*pMaxBlkLen = 0;
@@ -371,7 +384,10 @@ uint32_t EApiI2CProbeDevice(uint32_t Id, uint32_t Addr)
 		trxn.Bus = 2;
 	}
 	else if (Id == SEMA_EAPI_ID_I2C_EXTERNAL_2) {
-                trxn.Bus = 3;
+		trxn.Bus = 3;
+        }
+	else if (Id == EAPI_ID_I2C_LVDS_2) {
+	       	trxn.Bus = 4;
         }
 	else
 	{
@@ -451,6 +467,9 @@ uint32_t EApiI2CWriteReadRaw(uint32_t Id, uint8_t Addr, void *pWBuffer, uint32_t
 	else if (Id == SEMA_EAPI_ID_I2C_EXTERNAL_2)
         {
                 trxn.Bus = 3;
+        }
+	else if (Id == EAPI_ID_I2C_LVDS_2) {
+                trxn.Bus = 4;
         }
 	else
                 return EAPI_STATUS_UNSUPPORTED;

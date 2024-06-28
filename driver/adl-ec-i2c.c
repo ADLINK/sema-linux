@@ -30,6 +30,7 @@
 #define SEMA_C_I2C1             0x00010000                      ///< Bit 16: Ext. I2C bus #1 available
 #define SEMA_C_I2C2             0x00020000                      ///< Bit 17: Ext. I2C bus #2 available
 #define SEMA_C_I2C3             0x20000000                      ///< Group 0 bit 29: Ext. I2C bus #3 available
+#define SEMA_C_I2C4             0x40000000                      ///< Group 0 bit 30: Ext. I2C bus #4 available
 
 #define SLAVE_ADDR(x) ((x<<1) & 0xFE)
 
@@ -70,6 +71,7 @@ struct adlink_i2c_dev {
     struct i2c_adapter 	adapter1;
     struct i2c_adapter 	adapter2;
     struct i2c_adapter  adapter3;
+    struct i2c_adapter  adapter4;
     dev_t ldev;
     struct class *class;
     struct cdev cdev;
@@ -993,6 +995,132 @@ static int adlink_i2c_xfer3(struct i2c_adapter *adap, struct i2c_msg *msgs, int 
 	return ret;
 }
 
+
+static int adlink_i2c_xfer4(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
+{
+    int i,ret = -EOPNOTSUPP;
+    int bus = 4;
+    uint8_t Address;
+    uint8_t prev=0;
+    Address = SLAVE_ADDR(msgs->addr);
+
+    debug_printk("%s\n", __func__);
+	mutex_lock(&i2c_lock);
+
+	for (i=0; i<num; i++) {
+		if(msgs[i].flags & I2C_M_RD) {
+			if(msgs[i].flags==1) /*i2cdetect*/
+                        {
+                                buf.tBuffer[0]=0x4;
+                                buf.tBuffer[1]=0x2;
+                                buf.tBuffer[2]=0;
+                                buf.tBuffer[3]=bus;
+                                buf.tBuffer[4]=0x00;
+                                buf.tBuffer[5]=Address;
+                                buf.Type      =0x10;
+                                buf.Length     =0;
+                                if((ProbeDevice(&buf))==0)
+                                {
+                                        if(buf.tBuffer[1] & ~2)
+                                        {
+                                                mutex_unlock(&i2c_lock);
+                                                return -1;
+                                        }
+                                        if(buf.tBuffer[0]!=0)
+                                        {
+                                                mutex_unlock(&i2c_lock);
+                                                return -1;
+                                        }
+
+                                        mutex_unlock(&i2c_lock);
+
+					 if(prev!=0)
+                                        ret= 0;
+                                        else
+                                        ret = i2c_read_iic(&msgs[i],bus);
+                                        prev=msgs->addr;
+
+                                }
+                                else
+                                {
+                                        mutex_unlock(&i2c_lock);
+                                        return -1;
+                                }
+
+                        }
+		else
+		       ret = i2c_read_iic(&msgs[i],bus);
+		}
+		else if((msgs[i].flags == 0) || (msgs[i].flags == 0x200)) {
+			/*i2cdetect*/
+			if(msgs->len==0)
+        		{
+                		buf.tBuffer[0]=0x4;
+               			buf.tBuffer[1]=0x2;
+                		buf.tBuffer[2]=0;
+                		buf.tBuffer[3]=bus;
+                		buf.tBuffer[4]=0x00;
+                		buf.tBuffer[5]=Address;
+                		buf.Type      =0x10;
+                		buf.Length     =0;
+                		if((ProbeDevice(&buf))==0)
+                		{
+                        		if(buf.tBuffer[1] & ~2)
+                        		{
+						mutex_unlock(&i2c_lock);
+                                		return -1;
+                        		}
+                        		if(buf.tBuffer[0]!=0)
+                        		{
+						mutex_unlock(&i2c_lock);
+                                		return -1;
+                        		}
+
+					mutex_unlock(&i2c_lock);
+                        		ret=0;
+                		}
+                		else
+				{
+					mutex_unlock(&i2c_lock);
+                        		return -1;
+				}
+
+        		}
+
+		else
+			{
+			 if (i < (num - 1)) {
+					if (msgs[i+1].flags & I2C_M_RD) {
+						ret = i2c_write_read_iic(&msgs[i], &msgs[i+1], bus);
+						++i;
+					}
+					else {
+						ret = i2c_write_iic(&msgs[i], bus);
+					}
+				}
+
+				else {
+					ret = i2c_write_iic(&msgs[i],bus);
+			     	}
+			}
+		}
+		else {
+			printk("Unsupported xfer %x %x\n", msgs[i].flags, msgs[i].len);
+			ret = -EOPNOTSUPP;
+		}
+		if (ret < 0)
+			break;
+	}
+
+	mutex_unlock(&i2c_lock);
+
+	if(ret == 0)
+		ret = num;
+
+	return ret;
+}
+
+
 static u32 adlink_i2c_func(struct i2c_adapter *adapter)
 {
     return I2C_FUNC_I2C | I2C_FUNC_SMBUS_EMUL;
@@ -1011,9 +1139,15 @@ static const struct i2c_algorithm adlink_i2c_algo3 = {
     .functionality      = adlink_i2c_func,
     .master_xfer        = adlink_i2c_xfer3,
 };
+
+static const struct i2c_algorithm adlink_i2c_algo4 = {
+    .functionality      = adlink_i2c_func,
+    .master_xfer        = adlink_i2c_xfer4,
+};
+
 static int adl_bmc_i2c_probe(struct platform_device *pdev)
 {
-    struct i2c_adapter *adap1, *adap2, *adap3;
+    struct i2c_adapter *adap1, *adap2, *adap3, *adap4;
     struct adlink_i2c_dev *adlink;
     int ret;
 
@@ -1033,10 +1167,12 @@ static int adl_bmc_i2c_probe(struct platform_device *pdev)
     adap1 = &adlink->adapter1;
     adap2 = &adlink->adapter2;
     adap3 = &adlink->adapter3;
+    adap4 = &adlink->adapter4;
 
     i2c_set_adapdata(adap1, adlink);
     i2c_set_adapdata(adap2, adlink);
     i2c_set_adapdata(adap3, adlink);
+    i2c_set_adapdata(adap4, adlink);
 
     adap1->owner = THIS_MODULE;
     adap1->class = I2C_CLASS_DEPRECATED;
@@ -1047,13 +1183,19 @@ static int adl_bmc_i2c_probe(struct platform_device *pdev)
     adap3->owner = THIS_MODULE;
     adap3->class = I2C_CLASS_DEPRECATED;
 
+    adap4->owner = THIS_MODULE;
+    adap4->class = I2C_CLASS_DEPRECATED;
+
     strlcpy(adap1->name, "ADLINK BMC I2C adapter bus 1", sizeof(adap1->name));
     strlcpy(adap2->name, "ADLINK BMC I2C adapter bus 2", sizeof(adap2->name));
     strlcpy(adap3->name, "ADLINK BMC I2C adapter bus 3", sizeof(adap3->name));
+    strlcpy(adap4->name, "ADLINK BMC I2C adapter bus 4", sizeof(adap3->name));
 
      adap1->algo = &adlink_i2c_algo1;
      adap2->algo = &adlink_i2c_algo2;
      adap3->algo = &adlink_i2c_algo3;
+     adap4->algo = &adlink_i2c_algo4;
+
 
     if (adl_dev->Bmc_Capabilities[0] & SEMA_C_I2C1)
     {
@@ -1081,6 +1223,16 @@ static int adl_bmc_i2c_probe(struct platform_device *pdev)
             return -1;
         }
     }
+
+    if(adl_dev->Bmc_Capabilities[0] & SEMA_C_I2C4)
+    {
+        ret = i2c_add_adapter(adap4);
+        if(ret < 0)
+        {
+            return -1;
+        }
+    }
+
 
     if(alloc_chrdev_region(&(adlink->ldev), 0, 1, "adl_i2c_eapi") < 0)
     {
@@ -1137,6 +1289,9 @@ static int adl_bmc_i2c_remove(struct platform_device *pdev)
 	i2c_del_adapter(&adlink->adapter2);
     if(&adlink->adapter3 != NULL)
         i2c_del_adapter(&adlink->adapter3);
+    if(&adlink->adapter4 != NULL)
+        i2c_del_adapter(&adlink->adapter4);
+
     return 0;
 }
 

@@ -256,7 +256,8 @@ void ShowHelp(int condition)
 		printf("    1\tEAPI_ID_I2C_EXTERNAL_1\t\tBaseboard I2C Interface 1\n");
 		printf("    2\tEAPI_ID_I2C_EXTERNAL_2\t\tBaseboard I2C Interface 2\n");
 		printf("    3\tEAPI_ID_I2C_EXTERNAL_3\t\tBaseboard I2C Interface 3\n");
-		printf("    4\tEAPI_ID_I2C_LVDS_2\t\tLVDS \\ EDP 2 Interface\n");
+		printf("    4\tEAPI_ID_I2C_EXTERNAL_4\t\tBaseboard I2C Interface 4\n");
+		printf("    5\tEAPI_ID_I2C_LVDS_2\t\tLVDS \\ EDP 2 Interface\n");
 
 		printf("  [Command type]:\n");
 		printf("    ID\tENCODED CMD ID\t\tDescription\n");
@@ -1844,6 +1845,7 @@ signed int ParseArgs(int argc, char* argv[])
 					printf("    1\tEAPI_ID_I2C_EXTERNAL_1\t\tBaseboard I2C Interface 1\n");
 					printf("    2\tEAPI_ID_I2C_EXTERNAL_2\t\tBaseboard I2C Interface 2\n");
 					printf("    3\tEAPI_ID_I2C_EXTERNAL_3\t\tBaseboard I2C Interface 3\n");
+					printf("    4\tEAPI_ID_I2C_EXTERNAL_4\t\tBaseboard I2C Interface 4\n");
 					eRet = -3;
 				}
 
@@ -1859,6 +1861,7 @@ signed int ParseArgs(int argc, char* argv[])
 				printf("    1\tEAPI_ID_I2C_EXTERNAL_1\t\tBaseboard I2C Interface 1\n");
 				printf("    2\tEAPI_ID_I2C_EXTERNAL_2\t\tBaseboard I2C Interface 2\n");
 				printf("    3\tEAPI_ID_I2C_EXTERNAL_3\t\tBaseboard I2C Interface 3\n");
+                                printf("    4\tEAPI_ID_I2C_EXTERNAL_4\t\tBaseboard I2C Interface 4\n");
 				eRet = -3;
 			}
 		}
@@ -1889,6 +1892,7 @@ signed int ParseArgs(int argc, char* argv[])
 					printf("    1\tEAPI_ID_I2C_EXTERNAL_1\t\tBaseboard I2C Interface 1\n");
 					printf("    2\tEAPI_ID_I2C_EXTERNAL_2\t\tBaseboard I2C Interface 2\n");
 					printf("    3\tEAPI_ID_I2C_EXTERNAL_3\t\tBaseboard I2C Interface 3\n");
+					printf("    4\tEAPI_ID_I2C_EXTERNAL_4\t\tBaseboard I2C Interface 4\n");
 					eRet = -3;
 				}
 
@@ -1903,6 +1907,7 @@ signed int ParseArgs(int argc, char* argv[])
 					printf("    1\tEAPI_ID_I2C_EXTERNAL_1\t\tBaseboard I2C Interface 1\n");
 					printf("    2\tEAPI_ID_I2C_EXTERNAL_2\t\tBaseboard I2C Interface 2\n");
 					printf("    3\tEAPI_ID_I2C_EXTERNAL_3\t\tBaseboard I2C Interface 3\n");
+					printf("    4\tEAPI_ID_I2C_EXTERNAL_4\t\tBaseboard I2C Interface 4\n");
 					eRet = -3;
 				}
 				else
@@ -1930,6 +1935,7 @@ signed int ParseArgs(int argc, char* argv[])
 				printf("    1\tEAPI_ID_I2C_EXTERNAL_1\t\tBaseboard I2C Interface 1\n");
 				printf("    2\tEAPI_ID_I2C_EXTERNAL_2\t\tBaseboard I2C Interface 2\n");
 				printf("    3\tEAPI_ID_I2C_EXTERNAL_3\t\tBaseboard I2C Interface 3\n");
+				printf("    4\tEAPI_ID_I2C_EXTERNAL_4\t\tBaseboard I2C Interface 4\n");
 				eRet = -3;
 			}
 		}
@@ -1981,6 +1987,7 @@ signed int ParseArgs(int argc, char* argv[])
 					printf("    1\tEAPI_ID_I2C_EXTERNAL_1\t\tBaseboard I2C Interface 1\n");
 					printf("    2\tEAPI_ID_I2C_EXTERNAL_2\t\tBaseboard I2C Interface 2\n");
 					printf("    3\tEAPI_ID_I2C_EXTERNAL_3\t\tBaseboard I2C Interface 3\n");
+					printf("    4\tEAPI_ID_I2C_EXTERNAL_4\t\tBaseboard I2C Interface 4\n");
 					eRet = -3;
 				}
 			}
@@ -1995,6 +2002,7 @@ signed int ParseArgs(int argc, char* argv[])
 				printf("    1\tEAPI_ID_I2C_EXTERNAL_1\t\tBaseboard I2C Interface 1\n");
 				printf("    2\tEAPI_ID_I2C_EXTERNAL_2\t\tBaseboard I2C Interface 2\n");
 				printf("    3\tEAPI_ID_I2C_EXTERNAL_3\t\tBaseboard I2C Interface 3\n");
+				printf("    4\tEAPI_ID_I2C_EXTERNAL_4\t\tBaseboard I2C Interface 4\n");
 				eRet = -3;
 			}
 		}
@@ -2012,7 +2020,8 @@ signed int ParseArgs(int argc, char* argv[])
                                         printf("    1\tEAPI_ID_I2C_EXTERNAL_1\t\tBaseboard I2C Interface 1\n");
                                         printf("    2\tEAPI_ID_I2C_EXTERNAL_2\t\tBaseboard I2C Interface 2\n");
                                         printf("    3\tEAPI_ID_I2C_EXTERNAL_3\t\tBaseboard I2C Interface 3\n");
-                                        eRet = -3;
+                                        printf("    4\tEAPI_ID_I2C_EXTERNAL_4\t\tBaseboard I2C Interface 4\n");
+				     	 eRet = -3;
                                 }
                                 I2CFuncArgs.Address = string_to_hex(argv[4]);
 				if( I2CFuncArgs.Address < 0 || I2CFuncArgs.Address > 127)
@@ -2049,7 +2058,8 @@ signed int ParseArgs(int argc, char* argv[])
                                         	printf("    1\tEAPI_ID_I2C_EXTERNAL_1\t\tBaseboard I2C Interface 1\n");
                                         	printf("    2\tEAPI_ID_I2C_EXTERNAL_2\t\tBaseboard I2C Interface 2\n");
                                         	printf("    3\tEAPI_ID_I2C_EXTERNAL_3\t\tBaseboard I2C Interface 3\n");
-                                        	eRet = -3;
+                                        	printf("    4\tEAPI_ID_I2C_EXTERNAL_4\t\tBaseboard I2C Interface 4\n");
+						eRet = -3;
                                 	}
 					else
                                 	{
@@ -2140,6 +2150,7 @@ signed int ParseArgs(int argc, char* argv[])
 					printf("    1\tEAPI_ID_I2C_EXTERNAL_1\t\tBaseboard I2C Interface 1\n");
 					printf("    2\tEAPI_ID_I2C_EXTERNAL_2\t\tBaseboard I2C Interface 2\n");
 					printf("    3\tEAPI_ID_I2C_EXTERNAL_3\t\tBaseboard I2C Interface 3\n");
+					printf("    4\tEAPI_ID_I2C_EXTERNAL_4\t\tBaseboard I2C Interface 4\n");
 					eRet = -3;
 				}
 
@@ -2179,6 +2190,7 @@ signed int ParseArgs(int argc, char* argv[])
 					printf("    1\tEAPI_ID_I2C_EXTERNAL_1\t\tBaseboard I2C Interface 1\n");
 					printf("    2\tEAPI_ID_I2C_EXTERNAL_2\t\tBaseboard I2C Interface 2\n");
 					printf("    3\tEAPI_ID_I2C_EXTERNAL_3\t\tBaseboard I2C Interface 3\n");
+                                       printf("    4\tEAPI_ID_I2C_EXTERNAL_4\t\tBaseboard I2C Interface 4\n");
 
 					printf("  [Command Type]:\n");
 					printf("    ID\tENCODED CMD ID\t\tDescription\n");
@@ -2202,6 +2214,7 @@ signed int ParseArgs(int argc, char* argv[])
 					printf("    1\tEAPI_ID_I2C_EXTERNAL_1\t\tBaseboard I2C Interface 1\n");
 					printf("    2\tEAPI_ID_I2C_EXTERNAL_2\t\tBaseboard I2C Interface 2\n");
 					printf("    3\tEAPI_ID_I2C_EXTERNAL_3\t\tBaseboard I2C Interface 3\n");
+                                       printf("    4\tEAPI_ID_I2C_EXTERNAL_4\t\tBaseboard I2C Interface 4\n"); 
 
 					printf("  [Command Type]:\n");
 					printf("    ID\tENCODED CMD ID\t\tDescription\n");
@@ -2237,6 +2250,7 @@ signed int ParseArgs(int argc, char* argv[])
 				printf("    1\tEAPI_ID_I2C_EXTERNAL_1\t\tBaseboard I2C Interface 1\n");
 				printf("    2\tEAPI_ID_I2C_EXTERNAL_2\t\tBaseboard I2C Interface 2\n");
 				printf("    3\tEAPI_ID_I2C_EXTERNAL_3\t\tBaseboard I2C Interface 3\n");
+                                printf("    4\tEAPI_ID_I2C_EXTERNAL_4\t\tBaseboard I2C Interface 4\n");
 
 				printf("  [Command Type]:\n");
 				printf("    ID\tENCODED CMD ID\t\tDescription\n");
@@ -2269,6 +2283,7 @@ signed int ParseArgs(int argc, char* argv[])
 					printf("    1\tEAPI_ID_I2C_EXTERNAL_1\t\tBaseboard I2C Interface 1\n");
 					printf("    2\tEAPI_ID_I2C_EXTERNAL_2\t\tBaseboard I2C Interface 2\n");
 					printf("    3\tEAPI_ID_I2C_EXTERNAL_3\t\tBaseboard I2C Interface 3\n");
+				        printf("    4\tEAPI_ID_I2C_EXTERNAL_4\t\tBaseboard I2C Interface 4\n");	
 					eRet = -3;
 					return eRet;
 				}
@@ -2330,6 +2345,7 @@ signed int ParseArgs(int argc, char* argv[])
 					printf("    1\tEAPI_ID_I2C_EXTERNAL_1\t\tBaseboard I2C Interface 1\n");
 					printf("    2\tEAPI_ID_I2C_EXTERNAL_2\t\tBaseboard I2C Interface 2\n");
 					printf("    3\tEAPI_ID_I2C_EXTERNAL_3\t\tBaseboard I2C Interface 3\n");
+                                        printf("    4\tEAPI_ID_I2C_EXTERNAL_4\t\tBaseboard I2C Interface 4\n");
 
 					printf("  [Command Type]:\n");
 					printf("    ID\tENCODED CMD ID\t\tDescription\n");
@@ -2368,6 +2384,7 @@ signed int ParseArgs(int argc, char* argv[])
 				printf("    1\tEAPI_ID_I2C_EXTERNAL_1\t\tBaseboard I2C Interface 1\n");
 				printf("    2\tEAPI_ID_I2C_EXTERNAL_2\t\tBaseboard I2C Interface 2\n");
 				printf("    3\tEAPI_ID_I2C_EXTERNAL_3\t\tBaseboard I2C Interface 3\n");
+                               printf("    4\tEAPI_ID_I2C_EXTERNAL_4\t\tBaseboard I2C Interface 4\n");
 
 				printf("  [Command Type]:\n");
 				printf("    ID\tENCODED CMD ID\t\tDescription\n");
@@ -2399,6 +2416,7 @@ signed int ParseArgs(int argc, char* argv[])
 			printf("    1\tEAPI_ID_I2C_EXTERNAL_1\t\tBaseboard I2C Interface 1\n");
 			printf("    2\tEAPI_ID_I2C_EXTERNAL_2\t\tBaseboard I2C Interface 2\n");
 			printf("    3\tEAPI_ID_I2C_EXTERNAL_3\t\tBaseboard I2C Interface 3\n");
+			printf("    4\tEAPI_ID_I2C_EXTERNAL_4\t\tBaseboard I2C Interface 4\n");
 
 			printf("  [Command type]:\n");
 			printf("    ID\tENCODED CMD ID\t\tDescription\n");
