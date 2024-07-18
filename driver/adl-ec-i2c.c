@@ -1189,7 +1189,7 @@ static int adl_bmc_i2c_probe(struct platform_device *pdev)
     strlcpy(adap1->name, "ADLINK BMC I2C adapter bus 1", sizeof(adap1->name));
     strlcpy(adap2->name, "ADLINK BMC I2C adapter bus 2", sizeof(adap2->name));
     strlcpy(adap3->name, "ADLINK BMC I2C adapter bus 3", sizeof(adap3->name));
-    strlcpy(adap4->name, "ADLINK BMC I2C adapter bus 4", sizeof(adap3->name));
+    strlcpy(adap4->name, "ADLINK BMC I2C adapter bus 4", sizeof(adap4->name));
 
      adap1->algo = &adlink_i2c_algo1;
      adap2->algo = &adlink_i2c_algo2;

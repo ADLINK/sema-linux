@@ -45,6 +45,7 @@ struct adl_bmc_dev {
 	struct board_info current_board;
 
         uint32_t Bmc_Capabilities[8];
+	uint16_t region;
 	// Collect capabilities
 	void (*CollectCapabilities)(unsigned int *Capabilities, unsigned DataCount, unsigned char *CapData);
 };

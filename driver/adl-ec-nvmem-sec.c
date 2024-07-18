@@ -192,8 +192,11 @@ int ReadODMMem(unsigned char Region, unsigned int nAdr, u8* pData, unsigned int 
                     {
                         delay(40);
                         adl_bmc_ec_read_device(EC_RW_ADDR_IIC_BUFFER, pData, nSize, EC_REGION_2);
-			    if (pData[0] == 0xff)
-				    pData[0] = 0;			
+			    if(nAdr!=0xD00)
+			    {
+			    	if (pData[0] == 0xff)
+		            	pData[0] = 0;
+			    }
                         return 0;      
                     }
                 }

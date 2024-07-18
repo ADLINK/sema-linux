@@ -35,7 +35,7 @@
 struct secure {
         uint8_t Region;
         uint8_t permission;
-        char passcode[32];
+        char passcode[4];
 };
 static char NVMEM_DEVICE[285];
 //static char NVMEM_SEC_DEVICE[285];

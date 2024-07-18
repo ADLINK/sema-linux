@@ -26,7 +26,7 @@
 #include <eapi.h>
 #include <uuid/uuid.h>
 
-#define Version	"ADLINK-SEMA-EC-LINUX-V4_R3_24_04_17"
+#define Version	"ADLINK-SEMA-EC-LINUX-V4_R3_0_24_07_18"
 
 char*			ExeName;
 uint8_t	SetWatchdog, TriggerWatchdog, StopWatchdog, WatchDogCap,IsPwrUpWDogStart, IsPwrUpWDogStop;
@@ -2099,6 +2099,7 @@ signed int ParseArgs(int argc, char* argv[])
                                                 printf("    1\tEAPI_ID_I2C_EXTERNAL_1\t\tBaseboard I2C Interface 1\n");
                                                 printf("    2\tEAPI_ID_I2C_EXTERNAL_2\t\tBaseboard I2C Interface 2\n");
                                                 printf("    3\tEAPI_ID_I2C_EXTERNAL_3\t\tBaseboard I2C Interface 3\n");
+						printf("    4\tEAPI_ID_I2C_EXTERNAL_4\t\tBaseboard I2C Interface 4\n");
 						eRet = -3;
 					}
 					else
@@ -2122,6 +2123,7 @@ signed int ParseArgs(int argc, char* argv[])
                                 printf("    1\tEAPI_ID_I2C_EXTERNAL_1\t\tBaseboard I2C Interface 1\n");
                                 printf("    2\tEAPI_ID_I2C_EXTERNAL_2\t\tBaseboard I2C Interface 2\n");
                                 printf("    3\tEAPI_ID_I2C_EXTERNAL_3\t\tBaseboard I2C Interface 3\n");
+				printf("    4\tEAPI_ID_I2C_EXTERNAL_4\t\tBaseboard I2C Interface 4\n");
                                 eRet = -3;
 			}	
 		

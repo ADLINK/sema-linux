@@ -127,14 +127,32 @@ static int wait_for_ec(uint8_t port, uint8_t mask, uint8_t cond)
 int ReadEc(unsigned short int RegionIndex, unsigned short int offset, unsigned char *data)
 {
 	int ret;
+	uint8_t Cmd;
+       
 	uint8_t EC_CTRL_PORT = (RegionIndex & 0xFF);
-	uint8_t EC_DATA_PORT = ((RegionIndex >> 8) & 0xFF);
+        uint8_t EC_DATA_PORT = ((RegionIndex >> 8) & 0xFF);
+	Cmd = EC_SC_RD_CMD;
+	
+	if(adl_bmc_dev->region != EC_REGION_1 && adl_bmc_dev->region != EC_REGION_2)
+        {
+                Cmd = EC_SC_RD_CMD + 0x10;
+        }
+
+	if(RegionIndex == EC_REGION_1)
+        {
+        	if(adl_bmc_dev->region == EC_REGION_2)
+        	{
+			EC_CTRL_PORT = (EC_REGION_2 & 0xFF);
+			EC_DATA_PORT = ((EC_REGION_2 >> 8) & 0xFF);
+        		Cmd = EC_SC_RD_CMD + 0x10;
+        	}
+        }
 
 	if (!data)
 		return -EINVAL;
 	
 	/* 1. Write EC_SC_RD_CMD to control port*/
-	outb(EC_SC_RD_CMD, EC_CTRL_PORT);
+	outb(Cmd, EC_CTRL_PORT);
 
 	/* 2. Wait for EC_SC_IBF to clear */
 	if((ret = wait_for_ec(EC_CTRL_PORT, EC_SC_IBF, 0)) < 0)
@@ -157,11 +175,24 @@ int ReadEc(unsigned short int RegionIndex, unsigned short int offset, unsigned c
 int WriteEc(unsigned short int RegionIndex, unsigned short int offset, unsigned char data)
 {
 	int ret;
+	uint8_t Cmd;
+	
 	uint8_t EC_CTRL_PORT = (RegionIndex & 0xFF);
-	uint8_t EC_DATA_PORT = ((RegionIndex >> 8) & 0xFF);
+        uint8_t EC_DATA_PORT = ((RegionIndex >> 8) & 0xFF);
+	Cmd = EC_SC_WR_CMD;
 
+	if(RegionIndex == EC_REGION_1)
+        {
+        	if(adl_bmc_dev->region == EC_REGION_2)
+        	{
+			EC_CTRL_PORT = (EC_REGION_2 & 0xFF);
+			EC_DATA_PORT = ((EC_REGION_2 >> 8) & 0xFF);
+        		Cmd = EC_SC_WR_CMD + 0x10;
+        	}
+        }
+	
 	/* 1. Write EC_SC_WR_CMD to control port*/
-	outb(EC_SC_WR_CMD, EC_CTRL_PORT);
+	outb(Cmd, EC_CTRL_PORT);
 
 	/* 2. Wait for EC_SC_IBF to clear */
 	if((ret = wait_for_ec(EC_CTRL_PORT, EC_SC_IBF, 0)) < 0)
@@ -180,7 +211,7 @@ int WriteEc(unsigned short int RegionIndex, unsigned short int offset, unsigned 
 	/* 6. Wait for EC_SC_IBF to clear */
 	if((ret = wait_for_ec(EC_CTRL_PORT, EC_SC_IBF, 0)) < 0)
 		return ret;
-
+	
 	return 0;
 }
 
@@ -363,9 +394,39 @@ static int adl_ec_acpi_probe(struct platform_device *pdev)
     unsigned char *pData;
     uint8_t hardware_monitor=0;
 		
-    if(adl_bmc_ec_read_device(0xF0, buffer, 16, EC_REGION_1) < 0)
+    adl_bmc_dev = devm_kzalloc(&(pdev->dev), sizeof(struct adl_bmc_dev), GFP_KERNEL);
+
+    if (adl_bmc_dev == NULL)
+	return -ENOMEM;
+
+    if(adl_bmc_ec_read_device(0xF0, buffer, 16, EC_REGION_2) < 0)
     {
-	return -1;
+	adl_bmc_dev->region = EC_REGION_1;
+	if(adl_bmc_ec_read_device(0xF0, buffer, 16, EC_REGION_1) < 0)
+        {
+                return -1;
+        }
+        else
+        {
+        	adl_bmc_dev->region = EC_REGION_1;
+        }
+    }
+    else
+    {
+	if(strlen(buffer))
+    		adl_bmc_dev->region = EC_REGION_2;
+	else
+	{
+		adl_bmc_dev->region = EC_REGION_1;
+		if(adl_bmc_ec_read_device(0xF0, buffer, 16, EC_REGION_1) < 0)
+        	{
+               		return -1;
+        	}
+        	else
+        	{
+               		adl_bmc_dev->region = EC_REGION_1;
+        	}
+	}
     }
 
     if(strstr(buffer, "ADLINK") == NULL)
@@ -424,11 +485,6 @@ static int adl_ec_acpi_probe(struct platform_device *pdev)
 	unregister_chrdev_region(sema, 1);
 	return -ENODEV;
     }
-
-    adl_bmc_dev = devm_kzalloc(&(pdev->dev), sizeof(struct adl_bmc_dev), GFP_KERNEL);
-
-    if (adl_bmc_dev == NULL)
-	return -ENOMEM;
 
     if(adl_bmc_ec_read_device(ADL_BMC_OFS_BRD_NAME, buffer, 16, EC_REGION_1) < 0)
     {

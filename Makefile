@@ -43,8 +43,10 @@ app_install:
 
 driver_clean:
 	@make -C /lib/modules/`uname -r`/build M=`pwd` clean
-	@FILE=/lib/modules/`uname -r`/extra/adl-bmc*; if test -f $(FILE) ; then rm /lib/modules/`uname -r`/extra/adl-bmc*; fi
-	@FILE=/lib/modules/`uname -r`/extra/driver/adl-bmc*; if test -f $(FILE) ; then rm /lib/modules/`uname -r`/extra/driver/adl-bmc*; fi
+	@if [ -d "/lib/modules/`uname -r`/extra" ]; then rm -rf /lib/modules/`uname -r`/extra/adl-bmc*; fi
+	@if [ -d "/lib/modules/`uname -r`/extra/driver" ]; then rm -rf /lib/modules/`uname -r`/extra/driver/adl-bmc*; fi
+	@if [ -d "/lib/modules/`uname -r`/updates" ]; then rm -rf /lib/modules/`uname -r`/updates/adl-bmc*; fi
+	@if [ -d "/lib/modules/`uname -r`/updates/driver" ]; then rm -rf /lib/modules/`uname -r`/updates/driver/adl-bmc*; fi
 
 app_clean:
 	@rm -f semautil wdogtest app/*.o lib/*.o lib/*.so
