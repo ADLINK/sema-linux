@@ -11,6 +11,7 @@
 * nanoX-EL
 * Q7-EL
 * Express-VR7
+* VPX3-TL
 
 ### Supported Operating System:
 * Ubuntu 18.04, 20.04, 22.04
