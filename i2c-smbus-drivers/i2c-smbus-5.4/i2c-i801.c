@@ -1776,8 +1776,10 @@ static int i801_probe(struct pci_dev *dev, const struct pci_device_id *id)
 		return -ENODEV;
 	}
 
+#if 0
 	if (i801_acpi_probe(priv))
 		return -ENODEV;
+#endif
 
 	err = pcim_iomap_regions(dev, 1 << SMBBAR,
 				 dev_driver_string(&dev->dev));

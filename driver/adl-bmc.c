@@ -4,6 +4,7 @@
 #include <linux/acpi.h>
 #include <linux/i2c.h>
 #include <linux/mfd/core.h>
+#include <linux/version.h>
 #include "adl-bmc.h"
 
 #define	CAPABILITY_BYTE_UNIT	4
@@ -131,7 +132,11 @@ static int adl_bmc_detect ( struct i2c_client *client, struct i2c_board_info *in
 	return 0;
 }
 
-static int adl_bmc_probe ( struct i2c_client *client, const struct i2c_device_id *id) 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,3,0)
+static int adl_bmc_probe ( struct i2c_client *client)
+#else 
+static int adl_bmc_probe ( struct i2c_client *client, const struct i2c_device_id *id)
+#endif 
 {
 
 	struct device *dev = &client->dev;
@@ -169,7 +174,18 @@ static int adl_bmc_probe ( struct i2c_client *client, const struct i2c_device_id
 
 }
 
-static int adl_bmc_remove ( struct i2c_client *client) 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,1,0)
+void adl_bmc_remove ( struct i2c_client *client)
+{
+
+	struct device *dev = &client->dev;
+
+	debug_printk("remove............\n");
+
+	mfd_remove_devices (dev);
+}
+#else
+static int adl_bmc_remove ( struct i2c_client *client)
 {
 
 	struct device *dev = &client->dev;
@@ -180,7 +196,7 @@ static int adl_bmc_remove ( struct i2c_client *client)
 
 	return 0;
 }
-
+#endif
 
 static const struct i2c_device_id adl_bmc_id[] = {
         { "adl-bmc", 0 },

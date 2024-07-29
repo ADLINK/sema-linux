@@ -4,6 +4,7 @@
 #include <linux/backlight.h>
 #include <linux/fb.h>
 #include <linux/slab.h>
+#include <linux/version.h>
 #include "adl-bmc.h"
 
 #define ADL_BMC_MIN_BRIGHT 0
@@ -130,9 +131,15 @@ static int adl_bmc_bklight_probe(struct platform_device *pdev)
 	props.type = BACKLIGHT_RAW;
 	props.max_brightness = ADL_BMC_MAX_BRIGHT;
 
-	bl = devm_backlight_device_register(&pdev->dev, pdev->name,
-			pdev->dev.parent, bklite, &adl_bmc_bklight_ops,
-			&props);
+	#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
+		bl = devm_backlight_device_register(&pdev->dev, pdev->name,
+				pdev->dev.parent, bklite, &adl_bmc_bklight_ops,
+				&props);
+	#else
+		bl = backlight_device_register(pdev->name,
+				pdev->dev.parent, bklite, &adl_bmc_bklight_ops,
+				&props);
+	#endif	
 
 	if (IS_ERR(bl)) {
 		dev_err(&pdev->dev, "failed to register backlight device\n");
@@ -162,7 +169,12 @@ static int adl_bmc_bklight_remove(struct platform_device *pdev)
 {
 	struct backlight_device *bl = platform_get_drvdata(pdev);
 
-        devm_backlight_device_unregister(&pdev->dev, bl);
+	#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
+        	devm_backlight_device_unregister(&pdev->dev, bl);
+	#else
+		backlight_device_unregister(bl);
+	#endif
+
 	return 0;
 }
 

@@ -23,11 +23,23 @@
 #include <eapi.h>
 #include <common.h>
 #include <unistd.h>
+#include <sys/ioctl.h>
 
 #ifdef tempconvert
 #define KELVINS_OfFSET 2731
 #endif
 
+#define GET_VOLT_AND_DESC	_IOWR('a','1',struct data *)
+#define GET_VOLT_MONITOR_CAP	_IOWR('a','2',uint8_t *)
+#define MAX_ID		 16
+
+int dev_handle;
+
+struct data{
+	int id;
+	int volt;
+	char volt_desc[256];
+};
 
 #define PLATFORMS_NUMBER 2
 
@@ -159,6 +171,15 @@ uint32_t EApiBoardGetValue(uint32_t Id, uint32_t *pValue)
 			ret = IsFileExist(sysfile);
 			if (ret){
 				sprintf(sysfile, "/sys/class/thermal/thermal_zone1/temp");
+				ret = IsFileExist(sysfile);
+				if (ret == 0){
+					ret = read_sysfs_file(sysfile, res, sizeof(res));
+					if (ret == 0)
+					{
+						*pValue = atoi(res)/1000;
+						return ret;
+					}
+				}
 			}
 		
 			break;
@@ -297,41 +318,30 @@ uint32_t EApiBoardGetValue(uint32_t Id, uint32_t *pValue)
 }
 static int get_regulator_voltage(int id, uint32_t *mVolts, char *buf, uint32_t size)
 {
-        char sysfilename[128],sysfilevolt[128];
-	char pbuf[32];char value[256];
-	int ret;
+        struct data vm;
 
-
-	memset(pbuf, 0, sizeof(pbuf));
-	sprintf(pbuf, "%u", id);
-
-
-	sprintf(sysfilename, "/sys/bus/platform/devices/adl-bmc-vm/Info/voltage_info");
-
-	sprintf(sysfilevolt, "/sys/bus/platform/devices/adl-bmc-vm/Info/voltage_log");
-
-	ret = write_sysfs_file(sysfilename, pbuf, sizeof(pbuf));
-	if(ret < 0) {
-		return EAPI_STATUS_UNSUPPORTED;
-	}	
-	ret = read_sysfs_file(sysfilename, buf, size);
-	if(ret < 0) {
-		return EAPI_STATUS_UNSUPPORTED;
-	}	
-
-	ret = write_sysfs_file(sysfilevolt, pbuf, sizeof(buf));
-	if(ret < 0) {
-		return EAPI_STATUS_UNSUPPORTED;
+	if(id >= MAX_ID)
+	{
+		return -1;
 	}
 
-	ret = read_sysfs_file(sysfilevolt, value, size);
-	if(ret < 0) {
-		return EAPI_STATUS_UNSUPPORTED;
-	}      
+	dev_handle = open("/dev/adl_vm",O_RDONLY);
 
-	*mVolts = atoi(value); 
+	if(dev_handle < 0)
+	{
+		return -1;
+	}
 
-	return ret;
+	vm.id = id;
+	vm.volt=0;
+	*mVolts = 0;
+	memset(vm.volt_desc,0,256);
+	ioctl(dev_handle , GET_VOLT_AND_DESC , &vm);
+	*mVolts = vm.volt;
+	strcpy(buf,vm.volt_desc);
+	close(dev_handle);
+
+	return EAPI_STATUS_SUCCESS;
 }
 
 uint32_t EApiBoardGetVoltageMonitor(uint32_t id, uint32_t *mVolts, char *buf, uint32_t size)
@@ -342,6 +352,22 @@ uint32_t EApiBoardGetVoltageMonitor(uint32_t id, uint32_t *mVolts, char *buf, ui
 	
 	return ret;
 
+}
+
+uint32_t EApiBoardGetVoltageCap(uint32_t *value)
+{
+	uint32_t vm_cap;
+
+        dev_handle = open("/dev/adl_vm",O_RDONLY);
+
+        if(dev_handle < 0)
+        {
+                return -1;
+        }
+	ioctl(dev_handle , GET_VOLT_MONITOR_CAP, &vm_cap);
+	*value=vm_cap;
+	close(dev_handle);
+	return EAPI_STATUS_SUCCESS;
 }
 
 uint32_t EApiBoardGetErrorLog (uint32_t Pos, uint32_t *ErrorNumber, uint8_t  *Flags, uint8_t  *RestartEvent, uint32_t *PwrCycles, uint32_t *Bootcount, uint32_t *Time, uint8_t *Status, signed char *CPUtemp, signed char *Boardtemp)

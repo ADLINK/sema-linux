@@ -30,7 +30,7 @@ uint8_t	SetWatchdog, TriggerWatchdog, StopWatchdog, WatchDogCap,IsPwrUpWDogStart
 uint8_t	StorageCap, StorageAreaRead, StorageAreaWrite;
 uint8_t	SmartFanTempSet, SmartFanTempGet, SmartFanTempSetSrc, SmartFanTempGetSrc, SmartFanPWMSet;
 uint8_t	SmartFanModeGet, SmartFanModeSet, SmartFanPWMGet;
-uint8_t	GetStringA, GetValue, GetVoltageMonitor;
+uint8_t	GetStringA, GetValue, GetVoltageMonitor, GetVoltageMonitorCap;
 uint8_t	VgaGetBacklightEnable, VgaSetBacklightEnable, VgaGetBacklightBrightness, VgaSetBacklightBrightness;
 uint8_t	GPIOGetDirectionCaps, GPIOGetDirection, GPIOSetDirection, GPIOGetLevel, GPIOSetLevel;
 uint8_t GetErrorLog, GetErrorNumberDescription, GetCurrentPosErrorLog, GetExceptionDescription;
@@ -125,7 +125,8 @@ void ShowHelp(int condition)
 	if (condition == 5 || condition == 0)
 	{
 		printf("- Voltage monitor:\n");
-		printf("  1. semautil /v get_voltage <Channel> \n");
+		printf("  1. semautil /v get_voltage_cap \n");
+		printf("  2. semautil /v get_voltage <Channel> \n");
 		printf("       Channel 0-15\n");
 	}
 	if (condition == 6 || condition == 0)
@@ -348,7 +349,19 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 			printf("get eapi information failed\n");
 			errno_exit("EApiBoardGetValue");
 		}
-		printf("Value: %u\n", Value);
+		
+		if (Id == 5)
+		{
+			printf("Value: %u C\n", Value);	
+		}
+		else if (Id == 26)
+		{
+			printf("Value: %u mA\n", Value);	
+		}
+		else
+		{
+			printf("Value: %u\n", Value);
+		}
 	}
 	if (GetStringA)
 	{
@@ -795,6 +808,28 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 		}
 	}
 
+	if(GetVoltageMonitorCap)
+	{
+		uint32_t value=0;
+
+		if (argc != 3){
+			printf("Wrong arguments\n");
+			exit(-1);
+		}
+
+		ret= EApiBoardGetVoltageCap(&value);
+		if(ret){
+			printf("Get EApi information failed\n");
+       	                errno_exit("EApiBoardGetVoltageCap");
+		}
+
+		if(value ==1)
+			printf("\nVoltage monitor is compatible for this platform\n\n");
+		else
+			printf("\nVoltage monitor is not compatible for this platform\n\n");
+
+	}
+
 	if (GetVoltageMonitor)
 	{
 		if (argc != 4) {
@@ -812,7 +847,15 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 			printf("get eapi information failed\n");
 			errno_exit("EApiBoardGetVoltageMonitor");
 		}
-		printf("Description: %sVoltage: %u\n", Vmbuf, Voltage);
+		
+		if(Voltage == 0)
+		{
+			printf("Invalid Channel\n");
+		}
+		else
+		{
+			printf("Description: %s\nVoltage: %u\n", Vmbuf, Voltage);
+		}
 	}
 	return 0;
 
@@ -935,7 +978,11 @@ signed int ParseArgs(int argc, char* argv[])
 	}
 	else if (strcasecmp(argv[1], "/v") == 0)
 	{
-		if (argc == 4 && (strcasecmp(argv[2], "get_voltage") == 0))
+		if (argc == 3 && (strcasecmp(argv[2], "get_voltage_cap") ==0))
+		{
+			GetVoltageMonitorCap = TRUE;
+		}
+		else if (argc == 4 && (strcasecmp(argv[2], "get_voltage") == 0))
 		{
 			GetVoltageMonitor = TRUE;
 		}

@@ -38,7 +38,7 @@ static int initialize_nvmem()
         
 	memset(NVMEM_DEVICE, 0, sizeof(NVMEM_DEVICE));
         while ((de = readdir(dr)) != NULL) {
-                if(strncmp(de->d_name, "nvmem", strlen("nvmem")) == 0) {
+                if(strncmp(de->d_name, "nvmem_adl", strlen("nvmem_adl")) == 0) {
                         sprintf(NVMEM_DEVICE, "/sys/bus/nvmem/devices/%s/nvmem", de->d_name);
                         closedir(dr);
                         return 0;

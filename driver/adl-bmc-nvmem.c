@@ -135,7 +135,7 @@ static int adl_bmc_nvmem_write(void *context, unsigned int offset, void *val, si
 struct kobj_attribute attr0 = __ATTR_RO(nvmemcap);
 
 static struct nvmem_config adl_bmc_nvmem_config = {
-	.name = "nvmem",
+	.name = "nvmem_adl",
 	.read_only = false,
 	.word_size = 4,
 	.stride = 4,
