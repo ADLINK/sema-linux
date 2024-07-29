@@ -12,10 +12,9 @@
 #include <linux/acpi.h>
 #include <linux/io.h>
 #include <linux/delay.h>
+#include <linux/version.h>
 
 #include "adl-bmc.h"
-
-
 
 struct adl_bmc_hwmon_data {
 	struct device *hwmon_dev;
@@ -744,7 +743,7 @@ static ssize_t show_temp_input(struct device *dev, struct device_attribute *attr
 			if(ret < 0)
 				return ret;
 			
-			temper = encode_celcius(buff[0]);
+			temper = (unsigned short)buff[0];
 			break;
 		case 1:
 			ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_SYSTEM_TEMP, 1, buff);
@@ -1081,6 +1080,30 @@ static void adl_bmc_hwmon_remove_sysfs(struct platform_device *pdev)
 
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,9,0)
+static umode_t adl_is_visible(const void *data, enum hwmon_sensor_types type,
+			       u32 attr, int channel)
+{
+	return 0;
+}
+static const struct hwmon_ops adl_hwmon_ops = {
+	.is_visible = adl_is_visible,
+};
+
+static const struct hwmon_channel_info *adl_info[] = {
+	HWMON_CHANNEL_INFO(chip,
+			   HWMON_C_REGISTER_TZ | HWMON_C_UPDATE_INTERVAL),
+	HWMON_CHANNEL_INFO(temp,
+			   HWMON_T_INPUT | HWMON_T_MAX | HWMON_T_MAX_HYST),
+	NULL
+};
+
+static struct hwmon_chip_info adl_chip_info = {
+	.ops = &adl_hwmon_ops,
+	.info = adl_info,
+};
+#endif
+
 static int adl_bmc_hwmon_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -1243,7 +1266,12 @@ static int adl_bmc_hwmon_probe(struct platform_device *pdev)
 
 
 	/* Register device */
-	hwmon_data->hwmon_dev = hwmon_device_register(dev);
+	#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,9,0)
+		hwmon_data->hwmon_dev = hwmon_device_register_with_info(dev,"adl_bmc_hwmon",NULL,&adl_chip_info,NULL);
+	#else
+		hwmon_data->hwmon_dev = hwmon_device_register(dev);
+	#endif
+
 	if (IS_ERR(hwmon_data->hwmon_dev)) {
 		err = PTR_ERR(hwmon_data->hwmon_dev);
 		dev_err(dev, "Class registration failed (%d)\n", err);
