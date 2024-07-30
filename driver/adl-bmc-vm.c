@@ -13,7 +13,7 @@
 #include <linux/delay.h>
 #include <linux/cdev.h>
 #include <linux/fs.h>
-
+#include <linux/version.h>
 
 #include "adl-bmc.h"
 
@@ -276,7 +276,11 @@ static int adl_bmc_vm_probe(struct platform_device *pdev)
                 return -1;
         }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,4,0)
+	class_adl_vm = class_create("adl_vm");
+#else
 	class_adl_vm = class_create(THIS_MODULE, "adl_vm");
+#endif
 
 	if (IS_ERR(class_adl_vm)) {
                 printk("Error in Class_create\n");
