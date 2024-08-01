@@ -110,15 +110,18 @@ uint32_t EApiBoardGetStringA(uint32_t Id, char *pBuffer, uint32_t *pBufLen)
 			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/manufactured_date");
 			break;
 		case 11:
-			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/mac_address");
+			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/mac_address_1");
 			break;
 		case 12:
-			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/second_hw_rev");
+			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/mac_address_2");
 			break;
 		case 13:
-			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/second_ser_num");
+			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/second_hw_rev");
 			break;
 		case 14:
+			sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/second_ser_num");
+			break;
+		case 15:
                         sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-boardinfo/information/platform_id");
 			break;
 		default:

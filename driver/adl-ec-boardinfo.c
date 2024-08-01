@@ -551,13 +551,27 @@ static ssize_t manufactured_date_show(struct kobject *kobj, struct kobj_attribut
     return sprintf(buf, "%s\n", buff);
 }
 
-static ssize_t mac_address_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
+static ssize_t mac_address_1_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
     int ret;
     char buff[MAX_PATH];
     memset(buff, 0, sizeof(buff));
 
-    ret = GetManufData(SEMA_MANU_DATA_MACID, (u8*)buff, MAX_PATH);
+    ret = GetManufData(SEMA_MANU_DATA_MACID_1, (u8*)buff, MAX_PATH);
+
+    if (ret < 0)
+	return ret;
+
+    return sprintf(buf, "%s\n", buff);
+}
+
+static ssize_t mac_address_2_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
+{
+    int ret;
+    char buff[MAX_PATH];
+    memset(buff, 0, sizeof(buff));
+
+    ret = GetManufData(SEMA_MANU_DATA_MACID_2, (u8*)buff, MAX_PATH);
 
     if (ret < 0)
 	return ret;
@@ -1098,7 +1112,7 @@ struct kobj_attribute attr8 = __ATTR_RO(hw_rev);
 struct kobj_attribute attr9 = __ATTR_RO(bmc_application_version);
 struct kobj_attribute attr10 = __ATTR_RO(last_repair_date);
 struct kobj_attribute attr11 = __ATTR_RO(manufactured_date);
-struct kobj_attribute attr12 = __ATTR_RO(mac_address);
+struct kobj_attribute attr12 = __ATTR_RO(mac_address_1);
 struct kobj_attribute attr13 = __ATTR_RO(second_hw_rev);
 struct kobj_attribute attr14 = __ATTR_RO(second_ser_num);
 struct kobj_attribute attr15 = __ATTR_RO(boot_counter_val);
@@ -1129,6 +1143,7 @@ struct kobj_attribute attr37 = __ATTR_RO(voltage_12v);
 struct kobj_attribute attr38 = __ATTR(bios_source, 0660, sysfs_show_bios_source, sysfs_store_bios_source); //added
 
 struct kobj_attribute attr39 = __ATTR_RO(bios_status); //added
+struct kobj_attribute attr40 = __ATTR_RO(mac_address_2);
 
 static int boardinfo_probe(struct platform_device *pdev)
 {
@@ -1295,6 +1310,10 @@ static int boardinfo_probe(struct platform_device *pdev)
     ret = sysfs_create_file(kobj_ref, &attr39.attr); 
     if (ret < 0)
         goto ret_err;
+        
+    ret = sysfs_create_file(kobj_ref, &attr40.attr); 
+    if (ret < 0)
+        goto ret_err;
     debug_printk("%s:%d probe is done\n", __func__, __LINE__);
 
     return 0;
@@ -1347,6 +1366,7 @@ static int boardinfo_remove(struct platform_device *pdev)
     sysfs_remove_file(kernel_kobj, &attr38.attr); 
 
     sysfs_remove_file(kernel_kobj, &attr39.attr); 
+    sysfs_remove_file(kernel_kobj, &attr40.attr); 
     kobject_put(kobj_ref);
 
     return 0;

@@ -139,9 +139,10 @@ void ShowHelp(int condition)
 		printf("       8  : Board application revision\n");
 		printf("       9  : Board repair date\n");
 		printf("       10 : Board manufacturer date\n");
-		printf("       11 : Board MAC address\n");
-		printf("       12 : Board 2nd HW revision number\n");
-		printf("       13 : Board 2nd serial\n\n");
+		printf("       11 : Board MAC address 1\n");
+		printf("       12 : Board MAC address 2\n");
+		printf("       13 : Board 2nd HW revision number\n");
+		printf("       14 : Board 2nd serial\n\n");
 	}
 	if (condition == 5 || condition == 0)
 	{
