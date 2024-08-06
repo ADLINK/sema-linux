@@ -1,0 +1,31 @@
+name: Auto-reply to Issues
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  comment:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Send an automatic reply
+      uses: actions/github-script@v6
+      with:
+        github-token: ${{ secrets.PERSONAL_ACCESS_TOKEN_FOR_AAE_AUTO_REPLY }}
+        script: |
+          const issueNumber = context.issue.number;
+          const commentBody = `
+            Thank you for opening this issue! 
+            We will investigate it as soon as possible. 
+            [AAE (Ask An Expert)](https://www.adlinktech.com/en/Askanexpert) will be used to investigate the issues.
+            We request that you register and create an AAE ticket system, 
+            including providing all the necessary information about the issue that needs to be resolved.
+          `;
+          
+          await github.rest.issues.createComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: issueNumber,
+            body: commentBody
+          });
