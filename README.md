@@ -14,7 +14,7 @@
 * VPX3-TL
 
 ### Supported Operating System:
-* Ubuntu 18.04, 20.04, 22.04
+* Ubuntu 18.04, 20.04, 22.04, 24.04
 * Debian all versions
 * CentOS (except that Voltage Monitoring and GPIO Support)
 * Red Hat ((except that Voltage Monitoring and GPIO Support)
@@ -26,5 +26,5 @@
    
 ### Other information:
 * branch name: SEMA_4.0_Linux_SandBox/ACPI-EC
-* the internal latest commit ID: a91293392a23160b0f198db4651d005f2f1afea9
+* the internal latest commit ID: d2742b6a6d1665563ae25e6c0fafff2bf2278e3f
 
