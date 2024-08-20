@@ -26,7 +26,7 @@
 #include <eapi.h>
 #include <uuid/uuid.h>
 
-#define Version	"ADLINK-SEMA-EC-LINUX-V4_R3_1_24_08_01"
+#define Version	"ADLINK-SEMA-EC-LINUX-V4_R3_3_24_08_20"
 
 char*			ExeName;
 uint8_t	SetWatchdog, TriggerWatchdog, StopWatchdog, WatchDogCap,IsPwrUpWDogStart, IsPwrUpWDogStop;
@@ -535,7 +535,7 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 			printf("Get EApi information failed\n");
 			errno_exit("EApiPwrUpWDogStop");
 		}
-		printf("Watchdog is disabled  successfully\n");
+		printf("Watchdog is disabled successfully\n");
 	}
 
 

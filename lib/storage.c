@@ -35,7 +35,7 @@
 struct secure {
         uint8_t Region;
         uint8_t permission;
-        char passcode[4];
+        char passcode[8];
 };
 static char NVMEM_DEVICE[285];
 //static char NVMEM_SEC_DEVICE[285];
@@ -485,9 +485,11 @@ uint32_t EApiStorageLock(uint32_t Id,uint32_t Region)
 	}
 	if(ioctl(fd, EAPI_STOR_LOCK, &data ) < 0)
         {
+		close(fd);
 		return EAPI_STATUS_UNSUPPORTED;
 	}
 
+	close(fd);
 	return status;
 }
 
@@ -503,6 +505,7 @@ uint32_t EApiStorageUnLock(uint32_t Id,uint32_t Region,uint32_t Permission, char
 	data.Region=Region;
 	data.permission=Permission;
 
+	memset(data.passcode,0,sizeof(data.passcode));
 	memcpy(data.passcode,passcode,strlen(passcode));
 
         if((fd = open("/dev/ec-nvmem-eapi", O_RDWR)) < 0)
@@ -512,8 +515,10 @@ uint32_t EApiStorageUnLock(uint32_t Id,uint32_t Region,uint32_t Permission, char
 
         if(ioctl(fd, EAPI_STOR_UNLOCK,&data ) < 0)
         {
+				close(fd);
                 return EAPI_STATUS_UNSUPPORTED;
         }
 
+		close(fd);
         return status;
 }

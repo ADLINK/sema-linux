@@ -48,9 +48,9 @@ uint32_t IsFileExist(char *sysf)
 {
 	int fd;
 	fd = open(sysf, O_RDONLY);
-	if (fd < 1)
+	if (fd < 0)
 		return EAPI_STATUS_READ_ERROR;
-
+	close(fd);
 	return EAPI_STATUS_SUCCESS;
 
 }
@@ -327,6 +327,7 @@ static int get_regulator_voltage(int id, uint32_t *mVolts, char *buf, uint32_t s
 
 	if(ret)
 	{
+		close(dev_handle);
 		return EAPI_STATUS_ERROR;
 	}
 	*mVolts = vm.volt;
@@ -370,6 +371,7 @@ uint32_t EApiBoardGetVoltageCap(uint32_t *value)
 	ret=ioctl(dev_handle , GET_VOLT_MONITOR_CAP, &vm_cap);
 	if(ret)
 	{
+		close(dev_handle);
 		return EAPI_STATUS_ERROR;
 	}
 	*value=vm_cap;
