@@ -26,7 +26,7 @@
 #include <eapi.h>
 #include <uuid/uuid.h>
 
-#define Version	"ADLINK-SEMA-EC-LINUX-V4_R3_3_24_08_20"
+#define Version	"ADLINK-SEMA-EC-LINUX-V4_R3_4_24_08_27"
 
 char*			ExeName;
 uint8_t	SetWatchdog, TriggerWatchdog, StopWatchdog, WatchDogCap,IsPwrUpWDogStart, IsPwrUpWDogStop;
@@ -1020,7 +1020,7 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 			printf("Get EApi information failed\n");
 			errno_exit("EApiGPIOGetDirection");
 		}
-		if(dir)
+		if(dir & bitmask)
 			printf("Direction : Input\n");
 		else 
 			printf("Direction : Output\n");
@@ -1082,7 +1082,7 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 			printf("Get EApi information failed\n");
 			errno_exit("EApiGPIOGetLevel");
 		}
-		if(val)
+		if(val & bitmask)
 			printf("Level: High\n");
 		else 
 			printf("Level: Low\n");

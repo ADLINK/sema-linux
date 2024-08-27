@@ -252,13 +252,11 @@ uint32_t EApiGPIOGetDirection(uint32_t Id, uint32_t Bitmask, uint32_t *pDirectio
 	int gpio;
  	uint32_t bit;
 	char sysfile[256];
-	char value[256];
+	char value[5];
 	char label[256];
 	char boardname[11];
-
-	//status = adjustBitMask(Bitmask, &Bitmask);
-	//if (status)
-	//	return status;
+        *pDirection=0;
+	
 	if (Bitmask > 0xff)
 	{
  		sprintf(label, "/sys/bus/platform/devices/adl-ec-boardinfo/information/board_name");
@@ -281,10 +279,7 @@ uint32_t EApiGPIOGetDirection(uint32_t Id, uint32_t Bitmask, uint32_t *pDirectio
 				return EAPI_STATUS_READ_ERROR;
 			}
 			if(strncmp(value, "in", strlen("in")) == 0) {
-				*pDirection = 1;
-			}
-			if(strncmp(value, "out", strlen("out")) == 0) {
-				*pDirection = 0;
+				*pDirection |= (1 << bit);
 			}
 		}
 	}
@@ -335,9 +330,10 @@ uint32_t EApiGPIOGetLevel(uint32_t Id, uint32_t Bitmask, uint32_t *pLevel)
 	int gpio;
 	uint32_t bit;
 	char sysfile[256];
-	char value[10];
+	char value;
 	char label[256];
         char boardname[11];
+        *pLevel=0;
 
 	if (Bitmask > 0xff)
 	{
@@ -353,11 +349,12 @@ uint32_t EApiGPIOGetLevel(uint32_t Id, uint32_t Bitmask, uint32_t *pLevel)
 	for(gpio = gpiobase, bit = 0; gpio < (gpiobase + ngpio); gpio++, bit++) {
 		if(Bitmask & (1 << bit)) {
 			sprintf(sysfile, "/sys/class/gpio/gpio%d/value", gpio);
-			if(read_sysfs_file(sysfile, value, 1) < 0) {
+			if(read_sysfs_file(sysfile, &value, 1) < 0) {
 				return EAPI_STATUS_UNSUPPORTED;
 			}
 
-			*pLevel |= value[0] - '0';
+			if ((value - '0') > 0)
+				*pLevel |= (1 << bit);
 		}
 
 	}
