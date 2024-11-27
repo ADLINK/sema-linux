@@ -47,21 +47,12 @@ SEMA® is designed to monitor and access the following features on ADLINK boards
 8. Watchdog
 
 
-
-
 ## 3. Supported Operating System
 * Ubuntu 18.04, 20.04, 22.04
 * Yocto Linux: see sema4.0 branch of [meta-adlink-sema](https://github.com/ADLINK/meta-adlink-sema) for more details
 * VxWorks (by request)
 * QNX (by request)
 
-
-
-## 4. Supported Hardware
-
-| SEMA® - EC controller                                        | SEMA® - TivaBMC controller                                   |
-| :----------------------------------------------------------- | :----------------------------------------------------------- |
-| - cExpress-TL , cExpress-EL, cExpress-AR<br>- Express-ID7, Express-ADP, Express-TL <br>- COM-HPC-cADP, COM-HPC-sIDH <br>- LEC-EL <br>- NanoX-EL <br>- VPX3-TL | - Express-CF/CFE, Express-KL/KLE, Express-SL/SLE, Express-DN7, Express-BD7 <br>- cExpress-WL, cExpress-KL, cExpress-SL, cExpress-AL<br>- nanoX-AL<br>- LEC-AL<br>- Q7-AL<br>- LEC-PX30 |
 
 ## 5. Software Documentation
 
