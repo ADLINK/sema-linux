@@ -54,6 +54,6 @@ SEMA® is designed to monitor and access the following features on ADLINK boards
 * QNX (by request)
 
 
-## 5. Software Documentation
+## 4. Software Documentation
 
 - [SEMA Installation Guide for Linux](https://github.com/ADLINK/sema-linux/wiki)
