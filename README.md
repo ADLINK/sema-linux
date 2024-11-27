@@ -4,6 +4,7 @@
 
 
 ### Supported Hardware List:
+* LEC-ALN/ASL
 * cExpress-TL , cExpress-EL, cExpress-AR
 * Express-ID7, Express-ADP, Express-TL, Express-RLP
 * COM-HPC-cADP, COM-HPC-sIDH
