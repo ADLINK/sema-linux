@@ -11,6 +11,9 @@
 
 #include "adl-ec.h"
 
+#if __has_include("/etc/redhat-release")
+        #define CONFIG_REDHAT
+#endif
 
 #define WDT_TIMEOUT   		10
 #define WDT_MIN_TIMEOUT   	1
@@ -265,7 +268,9 @@ static int adl_bmc_wdt_probe(struct platform_device *pdev)
                 return -1;
         }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,4,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0) && defined(CONFIG_REDHAT)
+	 class_adl_wdt = class_create("watchdog_adl");
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(6,4,0)
 	 class_adl_wdt = class_create("watchdog_adl");
 #else
 	 class_adl_wdt = class_create(THIS_MODULE, "watchdog_adl");

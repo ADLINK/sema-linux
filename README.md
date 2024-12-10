@@ -7,7 +7,7 @@
 * LEC-ALN/ASL
 * cExpress-TL , cExpress-EL, cExpress-AR
 * Express-ID7, Express-ADP, Express-TL, Express-RLP
-* COM-HPC-cADP, COM-HPC-sIDH
+* COM-HPC-cRLS, COM-HPC-sIDH
 * LEC-EL
 * nanoX-EL
 * Q7-EL
@@ -17,8 +17,9 @@
 ### Supported Operating System:
 * Ubuntu 18.04, 20.04, 22.04, 24.04
 * Debian all versions
-* CentOS (except that Voltage Monitoring and GPIO Support)
-* Red Hat ((except that Voltage Monitoring and GPIO Support)
+* CentOS 
+* SuSE Linux
+* Red Hat 9.0/9.4
 
 
 ### Developer's Guide (how to use EAPI and Sysfs): 
@@ -27,5 +28,5 @@
    
 ### Other information:
 * branch name: SEMA_4.0_Linux_SandBox/ACPI-EC
-* the internal latest commit ID: 7fdf2e158dc6013d85ded6e2d41d18e79ce5a7ed
+* the internal latest commit ID: 554fd8e94c9ee76228ed7b1ede9176076dd5d986
 

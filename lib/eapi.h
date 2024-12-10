@@ -40,7 +40,22 @@
 
 #define EAPI_VERSION EAPI_VER_CREATE(EAPI_VER, EAPI_REVISION, 0)
 
-#define EAPI_ID_STORAGE_STD              EAPI_UINT32_C(0)
+ /*
+ *
+ *      S T O R A G E
+ *
+ */
+ /* IDs */
+#define EAPI_ID_USER_STORAGE EAPI_UINT32_C(1)
+#define EAPI_ID_SCRE_STORAGE EAPI_UINT32_C(2)
+#define EAPI_ID_ODM_STORAGE	 EAPI_UINT32_C(3)
+#define EAPI_ID_FP_STORAGE	 EAPI_UINT32_C(5)
+
+#define EAPI_ID_STORAGE_STD EAPI_ID_USER_STORAGE
+#define EAPI_ID_STORAGE_SCR EAPI_ID_SCRE_STORAGE
+#define EAPI_ID_STORAGE_ODM EAPI_ID_ODM_STORAGE
+#define EAPI_ID_STORAGE_FP EAPI_ID_FP_STORAGE
+
 
 #define TRUE 1
 #define FALSE 0
@@ -229,10 +244,10 @@ uint32_t EApiStorageCap(uint32_t Id, uint32_t *pStorageSize, uint32_t *pBlockLen
  * @brief Function To Read data to the selected user data area.
  * @param Offset storage area start address offset in bytes. This value must be a multiple of block length.
  * @param Size Number of bytes to read.
- * @param pBuf Pointer to buffer that receives the reda data.
+ * @param pBuf Pointer to buffer that receives the read data.
  * @return 0 on success -1 on failure
  */
-uint32_t EApiStorageAreaRead(uint32_t Id,uint32_t Region, uint32_t Offset, void *pBuffer, uint32_t BufLen, uint32_t  Bytecnt);
+uint32_t EApiStorageAreaRead(uint32_t Id, uint32_t Offset, void *pBuffer, uint32_t BufLen, uint32_t  ByteCnt);
                 
 /**
  * @brief Function To Read data to the selected user data area.
@@ -241,32 +256,25 @@ uint32_t EApiStorageAreaRead(uint32_t Id,uint32_t Region, uint32_t Offset, void 
  * @param Length Number of bytes to write.
  * @return 0 on success -1 on failure
  */
-uint32_t EApiStorageAreaWrite(uint32_t Id,uint32_t Region, uint32_t Offset, char *pBuf, uint32_t Length);
+uint32_t EApiStorageAreaWrite(uint32_t Id, uint32_t Offset, void *pBuffer, uint32_t ByteCnt);
 
 /**
  * @brief Function to Clear the User Region.
  * @return 0 on success
  */
  
-uint32_t EApiStorageHexWrite(uint32_t Id,uint32_t Region, uint32_t Offset, char* Buf, uint32_t Len);
+uint32_t EApiStorageHexWrite(uint32_t Id, uint32_t Offset, void* pBuffer, uint32_t ByteCnt);
 
-uint32_t EApiStorageHexRead(uint32_t Id,uint32_t Region, uint32_t Offset, void *pBuffer, uint32_t BufLen, uint32_t  Bytecnt);
-
-
-
-uint32_t EApiStorageAreaClear(uint32_t Id,uint32_t Region);
+uint32_t EApiStorageHexRead(uint32_t Id, uint32_t Offset, void* pBuffer, uint32_t BufLen, uint32_t  ByteCnt);
 
 
+uint32_t EApiStorageAreaClear(uint32_t Id);
 
+uint32_t EApiStorageLock(uint32_t Id);
 
-uint32_t EApiStorageLock(uint32_t Id,uint32_t Region);
+uint32_t EApiStorageUnLock(uint32_t Id,uint32_t Permission, char *passcode);
 
-
-
-
-uint32_t EApiStorageUnLock(uint32_t Id,uint32_t Region,uint32_t Permission, char *passcode);
-
-uint32_t EApiGUIDWrite(uint32_t Id, uint32_t Region, uint32_t Offset, char* Buf, uint32_t Len);
+uint32_t EApiGUIDWrite(uint32_t Id, uint32_t Offset, void* pBuffer, uint32_t ByteCnt);
 
 
 /*

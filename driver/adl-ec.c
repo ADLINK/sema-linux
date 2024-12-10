@@ -16,6 +16,10 @@
 
 #include "adl-ec.h"
 
+#if __has_include("/etc/redhat-release")
+        #define CONFIG_REDHAT
+#endif
+
 struct adl_bmc_dev *adl_bmc_dev;
 
 static const struct mfd_cell adl_bmc_devs[] = {
@@ -455,19 +459,17 @@ static int adl_ec_acpi_probe(struct platform_device *pdev)
 	return -ENODEV;
     }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,4,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0) && defined(CONFIG_REDHAT)
     if((cl = class_create("sema")) == NULL)
-    {
-	unregister_chrdev_region(sema, 1);
-	return -ENODEV;
-    }
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(6,4,0)
+    if((cl = class_create("sema")) == NULL)
 #else
     if((cl = class_create(THIS_MODULE, "sema")) == NULL)
+#endif
     {
 	unregister_chrdev_region(sema, 1);
 	return -ENODEV;
     }
-#endif
 
     if(device_create(cl, NULL, sema, NULL, "sema") == NULL)
     {

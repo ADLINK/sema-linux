@@ -8,6 +8,10 @@
 #include <linux/version.h>
 #include "adl-ec.h"
 
+#if __has_include("/etc/redhat-release")
+        #define CONFIG_REDHAT
+#endif
+
 #define ADL_BMC_OFS_GPIO_IN_PORT                 0x88
 #define ADL_BMC_OFS_GPIO_OUT_PORT                0x86
 #define ADL_BMC_OFS_GPIO_DIR			 0x84
@@ -23,6 +27,10 @@
 #define SET_GPIO_INT	_IOWR('a','2',uint32_t *)
 #define GET_GPIO_INT	_IOWR('a','3',uint32_t *)
 #define CLR_GPIO_INT	_IOWR('a','4',uint32_t *)
+#define GET_LEVEL 	_IOR('a', 'b', int32_t *)
+#define SET_LEVEL  	_IOWR('a', 'c', struct gpiostruct *)
+#define OP_DIRECTION  	_IOWR('a', 'd', struct gpiostruct *)
+#define IN_DIRECTION  	_IOWR('a', 'e', int32_t *)
 
 dev_t devdrv;
 struct class *class_adl_gpio;
@@ -33,7 +41,14 @@ struct adl_bmc_gpio {
 	struct gpio_chip gp;
 };
 
+struct gpiostruct{
+        unsigned int gpio;
+        int val;
+};
+
 int flag;
+struct gpiostruct data;
+int gpio_ret,gpionum;
 
 static int adl_gpio_get(struct gpio_chip *chip, unsigned int offset)
 {
@@ -297,11 +312,12 @@ int release(struct inode *inode, struct file *file)
 static long int ioctl (struct file *file, unsigned cmd, unsigned long arg)
 {
 	int RetVal;
-	uint32_t gpio_dir,trigger,value;
+	uint32_t gpio_dir, trigger,value;
 	switch(cmd)
         {
                 case GET_GPIO_DIR:
                 {
+
                         if((RetVal = copy_from_user(&gpio_dir,(uint32_t *)arg,sizeof(gpio_dir)))!=0)
                         {
                                 return -EFAULT;
@@ -315,6 +331,46 @@ static long int ioctl (struct file *file, unsigned cmd, unsigned long arg)
                         }
                 }
                 break;
+		case GET_LEVEL:
+		{
+			if((RetVal = copy_from_user(&gpionum, (int32_t *) arg, sizeof(gpionum)))!=0)
+			{
+				return -EFAULT;
+			}
+               		gpio_ret =adl_gpio_get(NULL,gpionum);
+			if((RetVal=copy_to_user((int32_t *) arg, &gpio_ret, sizeof(gpio_ret)))!=0)
+			{
+				return -EFAULT;
+			}
+		}
+		break;
+                case SET_LEVEL:
+		{
+			if((RetVal = copy_from_user(&data, (struct gpiostruct *) arg, sizeof(data)))!=0)
+			{
+				return -EFAULT;
+			}
+			adl_gpio_set(NULL,data.gpio ,data.val);
+		}
+		break;
+		case OP_DIRECTION :
+		{
+			if((RetVal = copy_from_user(&data, (struct gpiostruct *) arg, sizeof(data)))!=0)
+			{
+				return -EFAULT;
+			}
+			adl_gpio_direction_output(NULL,data.gpio, data.val);
+		}
+		break;
+		case IN_DIRECTION :
+		{
+			if((RetVal = copy_from_user(&gpionum, (int32_t *) arg, sizeof(gpionum)))!=0)
+			{
+				return -EFAULT;
+			}
+			adl_gpio_direction_input(NULL,gpionum);
+		}
+		break;
 		case SET_GPIO_INT:
                 {
                         if((RetVal = copy_from_user(&trigger,(uint32_t *)arg,sizeof(trigger)))!=0)
@@ -376,7 +432,9 @@ static int adl_ec_gpio_probe(struct platform_device *pdev)
 		return -1;
 	}
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,4,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0) && defined(CONFIG_REDHAT)
+        class_adl_gpio = class_create("gpio_adl");
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(6,4,0)
 	class_adl_gpio = class_create("gpio_adl");
 #else
 	class_adl_gpio = class_create(THIS_MODULE, "gpio_adl");

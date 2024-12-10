@@ -27,6 +27,10 @@
 
 #include "adl-ec.h"
 
+#if __has_include("/etc/redhat-release")
+        #define CONFIG_REDHAT
+#endif
+
 #define SEMA_C_I2C1             0x00010000                      ///< Bit 16: Ext. I2C bus #1 available
 #define SEMA_C_I2C2             0x00020000                      ///< Bit 17: Ext. I2C bus #2 available
 #define SEMA_C_I2C3             0x20000000                      ///< Group 0 bit 29: Ext. I2C bus #3 available
@@ -1239,21 +1243,19 @@ static int adl_bmc_i2c_probe(struct platform_device *pdev)
 	return -1;
     }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,4,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0) && defined(CONFIG_REDHAT)
     adlink->class = class_create("adl-ec-i2c-eapi");
-    if(adlink->class == NULL)
-    {
-	unregister_chrdev_region(adlink->ldev, 1);
-	return -1;
-    }
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(6,4,0)
+    adlink->class = class_create("adl-ec-i2c-eapi");
 #else
     adlink->class = class_create(THIS_MODULE, "adl-ec-i2c-eapi");
+#endif
+
     if(adlink->class == NULL)
     {
 	unregister_chrdev_region(adlink->ldev, 1);
 	return -1;
     }
-#endif
 
     if(device_create(adlink->class, NULL, adlink->ldev, NULL, "ec-i2c-eapi") == NULL)
     {

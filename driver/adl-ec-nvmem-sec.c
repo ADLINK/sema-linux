@@ -14,6 +14,11 @@
 #include <linux/ioctl.h>
 #include <linux/version.h>
 #include "adl-ec.h"
+
+#if __has_include("/etc/redhat-release")
+        #define CONFIG_REDHAT
+#endif
+
 #define EAPI_STOR_LOCK       _IOWR('a', 1, unsigned long)
 #define EAPI_STOR_UNLOCK       _IOWR('a', 2, unsigned long)
 #define EAPI_STOR_REGION      _IOWR('a', 3, unsigned long)
@@ -580,7 +585,9 @@ static int adl_bmc_nvmem_probe(struct platform_device *pdev)
         return -1;
     }
 
-# if LINUX_VERSION_CODE >= KERNEL_VERSION(6,4,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0) && defined(CONFIG_REDHAT)
+    adlink->class = class_create("adl-ec-nvmem-eapi");
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(6,4,0)
     adlink->class = class_create("adl-ec-nvmem-eapi");
 #else
     adlink->class = class_create(THIS_MODULE, "adl-ec-nvmem-eapi");

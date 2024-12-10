@@ -29,8 +29,13 @@
 #define SMC_FLASH_ALIGNMENT 4
 
 #define EAPI_STOR_LOCK       _IOWR('a', 1, unsigned long)
-#define EAPI_STOR_UNLOCK       _IOWR('a', 2, unsigned long)
-#define EAPI_STOR_REGION      _IOWR('a', 3, unsigned long)
+#define EAPI_STOR_UNLOCK     _IOWR('a', 2, unsigned long)
+#define EAPI_STOR_REGION     _IOWR('a', 3, unsigned long)
+
+#define BLOCK_SIZE 4
+#define EEPROM_USER_SIZE 1024
+#define EEPROM_SCRE_SIZE 2048
+#define EEPROM_ODM_SIZE  1024
 
 struct secure {
         uint8_t Region;
@@ -38,163 +43,181 @@ struct secure {
         char passcode[8];
 };
 static char NVMEM_DEVICE[285];
-//static char NVMEM_SEC_DEVICE[285];
 
 static int initialize_nvmem()
 {
 	struct dirent *de;
-        DIR *dr = opendir("/sys/bus/platform/devices/adl-ec-nvmem");
+    DIR *dr = opendir("/sys/bus/platform/devices/adl-ec-nvmem");
 
-        if (dr == NULL)  // opendir returns NULL if couldn't open directory 
-                return -1;
+    if (dr == NULL)  // opendir returns NULL if couldn't open directory 
+            return -1;
 	
         
 	memset(NVMEM_DEVICE, 0, sizeof(NVMEM_DEVICE));
-        while ((de = readdir(dr)) != NULL) {
-                if(strncmp(de->d_name, "nvmem", strlen("nvmem")) == 0) {
-                        sprintf(NVMEM_DEVICE, "/sys/bus/nvmem/devices/%s/nvmem", de->d_name);
-                        closedir(dr);
-                        return 0;
-                }
+    while ((de = readdir(dr)) != NULL) {
+        if(strncmp(de->d_name, "nvmem", strlen("nvmem")) == 0) {
+                sprintf(NVMEM_DEVICE, "/sys/bus/nvmem/devices/%s/nvmem", de->d_name);
+                closedir(dr);
+                return 0;
         }
-        closedir(dr);
+    }
+    closedir(dr);
 
-        return -1;
+    return -1;
 }
 
-#define NVMEM_INIT() if(initialize_nvmem() < 0) return EAPI_STATUS_UNSUPPORTED;
+#define NVMEM_INIT() if(initialize_nvmem() < 0) return EAPI_STATUS_NOT_INITIALIZED;
 
 static int initialize_nvmem_sec()
 {
-        struct dirent *de;
-        DIR *dr = opendir("/sys/bus/platform/devices/adl-ec-nvmem-sec");
+    struct dirent *de;
+    DIR *dr = opendir("/sys/bus/platform/devices/adl-ec-nvmem-sec");
 
-        if (dr == NULL)  // opendir returns NULL if couldn't open directory 
-                return -1;
-        memset(NVMEM_DEVICE, 0, sizeof(NVMEM_DEVICE));
-        while ((de = readdir(dr)) != NULL) {
-                if(strncmp(de->d_name, "nvmem-sec", strlen("nvmem-sec")) == 0) {
-                       
-		       	sprintf(NVMEM_DEVICE, "/sys/bus/nvmem/devices/%s/nvmem", de->d_name);
-                       
-		       	closedir(dr);
-                        return 0;
-                }
-        }
-        closedir(dr);
-
+    if (dr == NULL)  // opendir returns NULL if couldn't open directory 
         return -1;
+    memset(NVMEM_DEVICE, 0, sizeof(NVMEM_DEVICE));
+    while ((de = readdir(dr)) != NULL) {
+        if(strncmp(de->d_name, "nvmem-sec", strlen("nvmem-sec")) == 0) {
+                       
+		sprintf(NVMEM_DEVICE, "/sys/bus/nvmem/devices/%s/nvmem", de->d_name);
+                       
+		closedir(dr);
+                return 0;
+        }
+    }
+    closedir(dr);
+
+    return -1;
 }
 
-#define NVMEM_SEC_INIT() if(initialize_nvmem_sec() < 0) return EAPI_STATUS_UNSUPPORTED;
+#define NVMEM_SEC_INIT() if(initialize_nvmem_sec() < 0) return EAPI_STATUS_NOT_INITIALIZED;
 
 uint32_t EApiStorageCap(uint32_t Id, uint32_t *pStorageSize, uint32_t *pBlockLength)
 {
 	uint32_t status = EAPI_STATUS_SUCCESS;
 	char sysfile[256];
-	char buf[128];
+	char buf[128] = { 0 };
 
-        if(pStorageSize == NULL && pBlockLength == NULL){
-                return EAPI_STATUS_INVALID_PARAMETER;
-        }
-
-	if(Id > 1 && Id < 0)
-                return EAPI_STATUS_UNSUPPORTED;
-
-	sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-nvmem/capabilities/nvmemcap");
-
-        status = read_sysfs_file(sysfile, buf, sizeof(buf));
-	if (status)
-		return EAPI_STATUS_READ_ERROR;
- 
-	char* token = strtok(buf, " ");
-        if (strstr(token, "StorageSize")){
-	       	token = strtok(NULL, " ");
+	if (pStorageSize == NULL && pBlockLength == NULL) 
+	{
+		return EAPI_STATUS_INVALID_PARAMETER;
 	}
 
-	*pStorageSize = atoi(token);
+	if (Id == EAPI_ID_STORAGE_STD)   
+	{
+		sprintf(sysfile, "/sys/bus/platform/devices/adl-ec-nvmem/capabilities/nvmemcap");
+		status = read_sysfs_file(sysfile, buf, sizeof(buf));
+		if (status)
+			return EAPI_STATUS_READ_ERROR;
 
-	token = strtok(NULL, " ");
-        if (strstr(token, "\nBlockLength")){
-	       	token = strtok(NULL, " ");
+		char* token = strtok(buf, " ");
+		if (strstr(token, "StorageSize")) {
+			token = strtok(NULL, " ");
+		}
+
+		*pStorageSize = atoi(token);
+
+		token = strtok(NULL, " ");
+		if (strstr(token, "\nBlockLength")) {
+			token = strtok(NULL, " ");
+		}
+		*pBlockLength = atoi(token);
 	}
-
-	*pBlockLength = atoi(token);
-
+	else if (Id == EAPI_ID_STORAGE_SCR)
+	{
+		*pStorageSize = EEPROM_SCRE_SIZE;
+		*pBlockLength = BLOCK_SIZE;
+	}
+	else if (Id == EAPI_ID_STORAGE_ODM)
+	{
+		*pStorageSize = EEPROM_ODM_SIZE;
+		*pBlockLength = BLOCK_SIZE;
+	}
+	else
+	{
+		return EAPI_STATUS_UNSUPPORTED;
+	}
 	return status;
 }
 
-uint32_t EApiStorageAreaRead(uint32_t Id,uint32_t Region, uint32_t Offset, void *pBuffer, uint32_t BufLen, uint32_t  Bytecnt)
+uint32_t EApiStorageAreaRead(uint32_t Id, uint32_t Offset, void* pBuffer, uint32_t BufLen, uint32_t  ByteCnt)
 {
 	uint32_t status = EAPI_STATUS_SUCCESS;
 	int ret = 0;
 	int fd;
-	uint32_t BytecntTemp=Bytecnt;
-        uint8_t pBufferTemp[(Bytecnt%4)?Bytecnt+4-(Bytecnt%4):Bytecnt];
-	struct secure data;       
-	        
-	if(Region==1)
+	uint32_t BytecntTemp = ByteCnt;
+	uint32_t temp = (ByteCnt % 4) ? ByteCnt + 4 - (ByteCnt % 4) : ByteCnt;
+	uint8_t pBufferTemp[temp];
+	struct secure data;
+	if (Id == EAPI_ID_STORAGE_STD)
 	{
 		NVMEM_INIT();
+		if (Offset + ByteCnt > EEPROM_USER_SIZE)
+		{
+			return EAPI_STATUS_INVALID_BLOCK_LENGTH;
+		}
 	}
-	else if(Region==2)
+	else if (Id == EAPI_ID_STORAGE_SCR )
 	{
 		NVMEM_SEC_INIT();
+		if (Offset + ByteCnt > EEPROM_SCRE_SIZE)
+		{
+			return EAPI_STATUS_INVALID_BLOCK_LENGTH;
+		}
 	}
-	else if(Region==3)
+	else if ( Id == EAPI_ID_STORAGE_ODM)
 	{
 		NVMEM_SEC_INIT();
+		if (Offset + ByteCnt > EEPROM_ODM_SIZE)
+		{
+			return EAPI_STATUS_INVALID_BLOCK_LENGTH;
+		}
 	}
 	else
 	{
-		return EAPI_STATUS_INVALID_PARAMETER;
-	}
-
-	if(Id > 1 && Id < 0)
-	{
 		return EAPI_STATUS_UNSUPPORTED;
 	}
-	if (pBuffer == NULL || Bytecnt == 0 || BufLen == 0)
+
+	if (pBuffer == NULL || ByteCnt == 0 || BufLen == 0)
 	{
 		return EAPI_STATUS_INVALID_PARAMETER;
 	}
-	if (Bytecnt > BufLen)
+	if (ByteCnt > BufLen)
 	{
 		return EAPI_STATUS_MORE_DATA;
 	}
+	
+	data.Region = Id;
 
-	data.Region=Region;
-	
-        if((fd = open("/dev/ec-nvmem-eapi", O_RDWR)) < 0)
+	if ((fd = open("/dev/ec-nvmem-eapi", O_RDWR)) < 0)
 	{
-	
 		return -1;
 	}
-	if(ioctl(fd, EAPI_STOR_REGION, &data ) < 0)
-        {
-        	close(fd);
-		return EAPI_STATUS_UNSUPPORTED;
+	if (ioctl(fd, EAPI_STOR_REGION, &data) < 0)
+	{
+		close(fd);
+		return EAPI_STATUS_READ_ERROR;
 	}
 	else
-	close(fd);
-		
+		close(fd);
+
 	fd = open(NVMEM_DEVICE, O_RDONLY);
-	
+
 	if (fd < 0)
 	{
 		return EAPI_STATUS_READ_ERROR;
 	}
 
-	
-	lseek(fd,Offset,SEEK_SET);
-	
-	if(Bytecnt % 4 != 0)
+	memset(pBufferTemp, 0, sizeof(pBufferTemp));
+	lseek(fd, Offset, SEEK_SET);
+
+	if (ByteCnt % 4 != 0)
 	{
-		Bytecnt += 4 - (Bytecnt % 4);
+		ByteCnt += 4 - (ByteCnt % 4);
 	}
 	pBufferTemp[sizeof(pBufferTemp)]='\0';
 	
-	ret = read(fd, pBufferTemp, Bytecnt);
+	ret = read(fd, pBufferTemp, ByteCnt);
 	
 	memcpy(pBuffer, pBufferTemp, BytecntTemp);
 	
@@ -208,65 +231,73 @@ uint32_t EApiStorageAreaRead(uint32_t Id,uint32_t Region, uint32_t Offset, void 
 	return status;
 }
 
-uint32_t EApiStorageAreaWrite(uint32_t Id,uint32_t Region, uint32_t Offset, char* Buf, uint32_t Len)
+uint32_t EApiStorageAreaWrite(uint32_t Id, uint32_t Offset, void* pBuffer, uint32_t ByteCnt)
 {
 	uint32_t status = EAPI_STATUS_SUCCESS;
-	int ret,fd;
-	struct secure data;       
-	
-	if(Region==1)
+	int ret, fd;
+	struct secure data = { 0 };
+	unsigned char* buffer = NULL;
+
+	if (Id == EAPI_ID_STORAGE_STD)
 	{
 		NVMEM_INIT();
+		if (Offset + ByteCnt > EEPROM_USER_SIZE)
+		{
+			return EAPI_STATUS_INVALID_BLOCK_LENGTH;
+		}
 	}
-	else if(Region==2)
+	else if (Id == EAPI_ID_STORAGE_SCR)
 	{
 		NVMEM_SEC_INIT();
+		if (Offset + ByteCnt > EEPROM_SCRE_SIZE)
+		{
+			return EAPI_STATUS_INVALID_BLOCK_LENGTH;
+		}
 	}
-	else if(Region==3)
+	else if (Id == EAPI_ID_STORAGE_ODM)
 	{
 		NVMEM_SEC_INIT();
+		if (Offset + ByteCnt > EEPROM_ODM_SIZE)
+		{
+			return EAPI_STATUS_INVALID_BLOCK_LENGTH;
+		}
 	}
 	else
+	{
+		return EAPI_STATUS_UNSUPPORTED;
+	}
+
+	if(ByteCnt == 0 || pBuffer == NULL)
 	{
 		return EAPI_STATUS_INVALID_PARAMETER;
 	}
 
-	if(Id > 1 && Id < 0)
+	if ((ByteCnt % 4) != 0)
 	{
-		return EAPI_STATUS_UNSUPPORTED;
-	}
-	if(Offset + Len > 2048)
-	{
-		return EAPI_STATUS_MORE_DATA;
-	}
-
-	unsigned char *buffer;
-	if((Len % 4) != 0)
-	{
-		int rem = 4 - (Len % 4);
-		Len = Len + rem;
-		buffer = calloc(Len, sizeof(char));
+		int rem = 4 - (ByteCnt % 4);
+		ByteCnt = ByteCnt + rem;
+		buffer = calloc(ByteCnt, sizeof(char));
 		if(buffer == NULL)
 		{
 			return EAPI_STATUS_READ_ERROR;
 		}
-		memcpy(buffer, Buf, Len);
-		EApiStorageAreaRead(Id,Region, Offset + (Len - rem), buffer + (Len - rem), rem, rem);
+		memcpy(buffer, pBuffer, ByteCnt);
+		EApiStorageAreaRead(Id, Offset + (ByteCnt - rem), buffer + (ByteCnt - rem), rem, rem);
 	}
 	else
 	{
-		buffer = (unsigned char*)Buf;
+		buffer = (unsigned char*)pBuffer;
 	}
 
-	data.Region=Region;
-	
-        if((fd = open("/dev/ec-nvmem-eapi", O_RDWR)) < 0)
+	data.Region = Id;
+
+	if ((fd = open("/dev/ec-nvmem-eapi", O_RDWR)) < 0)
 	{
 		return -1;
 	}
 	if(ioctl(fd, EAPI_STOR_REGION, &data ) < 0)
-        {
-        	close(fd);
+    {
+        close(fd);
 		return EAPI_STATUS_UNSUPPORTED;
 	}
 	else
@@ -277,11 +308,11 @@ uint32_t EApiStorageAreaWrite(uint32_t Id,uint32_t Region, uint32_t Offset, char
         
 	if (fd < 0)
 	{
-                return EAPI_STATUS_WRITE_ERROR;
+        return EAPI_STATUS_WRITE_ERROR;
 	}
 
 	lseek(fd,Offset,SEEK_SET);
-	ret = write(fd,buffer,Len);
+	ret = write(fd,buffer,ByteCnt);
 	if (ret > 0)
 	{
 		close(fd);
@@ -295,196 +326,186 @@ uint32_t EApiStorageAreaWrite(uint32_t Id,uint32_t Region, uint32_t Offset, char
 	return status;
 }
 
-uint32_t EApiStorageHexRead(uint32_t Id,uint32_t Region, uint32_t Offset, void *pBuffer, uint32_t BufLen, uint32_t  Bytecnt)
+uint32_t EApiStorageHexRead(uint32_t Id, uint32_t Offset, void* pBuffer, uint32_t BufLen, uint32_t  ByteCnt)
 {
-        int ret = 0;
-	ret = EApiStorageAreaRead(Id,Region,Offset,pBuffer,BufLen,Bytecnt);
-	
-	if(ret)
+	int ret = 0;
+	ret = EApiStorageAreaRead(Id,Offset, pBuffer, BufLen, ByteCnt);
+
+	if (ret)
 		return ret;
 	else
 		return EAPI_STATUS_SUCCESS;
 }
 
-uint32_t EApiStorageHexWrite(uint32_t Id,uint32_t Region, uint32_t Offset, char* Buf, uint32_t Len)
+uint32_t EApiStorageHexWrite(uint32_t Id, uint32_t Offset, void* pBuffer, uint32_t ByteCnt)
 {
-        uint32_t status = EAPI_STATUS_SUCCESS;
-        int ret,i,fd;
-	struct secure data;
-	char *hex_buf;
-        char result[2048];
+	uint32_t status = EAPI_STATUS_SUCCESS;
+	int ret = 0, i = 0, fd = 0;
+	struct secure data = { 0 };
+	char* hex_buf = NULL;
+	unsigned char* buf=pBuffer;
+	char result[2048] = { 0 };  // Initialize to ensure no uninitialized use
 
-	for(i=0;i<Len*2;i++)
+	for(i=0;i<ByteCnt*2;i++)
 	{
-		if(isxdigit(Buf[i])==0)
+		if(isxdigit(buf[i])==0)
 		{
 			printf("Please provide the hex data only 'A'-'F','a'-'f' and '0'-'9'\n");
-			return EAPI_STATUS_UNSUPPORTED;
+			return EAPI_STATUS_INVALID_PARAMETER;
 		}
 	}
 
-	Conv_String2HexByte(Buf,result);
+	Conv_String2HexByte(pBuffer,result);
 	hex_buf = result;
 
-        if(Region==1)
-        {
-                NVMEM_INIT();
-        }
-        else if(Region==2)
-        {
-                NVMEM_SEC_INIT();
-        }
-        else if(Region==3)
-        {
-                NVMEM_SEC_INIT();
-        }
-        else
-        {
-                return EAPI_STATUS_INVALID_PARAMETER;
-        }
-
-        if(Id > 1 && Id < 0)
-        {
-                return EAPI_STATUS_UNSUPPORTED;
-        }
-
-	if(Region == 2)
+	if (Id == EAPI_ID_STORAGE_STD)
 	{
-        	if(Offset + Len > 2048)
-        	{
-			printf("The maximum byte length for hex_write is 2048\n");
-                	return EAPI_STATUS_MORE_DATA;
-        	}
+		NVMEM_INIT();
+		if (Offset + ByteCnt > EEPROM_USER_SIZE)
+		{
+			return EAPI_STATUS_INVALID_BLOCK_LENGTH;
+		}
+	}
+	else if (Id == EAPI_ID_STORAGE_SCR)
+	{
+		NVMEM_SEC_INIT();
+		if (Offset + ByteCnt > EEPROM_SCRE_SIZE)
+		{
+			return EAPI_STATUS_INVALID_BLOCK_LENGTH;
+		}
+	}
+	else if (Id == EAPI_ID_STORAGE_ODM)
+	{
+		NVMEM_SEC_INIT();
+		if (Offset + ByteCnt > EEPROM_ODM_SIZE)
+		{
+			return EAPI_STATUS_INVALID_BLOCK_LENGTH;
+		}
 	}
 	else
 	{
-	
-        	if(Offset + Len > 1024)
-        	{
-			printf("The maximum byte length for hex_write is 1024\n");
-                	return EAPI_STATUS_MORE_DATA;
-        	}
+		return EAPI_STATUS_UNSUPPORTED;
 	}
 
-        unsigned char *buffer;
+    unsigned char *buffer;
 	
 	buffer = (unsigned char*)hex_buf;
 
-        data.Region=Region;
+	data.Region = Id;
 
-        if((fd = open("/dev/ec-nvmem-eapi", O_RDWR)) < 0)
-        {
-                return -1;
-        }
-        if(ioctl(fd, EAPI_STOR_REGION, &data ) < 0)
-        {
-                close(fd);
-                return EAPI_STATUS_UNSUPPORTED;
-        }
-        else
-        {
-                close(fd);
-        }
+    if((fd = open("/dev/ec-nvmem-eapi", O_RDWR)) < 0)
+    {
+        return -1;
+    }
+    if(ioctl(fd, EAPI_STOR_REGION, &data ) < 0)
+    {
+        close(fd);
+        return EAPI_STATUS_UNSUPPORTED;
+    }
+    else
+    {
+        close(fd);
+    }
 	
 	fd = open(NVMEM_DEVICE, O_WRONLY);
 
-        if (fd < 0)
-        {
-                return EAPI_STATUS_WRITE_ERROR;
-        }
-        lseek(fd,Offset,SEEK_SET);
+    if (fd < 0)
+    {
+		return EAPI_STATUS_WRITE_ERROR;
+    }
+    lseek(fd,Offset,SEEK_SET);
         
-	ret = write(fd,buffer,Len);
-        if (ret > 0)
-        {
-                close(fd);
-        }
-        else
-        {
-                close(fd);
-                return EAPI_STATUS_WRITE_ERROR;
-        }
+	ret = write(fd,buffer,ByteCnt);
+    if (ret > 0)
+    {
+        close(fd);
+    }
+    else
+    {
+        close(fd);
+        return EAPI_STATUS_WRITE_ERROR;
+    }
 
-        return status;
+    return status;
 }
-uint32_t EApiGUIDWrite(uint32_t Id,uint32_t Region, uint32_t Offset, char* Buf, uint32_t Len)
+uint32_t EApiGUIDWrite(uint32_t Id, uint32_t Offset, void* pBuffer, uint32_t ByteCnt)
 {
-        uint32_t status = EAPI_STATUS_SUCCESS;
-        int ret,fd;
+	uint32_t status = EAPI_STATUS_SUCCESS;
+	int ret, fd;
 	struct secure data;
-	char *hex_buf;
-        char result[2048];
-        
-	NVMEM_SEC_INIT();
-        if(Offset + Len > 1024)
-        {
-		printf("The maximum byte length for GUIDWrite is 1024\n");
-               	return EAPI_STATUS_MORE_DATA;
-        }
+	char* hex_buf;
+	char result[2048];
 
-	Conv_String2HexByte(Buf,result);
+	NVMEM_SEC_INIT();
+
+	if (Offset + ByteCnt > EEPROM_ODM_SIZE)
+	{
+		return EAPI_STATUS_INVALID_BLOCK_LENGTH;
+	}
+
+	Conv_String2HexByte(pBuffer,result);
 	hex_buf = result;
 
-        data.Region=Region;
+	data.Region = Id;
 
-        if((fd = open("/dev/ec-nvmem-eapi", O_RDWR)) < 0)
-        {
-                return -1;
-        }
-        if(ioctl(fd, EAPI_STOR_REGION, &data ) < 0)
-        {
-                close(fd);
-                return EAPI_STATUS_UNSUPPORTED;
-        }
-        else
-        {
-                close(fd);
-        }
+    if((fd = open("/dev/ec-nvmem-eapi", O_RDWR)) < 0)
+    {
+            return -1;
+    }
+    if(ioctl(fd, EAPI_STOR_REGION, &data ) < 0)
+    {
+            close(fd);
+            return EAPI_STATUS_UNSUPPORTED;
+    }
+    else
+    {
+            close(fd);
+    }
 	
 	fd = open(NVMEM_DEVICE, O_WRONLY);
 
-        if (fd < 0)
-        {
-                return EAPI_STATUS_WRITE_ERROR;
-        }
+    if (fd < 0)
+    {
+            return EAPI_STATUS_WRITE_ERROR;
+    }
 
-        lseek(fd,Offset,SEEK_SET);
-        ret = write(fd,hex_buf,Len);
-        if (ret > 0)
-        {
-                close(fd);
-        }
-        else
-        {
-                close(fd);
-                return EAPI_STATUS_WRITE_ERROR;
-        }
+    lseek(fd,Offset,SEEK_SET);
+    ret = write(fd,hex_buf,ByteCnt);
+    if (ret > 0)
+    {
+            close(fd);
+    }
+    else
+    {
+            close(fd);
+            return EAPI_STATUS_WRITE_ERROR;
+    }
 
-        return status;
+    return status;
 }
 
-uint32_t EApiStorageAreaClear(uint32_t Id,uint32_t Region)
+uint32_t EApiStorageAreaClear(uint32_t Id)
 {
 	return EAPI_STATUS_UNSUPPORTED;
 }
 
-uint32_t EApiStorageLock(uint32_t Id,uint32_t Region)
+uint32_t EApiStorageLock(uint32_t Id)
 {
 	uint32_t status = EAPI_STATUS_SUCCESS;
 	int fd;
 	struct secure data;
-	if(Region!=2 && Region!=3 )
+	if (Id != EAPI_ID_STORAGE_SCR && Id != EAPI_ID_STORAGE_ODM)
 	{
 		return EAPI_STATUS_INVALID_PARAMETER;
 	}
-	data.Region=Region;
+	data.Region=Id;
 
-        if((fd = open("/dev/ec-nvmem-eapi", O_RDWR)) < 0)
+    if((fd = open("/dev/ec-nvmem-eapi", O_RDWR)) < 0)
 	{
 		return -1;
 	}
 	if(ioctl(fd, EAPI_STOR_LOCK, &data ) < 0)
-        {
+    {
 		close(fd);
 		return EAPI_STATUS_UNSUPPORTED;
 	}
@@ -493,32 +514,34 @@ uint32_t EApiStorageLock(uint32_t Id,uint32_t Region)
 	return status;
 }
 
-uint32_t EApiStorageUnLock(uint32_t Id,uint32_t Region,uint32_t Permission, char *passcode)
+uint32_t EApiStorageUnLock(uint32_t Id, uint32_t Permission, char* passcode)
 {
 	uint32_t status = EAPI_STATUS_SUCCESS;
 	int fd;
-        struct secure data;       
-	if(Region!=2 && Region!=3 )
+	struct secure data;
+	
+	if (Id != EAPI_ID_STORAGE_SCR && Id != EAPI_ID_STORAGE_ODM)
 	{
 		return EAPI_STATUS_INVALID_PARAMETER;
 	}
-	data.Region=Region;
-	data.permission=Permission;
+
+	data.Region = Id;
+	data.permission = Permission;
 
 	memset(data.passcode,0,sizeof(data.passcode));
 	memcpy(data.passcode,passcode,strlen(passcode));
 
-        if((fd = open("/dev/ec-nvmem-eapi", O_RDWR)) < 0)
-        {
-                return -1;
-        }
+    if((fd = open("/dev/ec-nvmem-eapi", O_RDWR)) < 0)
+    {
+            return -1;
+    }
 
-        if(ioctl(fd, EAPI_STOR_UNLOCK,&data ) < 0)
-        {
-				close(fd);
-                return EAPI_STATUS_UNSUPPORTED;
-        }
+    if(ioctl(fd, EAPI_STOR_UNLOCK,&data ) < 0)
+    {
+			close(fd);
+            return EAPI_STATUS_UNSUPPORTED;
+    }
 
-		close(fd);
-        return status;
+	close(fd);
+    return status;
 }

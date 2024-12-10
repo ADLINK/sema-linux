@@ -26,11 +26,11 @@
 #include <eapi.h>
 #include <uuid/uuid.h>
 
-#define Version	"ADLINK-SEMA-EC-LINUX-V4_R3_4_24_08_27"
+#define Version	"ADLINK-SEMA-EC-LINUX-V4_R3_5_24_12_10"
 
 char*			ExeName;
 uint8_t	SetWatchdog, TriggerWatchdog, StopWatchdog, WatchDogCap,IsPwrUpWDogStart, IsPwrUpWDogStop;
-uint8_t	StorageCap, StorageAreaRead, StorageAreaWrite, StorageAreaLock, StorageAreaUnLock,StorageHexWrite, StorgeHexRead,GUIDWrite, GUIDRead;
+uint8_t	StorageCap, StorageAreaRead, StorageAreaWrite, StorageAreaLock, StorageAreaUnLock,StorageHexWrite, StorgeHexRead,GUIDWrite, GUIDRead,ODM_write;
 uint8_t	SmartFanTempSet, SmartFanTempGet, SmartFanTempSetSrc, SmartFanTempGetSrc, SmartFanPWMSet;
 uint8_t	SmartFanModeGet, SmartFanModeSet, SmartFanPWMGet;
 uint8_t	GetStringA, GetValue, GetVoltageMonitor,GetVoltageMonitorCap, GetSEMAVersion;
@@ -85,29 +85,43 @@ void ShowHelp(int condition)
 		printf("  3. semautil /w trigger\n");
 		printf("  4. semautil /w stop\n");
 		printf("  5. semautil /w pwrup_enable [sec (60-65535)]\n");
-		printf("     Note:\n	Start time will be different for the different platforms.\n	Please go to BIOS meun to check it\n");
+		printf("     Note:\n	Start time will be different for the different platforms.\n	Please go to BIOS menu to check it\n");
 		printf("  6. semautil /w pwrup_disable\n\n");
 	}
 	if (condition == 2 || condition == 0)
 	{
 		printf("- Storage:\n");
-		printf("  1. semautil /s get_cap\n");
+		printf("  1. semautil /s get_cap [Region]\n");
 		printf("  2. semautil /s read [Region] [Address] [Length] \n");
-		printf("  3. semautil /s write [Region] [Address] [string/value] [Length] \n");
+		printf("  3. semautil /s write [Region] [Address] [string/value] \n");
 		printf("  4. semautil /s hex_write [Region] [Address] [value] \n");
 		printf("  5. semautil /s hex_read [Region] [Address] [Length] \n");
 		printf("  6. semautil /s lock [Region]\n");
-		printf("  7. semautil /s unlock [Region] [Permission] [passcode]\n\n");
+		printf("  7. semautil /s unlock [Region] [Permission] [passcode]\n");
+		printf("  8. semautil /s odm_write [ODM Id] [string/value]\n\n");
+
 		printf("     Region:\n");
 		printf("     1.User\n");
-		printf("     2.Secure\n\n");
+		printf("     2.Secure\n");
+		printf("     3.ODM\n\n");
+
 		printf("     Permission:\n");
 		printf("     1.Read only\n");
 		printf("     2.Read/Write\n\n");
+
+		printf("     ODM Id:\n");
+		printf("     1.Hardware Revision\n");
+		printf("     2.Serial Number\n");
+		printf("     3.Last Repair date\n");
+		printf("     4.Manufacturing date\n");
+		printf("     5.2nd Hardware Revision\n");
+		printf("     6.2nd Serial Number\n");
+		printf("     7.MAC Id\n");
+		printf("     8.MAC Id 2\n\n");
+
 		printf("     Example: semautil /s write 1020 Aaaa 4\n          It will be written to 1020, 1021, 1022, 1023\n\n");
 		//printf("\n     Note: Hexa decimal values are not valid\n     Note: Locking of ODM region will only make ODM is read-only.\n          lock function will not protect User region.\n          read and write function will not work on ODM region\n");
-		printf("     Note : hex_write operation should be provided as below\n	Example: semautil /s hex_write 1 128 aa bb c d \n");
-
+		printf("     Note : Unlock the ODM region to perform odm_write operation\n            hex_write operation should be provided as below\n	Example: semautil /s hex_write 1 128 aa bb c d \n");
 	}
 	if (condition == 3 || condition == 0)
 	{
@@ -267,29 +281,29 @@ void ShowHelp(int condition)
 		printf("    3\tEAPI_I2C_ENC_EXT_CMD\tExtended standard 16 bits CMD\n\n");
 	}
 
-	 if(condition == 12 || condition == 0)
-        {
-                printf("\n- Get BIOS Source:\n");
-                printf("  1. semautil /src  get_src\n");
-                printf("  2. semautil /src  set_src value[0-3]\n");
+	if (condition == 12 || condition == 0)
+    {
+        printf("\n- Get BIOS Source:\n");
+        printf("  1. semautil /src  get_src\n");
+        printf("  2. semautil /src  set_src value[0-3]\n");
 		printf("  3. semautil /src get_bios_status\n");
-                printf("  \n	Value   :\n");
-                printf("	 0      -   By hardware configuration of currently selected BIOS\n");
-                printf("	 1      -   Switch to Fail-Safe BIOS\n");
-                printf("	 2      -   Switch to External BIOS (SPI0 on carrier)\n");
-                printf("	 3      -   Switch to Internal BIOS (SPI0 on module)\n");
+        printf("  \n	Value   :\n");
+        printf("	 0      -   By hardware configuration of currently selected BIOS\n");
+        printf("	 1      -   Switch to Fail-Safe BIOS\n");
+        printf("	 2      -   Switch to External BIOS (SPI0 on carrier)\n");
+        printf("	 3      -   Switch to Internal BIOS (SPI0 on module)\n");
 
 		printf("\n");
 		printf("  BIOS select status information.\n");
 		printf("	Bit2 Bit1 Bit0\n");
-                printf("	 0    0    0  -   Module SPI0/ Carrier SPI1 (Standard BIOS)\n");
-                printf("	 0    0    1  -   Carrier SPI0/ Module SPI1 (Fail - Safe BIOS)\n");
-                printf("	 0    1    0  -   Unknown\n");
-                printf("	 0    1    1  -   Module SPI0/Module SPI1 (Standard BIOS)\n");
+        printf("	 0    0    0  -   Module SPI0/ Carrier SPI1 (Standard BIOS)\n");
+        printf("	 0    0    1  -   Carrier SPI0/ Module SPI1 (Fail - Safe BIOS)\n");
+        printf("	 0    1    0  -   Unknown\n");
+        printf("	 0    1    1  -   Module SPI0/Module SPI1 (Standard BIOS)\n");
 		printf("	 1    0    0  -   Unknown\n");
-                printf("	 1    0    1  -   Switch to Fail-Safe BIOS\n");
-                printf("	 1    1    0  -   Switch to External BIOS\n");
-                printf("	 1    1    1  -   Switch to Internal BIOS \n\n");
+        printf("	 1    0    1  -   Switch to Fail-Safe BIOS\n");
+        printf("	 1    1    0  -   Switch to External BIOS\n");
+        printf("	 1    1    1  -   Switch to Internal BIOS \n\n");
 		printf("  If Bit 2 is OFF : PICMG BIOS selected\n");
 		printf("  If Bit 2 is ON : Dual BIOS selected\n");
 	
@@ -306,7 +320,7 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 {
 	int ret  = 0;
 	/* Board information*/
-	uint32_t Id, Size,region,permission, Value = 0;
+	uint32_t Id, Size,permission, Value, ODM_Id= 0;
 	char *passcode;
 	char BoardInfo[64];
 	char ExcepDesc[1024];
@@ -722,12 +736,12 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 
 	if (StorageCap)
 	{
-		if (argc != 3) {
+		if (argc != 4) {
 			printf("Wrong arguments\n");
 			exit(-1);
 		}
 
-		Id = EAPI_ID_STORAGE_STD;
+		Id = atoi(argv[3]);
 		ret = EApiStorageCap(Id, &Storagesize, &BlockLength);
 		if (ret) {
 			printf("Get EApi information failed\n");
@@ -744,13 +758,12 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 			printf("Wrong arguments\n");
 			exit(-1);
 		}
-		Id = EAPI_ID_STORAGE_STD;
 		memset(memcap, 0, sizeof(memcap));
-		region= atoi(argv[3]);
+		Id= atoi(argv[3]);
 		Offset = atoi(argv[4]);
 		ByteCnt = atoi(argv[5]);
 		BufLen = sizeof(memcap);
-		ret = EApiStorageAreaRead(Id,region, Offset, memcap, BufLen, ByteCnt);
+		ret = EApiStorageAreaRead(Id, Offset, memcap, BufLen, ByteCnt);
 		if (ret) {
 			printf("Get EApi information failed\n");
 			errno_exit("EApiStorageAreaRead");
@@ -770,16 +783,15 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 
 	if (StorageAreaWrite)
 	{
-		if (argc != 7) {
+		if (argc != 6) {
 			printf("Wrong arguments\n");
 			exit(-1);
 		}
-		Id = EAPI_ID_STORAGE_STD;
-		region = atoi(argv[3]);
+		Id = atoi(argv[3]);
 		Offset = atoi(argv[4]);
 		Buffer = argv[5];
-		ByteCnt = atoi(argv[6]);
-		ret = EApiStorageAreaWrite(Id,region, Offset, Buffer, ByteCnt);
+		ByteCnt = strlen(Buffer);
+		ret = EApiStorageAreaWrite(Id,Offset, Buffer, ByteCnt);
 		if (ret) {
 			printf("Get EApi information failed\n");
 			errno_exit("EApiStorageAreaWrite");
@@ -800,51 +812,48 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 		int i,j=0;
 		
 		for(i=5;i<argc;i++)
-                {
+        {
 			if(strlen(argv[i])==1)
 			{
-			       hex_buf[j] = '0';
-			       j++;
-		       	       hex_buf[j] = argv[i][0];	       
+			    hex_buf[j] = '0';
+			    j++;
+		       	hex_buf[j] = argv[i][0];	       
 			}
 			else
 			{
-                        	strcpy(hex_buf + j,argv[i]);
+                strcpy(hex_buf + j,argv[i]);
 			}
-                        j = strlen (argv[i]) + j;
+            j = strlen (argv[i]) + j;
 		}
-		Id = EAPI_ID_STORAGE_STD;
-                region = atoi(argv[3]);
-                Offset = atoi(argv[4]);
-		Buffer = hex_buf;
-                ByteCnt = strlen(Buffer);
-		ret = EApiStorageHexWrite(Id,region, Offset, Buffer, ByteCnt/2);
-                if (ret) {
-                        printf("Get EApi information failed\n");
-                        errno_exit("EApiStorageHexWrite");
-                }
-                printf("%d Bytes Written Successfully\n",ByteCnt/2);
-
+        Id = atoi(argv[3]);
+        Offset = string_to_hex(argv[4]);
+	Buffer = hex_buf;
+        ByteCnt = strlen(Buffer);
+	ret = EApiStorageHexWrite(Id, Offset, Buffer, ByteCnt/2);
+        if (ret) {
+            printf("Get EApi information failed\n");
+            errno_exit("EApiStorageHexWrite");
+        }
+        printf("%d Bytes Written Successfully\n",ByteCnt/2);
 	}
 	
 	if(StorgeHexRead)
 	{
-                if (argc != 6) {
-                        printf("Wrong arguments\n");
-                        exit(-1);
-                }
-                Id = EAPI_ID_STORAGE_STD;
-                memset(memcap, 0, sizeof(memcap));
-                region= atoi(argv[3]);
-                Offset = atoi(argv[4]);
-                ByteCnt = atoi(argv[5]);
-                BufLen = sizeof(memcap);
+        if (argc != 6) {
+            printf("Wrong arguments\n");
+            exit(-1);
+        }
+        memset(memcap, 0, sizeof(memcap));
+        Id= atoi(argv[3]);
+        Offset = atoi(argv[4]);
+        ByteCnt = atoi(argv[5]);
+        BufLen = sizeof(memcap);
 
-                ret = EApiStorageHexRead(Id,region, Offset, memcap, BufLen, ByteCnt);
-                if (ret) {
-                        printf("Get EApi information failed\n");
-                        errno_exit("EApiStorageHexRead");
-                }
+        ret = EApiStorageHexRead(Id, Offset, memcap, BufLen, ByteCnt);
+        if (ret) {
+            printf("Get EApi information failed\n");
+            errno_exit("EApiStorageHexRead");
+        }
 		printf("Read Buffer : ");
 		for(int i=0;i<ByteCnt;i++)
 		{
@@ -876,48 +885,47 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 			}
 		}
 	
-		Id = EAPI_ID_STORAGE_STD;
-                region = 3;
-                Offset = 0x100;
-
-                ByteCnt = strlen(buffer);
+        Id = 3;
+        Offset = 0x100;
+        ByteCnt = strlen(buffer);
 		permission = 2;	
 		passcode="ADEC";
 		
-		ret= EApiStorageUnLock(Id, region, permission, passcode);
+		ret= EApiStorageUnLock(Id, permission, passcode);
 		if(ret==EAPI_STATUS_SUCCESS){
-		ret = EApiGUIDWrite(Id, region, Offset, buffer, ByteCnt/2);
-                if (ret) {
-                        printf("Get EApi information failed\n");
-                        errno_exit("EApiGUIDWrite");
-                	}
-		printf("Bytes Written Successfully\n");
+			ret = EApiGUIDWrite(Id, Offset, buffer, ByteCnt/2);
+			if (ret)
+			{
+				printf("Get EApi information failed\n");
+				errno_exit("EApiGUIDWrite");
+			}
+			printf("Bytes Written Successfully\n");
 		}
-		ret = EApiStorageLock(Id, region);
+		ret = EApiStorageLock(Id);
 	}
 	
 	if(GUIDRead)
 	{
-                if (argc != 3) {
-                        printf("Wrong arguments\n");
-                        exit(-1);
-                }
-                Id = EAPI_ID_STORAGE_STD;
-                memset(memcap, 0, sizeof(memcap));
-                region= 3;
-                Offset = 0x100;
-                ByteCnt = 16;
-                BufLen = sizeof(memcap);
+        if (argc != 3) {
+            printf("Wrong arguments\n");
+            exit(-1);
+        }
+           
+        memset(memcap, 0, sizeof(memcap));
+        Id= 3;
+        Offset = 0x100;
+        ByteCnt = 16;
+        BufLen = sizeof(memcap);
 
-                ret = EApiStorageHexRead(Id, region, Offset, memcap, BufLen, ByteCnt);
-                if (ret) {
-                        printf("Get EApi information failed\n");
-                        errno_exit("EApiStorageHexRead");
-                }
+        ret = EApiStorageHexRead(Id, Offset, memcap, BufLen, ByteCnt);
+        if (ret) {
+            printf("Get EApi information failed\n");
+            errno_exit("EApiStorageHexRead");
+        }
 		printf("Read Buffer : ");
 		for(int i=0;i<ByteCnt;i++)
 		{
-                	printf("0x%02X ", memcap[i]);
+            printf("0x%02X ", memcap[i]);
 		}
 		printf("\n");
 	}
@@ -927,13 +935,12 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 			printf("Wrong arguments\n");
 			exit(-1);
 		}
-		region = atoi(argv[3]);
-		Id = 1;
-		ret = EApiStorageLock(Id,region);
+		Id = atoi(argv[3]);
+		ret = EApiStorageLock(Id);
 		if (!ret) {
-			if(region==2)
+			if(Id==2)
 			printf("Secured region locked successfully\n");
-			else if(region==3)
+			else if(Id==3)
 			printf("ODM region locked successfully\n");
 		}
 		else
@@ -949,15 +956,14 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 			printf("Wrong arguments\n");
 			exit(-1);
 		}
-		Id = 1;
-		region = atoi(argv[3]);
+		Id= atoi(argv[3]);
 		permission=atoi(argv[4]);
 		passcode=argv[5];
-		ret = EApiStorageUnLock(Id,region,permission, passcode);
+		ret = EApiStorageUnLock(Id,permission, passcode);
 		if (!ret) {
-			if(region==2)
+			if(Id==2)
 			printf("Secure region is unLocked successfully\n");
-			else if(region==3)
+			else if(Id==3)
 			printf("ODM region is unLocked successfully\n");
 		}
 		else
@@ -966,7 +972,58 @@ int DispatchCMDToSEMA(int argc,char *argv[])
 			errno_exit("EApiStorageAreaUnLock");
 		}
 	}
+        if(ODM_write)
+	{
+		if (argc != 5) {
+			printf("Wrong arguments\n");
+			exit(-1);
+		}
+		Id = 3;
+		ODM_Id=atoi(argv[3]);
+		switch (ODM_Id)
+		{
+		case 1:
+			Offset = 0x10;
+			break;
+		case 2:
+			Offset = 0x20;
+			break;
+		case 3:
+			Offset = 0x30;
+			break;
+		case 4:
+			Offset = 0x40;
+			break;
+		case 5:
+			Offset = 0x50;
+			break;
+		case 6:
+			Offset = 0x60;
+			break;
+		case 7:
+			Offset = 0x70;
+			break;
+		case 8:
+			Offset = 0x80;
+			break;
+		default:
+			printf("\nInvalid ODM_Id");
+			break;
+		}
 
+		Buffer = argv[4];
+		ByteCnt = strlen(Buffer);
+		if(ByteCnt>16){
+			printf("\nString should not exceed 16 characters");
+			exit(-1);
+		}
+		ret = EApiStorageAreaWrite(Id,Offset, Buffer, ByteCnt);
+		if (ret) {
+			printf("Get EApi information failed\n");
+			errno_exit("EApiStorageAreaWrite");
+		}
+		printf("Data Written Successfully\n");
+	}
 
 
 	if (GPIOGetDirectionCaps)
@@ -1615,7 +1672,7 @@ signed int ParseArgs(int argc, char* argv[])
 	}
 	else if (strcasecmp(argv[1], "/s") == 0)
 	{
-		if (argc == 3 && (strcasecmp(argv[2], "get_cap") == 0))
+		if (argc == 4 && (strcasecmp(argv[2], "get_cap") == 0))
 		{
 			StorageCap = TRUE;
 		}
@@ -1623,7 +1680,7 @@ signed int ParseArgs(int argc, char* argv[])
 		{
 			StorageAreaRead = TRUE;
 		}
-		else if (argc == 7 && (strcasecmp(argv[2], "write") == 0))
+		else if (argc == 6 && (strcasecmp(argv[2], "write") == 0))
 		{
 			StorageAreaWrite = TRUE;
 		}
@@ -1642,6 +1699,10 @@ signed int ParseArgs(int argc, char* argv[])
 		else if (argc == 6 && (strcasecmp(argv[2], "unlock") == 0))
 		{
 			StorageAreaUnLock = TRUE;
+		}
+		else if (argc == 5 && (strcasecmp(argv[2], "odm_write") == 0))
+		{
+			ODM_write = TRUE;
 		}
 		else
 		{

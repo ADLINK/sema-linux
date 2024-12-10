@@ -15,6 +15,10 @@
 #include <linux/delay.h>
 #include "adl-ec.h"
 
+#if __has_include("/etc/redhat-release")
+        #define CONFIG_REDHAT
+#endif
+
 #define GET_VOLT_AND_DESC	_IOR('a','1',struct data *)
 #define GET_VOLT_MONITOR_CAP	_IOR('a','2',uint8_t *)
 
@@ -143,7 +147,9 @@ static int adl_bmc_vm_probe(struct platform_device *pdev)
                 return -1;
         }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,4,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0) && defined(CONFIG_REDHAT)
+        class_adl_vm = class_create("adl_vm");
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(6,4,0)
 	class_adl_vm = class_create("adl_vm");
 #else
 	class_adl_vm = class_create(THIS_MODULE, "adl_vm");

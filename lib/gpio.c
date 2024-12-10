@@ -44,11 +44,19 @@ static int ngpio = -1;
 #define SET_GPIO_INT	_IOWR('a','2',uint32_t *)
 #define GET_GPIO_INT	_IOWR('a','3',uint32_t *)
 #define CLR_GPIO_INT	_IOWR('a','4',uint32_t *)
+#define GET_LEVEL	_IOR('a', 'b', int32_t *)
+#define SET_LEVEL  	_IOWR('a', 'c', struct gpiostruct *)
+#define OP_DIRECTION   	_IOWR('a', 'd', struct gpiostruct *)
+#define IN_DIRECTION  	_IOWR('a', 'e', int32_t *)
+
+int gpio_handle;
+int cdev_gpio = 0;
 
 struct gpiostruct{
 	int gpio;
 	int val;
-};
+}data;
+
 
 static int get_gpio_base(int *gpiobase, int *ngpio)
 {
@@ -100,15 +108,23 @@ int initialize_gpio(void)
 	int gpio,ret,fd;
 	uint16_t bit = 0;
 	uint32_t value = 0;
-	if((gpiobase == -1) || (ngpio == -1)) {
-		ret = get_gpio_base(&gpiobase, &ngpio);
-		if(ret < 0) {
-			return -1;
-		}
-	}
-	if((fd=open("/dev/gpio_adl",O_RDONLY)) >= 0)
+	DIR *gpio_dir = opendir("/sys/class/gpio");
+
+	if(gpio_dir == NULL)
 	{
-		for(gpio = gpiobase; gpio < (gpiobase + ngpio); gpio++) {
+		cdev_gpio=1;
+	}
+	else
+	{
+		if((gpiobase == -1) || (ngpio == -1)) {
+			ret = get_gpio_base(&gpiobase, &ngpio);
+			if(ret < 0) {
+				return -1;
+			}
+		}
+		if((fd=open("/dev/gpio_adl",O_RDONLY)) >= 0)
+		{
+			for(gpio = gpiobase; gpio < (gpiobase + ngpio); gpio++) {
 			char export[256],path[100];
 			struct stat stats;
 			sprintf(path, "/sys/class/gpio/gpio%d" , gpio);
@@ -126,13 +142,12 @@ int initialize_gpio(void)
 				value = 0;
 				system(export);
 			}
+		   }
 		}
 		close(fd);
 	}
-
 	return 0;
 }
-
 
 uint32_t adjustBitMask(uint32_t id, uint32_t *Bitmask)
 {
@@ -255,8 +270,11 @@ uint32_t EApiGPIOGetDirection(uint32_t Id, uint32_t Bitmask, uint32_t *pDirectio
 	char value[5];
 	char label[256];
 	char boardname[11];
-        *pDirection=0;
-	
+	*pDirection = 0;
+
+	//status = adjustBitMask(Bitmask, &Bitmask);
+	//if (status)
+	//	return status;
 	if (Bitmask > 0xff)
 	{
  		sprintf(label, "/sys/bus/platform/devices/adl-ec-boardinfo/information/board_name");
@@ -272,16 +290,36 @@ uint32_t EApiGPIOGetDirection(uint32_t Id, uint32_t Bitmask, uint32_t *pDirectio
 		return EAPI_STATUS_INVALID_PARAMETER;
 
 
-	for(gpio = gpiobase, bit = 0; gpio < (gpiobase + ngpio); gpio++, bit++) {
-		if(Bitmask & (1 << bit)) {
-			sprintf(sysfile, "/sys/class/gpio/gpio%d/direction", gpio);
-		if(read_sysfs_file(sysfile, value, sizeof(value)) < 0) {
-				return EAPI_STATUS_READ_ERROR;
-			}
-			if(strncmp(value, "in", strlen("in")) == 0) {
-				*pDirection |= (1 << bit);
-			}
+	if(cdev_gpio == 1)
+	{
+		int mask,bit_ext;
+
+		gpio_handle = open("/dev/gpio_adl",O_RDONLY);
+		if(gpio_handle < 0)
+		{
+			return -1 ;
 		}
+
+		for(bit_ext=0,mask=0;(bit_ext=Bitmask&(1<<mask))==0;mask++);
+        	Bitmask=mask;
+		ioctl(gpio_handle,GET_GPIO_DIR, &Bitmask);
+        	if(Bitmask & (1 << mask))
+			*pDirection = Bitmask;
+    		close(gpio_handle);
+	}
+	else
+	{
+		for(gpio = gpiobase, bit = 0; gpio < (gpiobase + ngpio); gpio++, bit++) {
+               	 	if(Bitmask & (1 << bit)) {
+                        	sprintf(sysfile, "/sys/class/gpio/gpio%d/direction", gpio);
+                		if(read_sysfs_file(sysfile, value, sizeof(value)) < 0) {
+                               		return EAPI_STATUS_READ_ERROR;
+                        	}
+                        	if(strncmp(value, "in", strlen("in")) == 0) {
+                        	        *pDirection |= (1 << bit);
+                        	}
+                	}
+        	}
 	}
 
         return status;
@@ -307,16 +345,51 @@ uint32_t EApiGPIOSetDirection(uint32_t Id, uint32_t Bitmask, uint32_t Direction)
                 }
 
 	}
-	for(gpio = gpiobase, bit = 0; gpio < (gpiobase + ngpio); gpio++, bit++) {
-		if(Bitmask & (1 << bit)) {
-			if(Direction) {
-				sprintf(sysfile, "echo \"in\" > /sys/class/gpio/gpio%d/direction", gpio);
-			}else{
-				sprintf(sysfile, "echo \"out\" > /sys/class/gpio/gpio%d/direction", gpio);
-			}
-			if(system(sysfile) != 0)
-			{
-				return EAPI_STATUS_WRITE_ERROR;
+
+	if(cdev_gpio ==1)
+	{
+		int mask,bit_ext;
+		
+		gpio_handle = open("/dev/gpio_adl",O_RDONLY);
+		if(gpio_handle < 0)
+		{
+			return -1 ;
+		}
+
+		for(bit_ext=0,mask=0;(bit_ext=Bitmask&(1<<mask))==0;mask++);
+		Bitmask=mask;
+		
+		data.gpio=Bitmask;
+       		data.val=Direction;
+        	if(Direction) {
+				if(ioctl(gpio_handle,IN_DIRECTION ,&Bitmask))
+				{
+    					close(gpio_handle);
+              	  			return EAPI_STATUS_WRITE_ERROR;
+				}
+        	}
+		else{
+				if(ioctl(gpio_handle,OP_DIRECTION , &data))
+				{
+    					close(gpio_handle);
+                  			return EAPI_STATUS_WRITE_ERROR;
+		    		}
+		}
+    		close(gpio_handle);
+    	}
+	else
+	{
+		for(gpio = gpiobase, bit = 0; gpio < (gpiobase + ngpio); gpio++, bit++) {
+			if(Bitmask & (1 << bit)) {
+				if(Direction) {
+					sprintf(sysfile, "echo \"in\" > /sys/class/gpio/gpio%d/direction", gpio);
+				}else{
+					sprintf(sysfile, "echo \"out\" > /sys/class/gpio/gpio%d/direction", gpio);
+				}
+				if(system(sysfile) != 0)
+				{
+					return EAPI_STATUS_WRITE_ERROR;
+				}
 			}
 		}
 	}
@@ -333,7 +406,7 @@ uint32_t EApiGPIOGetLevel(uint32_t Id, uint32_t Bitmask, uint32_t *pLevel)
 	char value;
 	char label[256];
         char boardname[11];
-        *pLevel=0;
+	*pLevel = 0;
 
 	if (Bitmask > 0xff)
 	{
@@ -346,17 +419,44 @@ uint32_t EApiGPIOGetLevel(uint32_t Id, uint32_t Bitmask, uint32_t *pLevel)
                 }
 
 	}
-	for(gpio = gpiobase, bit = 0; gpio < (gpiobase + ngpio); gpio++, bit++) {
-		if(Bitmask & (1 << bit)) {
-			sprintf(sysfile, "/sys/class/gpio/gpio%d/value", gpio);
-			if(read_sysfs_file(sysfile, &value, 1) < 0) {
-				return EAPI_STATUS_UNSUPPORTED;
-			}
 
-			if ((value - '0') > 0)
-				*pLevel |= (1 << bit);
+	if(cdev_gpio ==1)
+	{
+		int mask,bit_ext;
+
+		gpio_handle = open("/dev/gpio_adl",O_RDONLY);
+		if(gpio_handle < 0)
+		{
+			return -1 ;
 		}
 
+		for(bit_ext=0,mask=0;(bit_ext=Bitmask&(1<<mask))==0;mask++);
+        	Bitmask=mask;
+		
+		if( ioctl(gpio_handle,GET_LEVEL,&Bitmask)< 0)
+        	{
+    			close(gpio_handle);
+                	return EAPI_STATUS_WRITE_ERROR;
+        	}
+        
+		if(Bitmask == 1)	
+			*pLevel |= (1 << mask);
+    		close(gpio_handle);
+	}
+	else
+	{
+		for(gpio = gpiobase, bit = 0; gpio < (gpiobase + ngpio); gpio++, bit++) {
+			if(Bitmask & (1 << bit)) {
+				sprintf(sysfile, "/sys/class/gpio/gpio%d/value", gpio);
+				if(read_sysfs_file(sysfile, &value, 1) < 0) {
+					return EAPI_STATUS_UNSUPPORTED;
+				}
+				
+				if ((value - '0') > 0)
+                                *pLevel |= (1 << bit);
+			}
+
+		}
 	}
 
         return status;
@@ -383,20 +483,56 @@ uint32_t EApiGPIOSetLevel(uint32_t Id, uint32_t Bitmask, uint32_t Level)
 
 	}
 
-	for(gpio = gpiobase, bit = 0; gpio < (gpiobase + ngpio); gpio++, bit++) {
-		if(Bitmask & (1 << bit)) {
-			if(Level & (1 << bit)) 
-			{
-				sprintf(sysfile, "echo \"1\" > /sys/class/gpio/gpio%d/value", gpio);
-			}else{
-				sprintf(sysfile, "echo \"0\" > /sys/class/gpio/gpio%d/value", gpio);
-			}
-			if(system(sysfile) != 0)
-			{
-				return EAPI_STATUS_WRITE_ERROR;
-			}
-		}	
+	if(cdev_gpio ==1)
+	{
+		int mask,bit_ext;
 
+		gpio_handle = open("/dev/gpio_adl",O_RDONLY);
+		if(gpio_handle < 0)
+		{
+			return -1 ;
+		}
+
+		for(bit_ext=0,mask=0;(bit_ext=Bitmask&(1<<mask))==0;mask++);
+        	Bitmask=mask;
+
+		ioctl(gpio_handle,GET_GPIO_DIR, &Bitmask);
+		Bitmask = (Bitmask >> mask) & 0x01;
+		if(Bitmask == 1)
+		{
+    			close(gpio_handle);
+			return EAPI_STATUS_WRITE_ERROR;
+		}
+		if(Level != 0)
+		{
+			Level=1;
+		}
+		data.gpio=mask;
+		data.val=Level;
+		if(ioctl(gpio_handle,SET_LEVEL,&data)<0)
+        	{
+    			close(gpio_handle);
+                	return EAPI_STATUS_WRITE_ERROR;
+        	}
+    		close(gpio_handle);
+	}
+	else
+	{
+		for(gpio = gpiobase, bit = 0; gpio < (gpiobase + ngpio); gpio++, bit++) {
+			if(Bitmask & (1 << bit)) {
+				if(Level & (1 << bit)) 
+				{
+					sprintf(sysfile, "echo \"1\" > /sys/class/gpio/gpio%d/value", gpio);
+				}else{
+					sprintf(sysfile, "echo \"0\" > /sys/class/gpio/gpio%d/value", gpio);
+				}
+				if(system(sysfile) != 0)
+				{
+					return EAPI_STATUS_WRITE_ERROR;
+				}
+			}	
+
+		}
 	}
 
         return status;
