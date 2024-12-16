@@ -4,12 +4,11 @@
 
 
 ### Supported Hardware List:
-* LEC-ALN/ASL
-* cExpress-TL , cExpress-EL, cExpress-AR
+* LEC-EL,LEC-ALN/ASL
+* cExpress-TL , cExpress-EL, cExpress-AR, cExpress-ALN
 * Express-ID7, Express-ADP, Express-TL, Express-RLP
 * COM-HPC-cRLS, COM-HPC-sIDH
-* LEC-EL
-* nanoX-EL
+* NanoX-EL
 * Q7-EL
 * Express-VR7
 * VPX3-TL
