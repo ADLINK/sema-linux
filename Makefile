@@ -17,12 +17,14 @@ obj-m := driver/adl-bmc.o \
 
 adl-bmc-nvmem-sec-m := driver/adl-bmc-nvmem-sec.o driver/nvmem-common.o	 
 adl-bmc-nvmem-m := driver/adl-bmc-nvmem.o driver/nvmem-common.o	 
-all: libsema.so semautil wdogtest modules
+all: app_build modules
 
 driver: modules
 
 libsema.so: $(SEMA_OBJS)
 	@$(CC) -shared -fPIC -g -o lib/$@ $^
+
+app_build: libsema.so semautil wdogtest
 
 modules:
 	@make -C /lib/modules/`uname -r`/build M=`pwd` $@
