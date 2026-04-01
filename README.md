@@ -36,6 +36,7 @@ This is the common repository for unified sema linux supporting TIVA BMC and EC
 * NanoX-EL
 * NanoX-BT
 * Express-VR7
+* LEC-ASL/ALN
   
 ## Supported Operating System
 * Ubuntu 20.04, 24.04

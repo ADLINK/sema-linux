@@ -152,6 +152,9 @@ static int adl_bmc_bklight_probe(struct platform_device *pdev)
 	struct backlight_device *bl = 0;
 	struct backlight_properties props;
 	struct adl_bmc_bklight *bklite;
+	unsigned char brightness = 0;
+	int ret;
+	unsigned char buff[2];
 
 	bklite = devm_kzalloc(&pdev->dev, sizeof(*bklite), GFP_KERNEL);
 	if(!bklite)
@@ -191,9 +194,7 @@ static int adl_bmc_bklight_probe(struct platform_device *pdev)
 		debug_printk("Backlight functionality is not compatible for this platform\n");
 		return -EINVAL;
 	}
-	unsigned char brightness = 0;
-	int ret;
-	unsigned char buff[2];
+	
 	memset(buff, 0, sizeof(buff));
 
 	if (bklite->adl_dev->con_type == BMC)

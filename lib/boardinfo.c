@@ -177,7 +177,7 @@ uint32_t EApiBoardGetValue(uint32_t Id, uint32_t *pValue)
 			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/total_up_time");
 			break;
 		case EAPI_ID_BOARD_LIB_VERSION_VAL:
-			*pValue = EAPI_VER_CREATE(5,0,0);
+			*pValue = EAPI_VER_CREATE(4,4,1);
 			return EAPI_STATUS_SUCCESS;
 		case EAPI_ID_HWMON_CPU_TEMP:
 			sprintf(sysfile, "/sys/class/hwmon/hwmon%d/device/cpu_cur_temp",hwmon_number);
@@ -298,13 +298,8 @@ uint32_t EApiBoardGetValue(uint32_t Id, uint32_t *pValue)
                         status = EAPI_STATUS_UNSUPPORTED;
                         return status;
                 case EAPI_SEMA_ID_IO_CURRENT:
-			if(is_bmc_board)
-                        	sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/main_current");
-			else{
-				status = EAPI_STATUS_UNSUPPORTED;
-				return status;
-			}	
-                        break;
+                        sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/main_current");
+			break;
 		case EAPI_ID_HWMON_SYSTEM_TEMP:
 			sprintf(sysfile, "/sys/class/hwmon/hwmon%d/device/sys1_cur_temp",hwmon_number);
 			break;

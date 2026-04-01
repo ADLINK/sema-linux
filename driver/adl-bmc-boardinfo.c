@@ -91,8 +91,7 @@ static int GetManufData(unsigned int nDataInfo, unsigned char* pData, unsigned i
 			if (!!(pDataIn[0] & 0x4) == 0x0 && (pDataIn[0] & 0x1) == 0 && !!(pDataIn[0] & 0x8) == 0)
 			{
 			    adl_bmc_ec_read_device(EC_RW_ADDR_IIC_BUFFER, pData, 16, EC_REGION_2);
-			    if (pData[0] == 0xff)
-				    pData[0] = 0;
+			    
 			    debug_printk(KERN_INFO "%s %s\n",__func__,pData);
 			    
 			    return 0;
