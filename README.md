@@ -35,6 +35,7 @@ This is the common repository for unified sema linux supporting TIVA BMC and EC
 * COM-HPC-cRLS, COM-HPC-sIDH, COM-HPC-mMTL, COM-HPC-cADP
 * NanoX-EL
 * NanoX-BT
+* NanoX-ASL
 * Express-VR7
 * LEC-ASL/ALN
   
