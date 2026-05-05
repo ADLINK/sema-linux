@@ -25,6 +25,7 @@
 #include <common.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
+#include <sys/utsname.h>
 
 static int gpiobase = -1;
 static int ngpio = -1;
@@ -56,6 +57,24 @@ struct gpiostruct{
 	int val;
 }data;
 
+int is_kernel_6_17(void)
+{
+    struct utsname buf;
+    int major = 0, minor = 0, patch = 0;
+
+    if (uname(&buf) != 0)
+        return 0;
+
+    sscanf(buf.release, "%d.%d.%d", &major, &minor, &patch);
+
+    if (major > 6)
+        return 1;
+
+    if (major == 6 && minor >= 17)
+        return 1;
+
+    return 0;
+}
 
 static int get_gpio_base(int *gpiobase, int *ngpio)
 {
@@ -121,6 +140,15 @@ int initialize_gpio(void)
 	{
 		uint32_t value = 0;
 		DIR *gpio_dir = opendir("/sys/class/gpio");
+		
+		if (is_kernel_6_17()) {
+			cdev_gpio = 1;
+
+    			if (gpio_dir)
+        		closedir(gpio_dir);
+
+    			return 0;
+		}
 
 		if(gpio_dir == NULL)
 		{

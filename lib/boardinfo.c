@@ -177,7 +177,7 @@ uint32_t EApiBoardGetValue(uint32_t Id, uint32_t *pValue)
 			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/total_up_time");
 			break;
 		case EAPI_ID_BOARD_LIB_VERSION_VAL:
-			*pValue = EAPI_VER_CREATE(4,4,1);
+			*pValue = EAPI_VER_CREATE(4,4,2);
 			return EAPI_STATUS_SUCCESS;
 		case EAPI_ID_HWMON_CPU_TEMP:
 			sprintf(sysfile, "/sys/class/hwmon/hwmon%d/device/cpu_cur_temp",hwmon_number);

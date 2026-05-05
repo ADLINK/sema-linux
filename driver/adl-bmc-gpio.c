@@ -174,9 +174,16 @@ static void __adl_gpio_set(struct gpio_chip *chip, unsigned int offset, int valu
 		mutex_unlock(&gpio_lock);
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,17,0)
+static int adl_gpio_set(struct gpio_chip *chip, unsigned int offset, int value)
+#else
 static void adl_gpio_set(struct gpio_chip *chip, unsigned int offset, int value)
+#endif
 {
 	__adl_gpio_set(chip, offset, value, true);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,17,0)
+	return 0;
+#endif
 }
 
 static int adl_gpio_direction_input(struct gpio_chip *gc, unsigned int nr)
@@ -567,4 +574,4 @@ module_platform_driver(adl_ec_gpio_driver);
 
 MODULE_LICENSE("Dual BSD/GPL");
 MODULE_AUTHOR("ADLINK");
-MODULE_DESCRIPTION("ADLINK EC GPIO Driver");
+MODULE_DESCRIPTION("ADLINK BMC GPIO Driver");

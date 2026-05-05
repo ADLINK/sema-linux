@@ -8,6 +8,7 @@
 #include <linux/watchdog.h>
 #include <linux/platform_device.h>
 #include <linux/version.h>
+#include <linux/cdev.h>
 #include <linux/fs.h>
 
 #include "adl-ec.h"
@@ -402,3 +403,5 @@ static struct platform_driver adl_bmc_wdt_driver = {
 module_platform_driver(adl_bmc_wdt_driver);
 
 MODULE_LICENSE("Dual BSD/GPL");
+MODULE_AUTHOR("ADLINK");
+MODULE_DESCRIPTION("ADLINK BMC WDT Driver");

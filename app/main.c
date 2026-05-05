@@ -26,7 +26,7 @@
 #include <eapi.h>
 #include <uuid/uuid.h>
 
-#define Version	"ADLINK-SEMA-UNIFIED-LINUX-V4_R4_1_26_03_31"
+#define Version	"ADLINK-SEMA-UNIFIED-LINUX-V4_R4_2_26_05_05"
 
 char* ExeName;
 uint8_t	SetWatchdog, TriggerWatchdog, StopWatchdog, WatchDogCap, IsPwrUpWDogStart, IsPwrUpWDogStop;
