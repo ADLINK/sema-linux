@@ -22,6 +22,49 @@
 #include <common.h>
 #include <unistd.h>
 
+#define CPU_FAN_CAP_BIT   18
+#define SYS_FAN1_CAP_BIT  19
+#define SYS_FAN2_CAP_BIT  26
+#define SYS_FAN3_CAP_BIT  27
+
+
+
+/*Check Fan Support*/
+static uint32_t CheckFanSupport(int id)
+{
+	uint32_t capabilities;
+	int cap_bit;
+	FILE* fp;
+
+	switch (id)
+	{
+	case 0: cap_bit = CPU_FAN_CAP_BIT;  break;
+	case 1: cap_bit = SYS_FAN1_CAP_BIT; break;
+	case 2: cap_bit = SYS_FAN2_CAP_BIT; break;
+	case 3: cap_bit = SYS_FAN3_CAP_BIT; break;
+	default:
+		return EAPI_STATUS_INVALID_PARAMETER;
+	}
+
+	fp = fopen("/sys/bus/platform/devices/adl-bmc-boardinfo/information/capabilities", "r");
+	if (!fp)
+		return EAPI_STATUS_READ_ERROR;
+
+	if (fscanf(fp, "%u", &capabilities) != 1)
+	{
+		fclose(fp);
+		return EAPI_STATUS_READ_ERROR;
+	}
+
+	fclose(fp);
+
+	if (!(capabilities & (1U << cap_bit)))
+	{
+		return EAPI_STATUS_UNSUPPORTED;
+	}
+	return EAPI_STATUS_SUCCESS;
+}
+
 uint32_t EApiSmartFanSetTempSetpoints(int id, int Level1, int Level2, int Level3, int Level4)
 {
 	errno = 0;
@@ -29,29 +72,28 @@ uint32_t EApiSmartFanSetTempSetpoints(int id, int Level1, int Level2, int Level3
 	int i;
 	int fan_no;
 	char buff[256],re_buff[256] = {0};
-	int Level_val=0,Read_val=0;
+	int Level_val=0,Read_val=0,ret=0;
 
 
 	/*Check inputs are valid*/
-	if(is_bmc_board)
+	if((Level1 < -127) || (Level1 > 128) || (Level2 < - 127) || (Level2 > 128) || (Level3 < -127) || (Level3 > 128) || (Level4 < -127) || (Level4 > 128) || (id < 0) || (id > 3))
 	{
-		if((Level1 < -127) || (Level1 > 128) || (Level2 < - 127) || (Level2 > 128) || (Level3 < -127) || (Level3 > 128) || (Level4 < -127) || (Level4 > 128) || (id < 0) || (id > 4))
-		{
+			errno = EINVAL;
 			return EAPI_STATUS_INVALID_PARAMETER;
-		}
 	}
-	else
-	{
-		if((Level1 < -127) || (Level1 > 128) || (Level2 < - 127) || (Level2 > 128) || (Level3 < -127) || (Level3 > 128) || (Level4 < -127) || (Level4 > 128) || (id < 0) || (id > 1))
-		{
-			return EAPI_STATUS_INVALID_PARAMETER;
-		}
-	}
+       
+	//Check Fan Support
+	ret = CheckFanSupport(id);
+	if (ret != EAPI_STATUS_SUCCESS)
+		return ret;
+
+	if (!is_bmc_board && id == 3)
+		return EAPI_STATUS_ERROR;
 
 	/*Check whether FAN driver is loaded*/
 	fan_no = get_hwmon_num();
 	if (fan_no < 0)
-		return EAPI_STATUS_UNSUPPORTED;
+		return EAPI_STATUS_ERROR;
 
 	for(i=1;i<=4;i++)
 	{
@@ -103,32 +145,31 @@ uint32_t EApiSmartFanGetTempSetpoints(int id, int *pLevel1, int *pLevel2, int *p
 {
 	char fan_sysfile[512];
 	int i;
-	int fan_no;
+	int fan_no,ret=0;
 	char buff[256];
 
 	/*Check inputs are valid*/
-	if(is_bmc_board)
+	if((id < 0) || (id > 3))
 	{
-		if((id < 0) || (id > 4))
-		{
 			errno = EINVAL;
-			return EAPI_STATUS_UNSUPPORTED;
-		}
+			return EAPI_STATUS_INVALID_PARAMETER;
 	}
-	else
-	{
-		if((id < 0) || (id > 1))
-		{
-			errno = EINVAL;
-			return EAPI_STATUS_UNSUPPORTED;
-		}
-	}
+
+
+	//Check Fan Support
+	ret = CheckFanSupport(id);
+	if (ret != EAPI_STATUS_SUCCESS)
+		return ret;
+
+	if (!is_bmc_board && id == 3)
+		return EAPI_STATUS_ERROR;
+
 
 	/*Check whether FAN driver is loaded*/
 	fan_no = get_hwmon_num();
 	
 	if (fan_no < 0)
-		return EAPI_STATUS_UNSUPPORTED;
+		return EAPI_STATUS_ERROR;
 	for(i=1;i<=4;i++)
 	{
 		FILE *fp;
@@ -164,33 +205,31 @@ uint32_t EApiSmartFanSetPWMSetpoints(int id, int pwm_Level1, int pwm_Level2, int
 {
 	char fan_sysfile[512];
 	int i;
-	int fan_no;
+	int fan_no,ret=0;
 	char buff[256], re_buff[256] = {0};
 	int Level_val=0, Read_val=0;
 
 
 	/*Check inputs are valid*/
-	if(is_bmc_board)
+	if((pwm_Level1 < 0) || (pwm_Level1 > 100) || (pwm_Level2 < 0) || (pwm_Level2 > 100) || (pwm_Level3 < 0) || (pwm_Level3 > 100) || (pwm_Level4 < 0) || (pwm_Level4 > 100) || (id < 0) || (id > 3))
 	{
-		if((pwm_Level1 < 0) || (pwm_Level1 > 100) || (pwm_Level2 < 0) || (pwm_Level2 > 100) || (pwm_Level3 < 0) || (pwm_Level3 > 100) || (pwm_Level4 < 0) || (pwm_Level4 > 100) || (id < 0) || (id > 4))
-		{
 			errno = EINVAL;
 			return EAPI_STATUS_INVALID_PARAMETER;
-		}
 	}
-	else
-	{
-		if((pwm_Level1 < 0) || (pwm_Level1 > 100) || (pwm_Level2 < 0) || (pwm_Level2 > 100) || (pwm_Level3 < 0) || (pwm_Level3 > 100) || (pwm_Level4 < 0) || (pwm_Level4 > 100) || (id < 0) || (id > 1))
-		{
-			errno = EINVAL;
-			return EAPI_STATUS_INVALID_PARAMETER;
-		}
-	}
+	
+	//Check Fan Support
+	ret = CheckFanSupport(id);
+	if (ret != EAPI_STATUS_SUCCESS)
+		return ret;
+
+	if (!is_bmc_board && id == 3)
+		return EAPI_STATUS_ERROR;
+
 
 	/*Check whether FAN driver is loaded*/
 	fan_no = get_hwmon_num();
 	if (fan_no < 0)
-		return EAPI_STATUS_UNSUPPORTED;
+		return EAPI_STATUS_ERROR;
 
 
 	for(i=1;i<=4;i++)
@@ -243,32 +282,32 @@ uint32_t EApiSmartFanGetPWMSetpoints(int id, int *pLevel1, int *pLevel2, int *pL
 {
 	char fan_sysfile[512];
 	int i;
-	int fan_no;
+	int fan_no,ret=0;
 	char buff[256];
 
 
 	/*Check inputs are valid*/
-	if(is_bmc_board)
+	if((pLevel1 == NULL) || (pLevel2 == NULL) || (pLevel3 == NULL) || (pLevel4 == NULL) || (id < 0) || (id > 3))
 	{
-		if((pLevel1 == NULL) || (pLevel2 == NULL) || (pLevel3 == NULL) || (pLevel4 == NULL) || (id < 0) || (id >= 4))
-		{
 			errno = EINVAL;
 			return EAPI_STATUS_INVALID_PARAMETER;
-		}
 	}
-	else
-	{
-		if((pLevel1 == NULL) || (pLevel2 == NULL) || (pLevel3 == NULL) || (pLevel4 == NULL) || (id < 0) || (id > 1))
-		{
-			errno = EINVAL;
-			return EAPI_STATUS_INVALID_PARAMETER;
-		}
-	}
+	
+
+ 
+	//Check Fan Support
+	ret = CheckFanSupport(id);
+	if (ret != EAPI_STATUS_SUCCESS)
+		return ret;
+
+	if (!is_bmc_board && id == 3)
+		return EAPI_STATUS_ERROR;
+
 
 	/*Check whether FAN driver is loaded*/
 	fan_no = get_hwmon_num();
 	if (fan_no < 0)
-		return EAPI_STATUS_UNSUPPORTED;
+		return EAPI_STATUS_ERROR;
 
 
 	for(i=1;i<=4;i++)
@@ -302,24 +341,32 @@ uint32_t EApiSmartFanGetPWMSetpoints(int id, int *pLevel1, int *pLevel2, int *pL
 
 uint32_t EApiSmartFanGetMode(int id, int *fan_mode)
 {
-	int ret = 0;
 	char fan_sysfile[512];
 	FILE* fp;
-	int fan_no;
+	int fan_no,ret=0;
 	char buff[256];
 
 
 	/*Check inputs are valid*/
-	if((fan_mode == NULL) || (id < 0) || (id >= 4))
+	if((fan_mode == NULL) || (id < 0) || (id > 3))
 	{
 		errno = EINVAL;
 		return EAPI_STATUS_INVALID_PARAMETER;
 	}
 
+	//Check Fan Support
+	ret = CheckFanSupport(id);
+	if (ret != EAPI_STATUS_SUCCESS)
+		return ret;
+
+
+	if (!is_bmc_board && id == 3)
+		return EAPI_STATUS_ERROR;
+	
 	/*Check whether FAN driver is loaded*/
 	fan_no = get_hwmon_num();
 	if (fan_no < 0)
-		return EAPI_STATUS_UNSUPPORTED;
+		return EAPI_STATUS_ERROR;
 
 
 	sprintf(fan_sysfile, "/sys/class/hwmon/hwmon%d/device/fan%d_enable", fan_no, (id+1));
@@ -343,24 +390,33 @@ uint32_t EApiSmartFanGetMode(int id, int *fan_mode)
 
 uint32_t EApiSmartFanSetMode(int id, int fan_mode)
 {
-	int ret = 0;
 	char fan_sysfile[512];
 	FILE *fp;
-	int fan_no, Reg_val=0;
+	int fan_no, Reg_val=0,ret=0;
 	char buff[256], re_buff[256];
 
 
 	/*Check inputs are valid*/
-	if((fan_mode < 0) || (fan_mode >= 4)  || (id < 0) || (id >= 4))
+	if((fan_mode < 0) || (fan_mode >= 4)  || (id < 0) || (id > 3))
 	{
 		errno = EINVAL;
 		return EAPI_STATUS_INVALID_PARAMETER;
 	}
+       
+ 
+	//Check Fan Support
+	ret = CheckFanSupport(id);
+	if (ret != EAPI_STATUS_SUCCESS)
+		return ret;
 
+	if (!is_bmc_board && id == 3)
+		return EAPI_STATUS_ERROR;
+
+	
 	/*Check whether FAN driver is loaded*/
 	fan_no = get_hwmon_num();
 	if (fan_no < 0)
-		return EAPI_STATUS_UNSUPPORTED;
+		return EAPI_STATUS_ERROR;
 
 
 	sprintf(fan_sysfile, "/sys/class/hwmon/hwmon%d/device/fan%d_enable", fan_no, (id+1));
@@ -411,27 +467,28 @@ uint32_t EApiSmartFanGetTempSrc(int id, int *pTempsrc)
 	char buff[256];
 
 	/*Check inputs are valid*/
-	if(is_bmc_board)
+	if((pTempsrc == NULL) || (id < 0) || (id > 3))
 	{
-		if((pTempsrc == NULL) || (id < 0) || (id >= 4))
-		{
 			errno = EINVAL;
 			return EAPI_STATUS_INVALID_PARAMETER;
-		}
 	}
-	else
-	{
-		if((pTempsrc == NULL) || (id < 0) || (id > 1))
-                {
-                        errno = EINVAL;
-                        return EAPI_STATUS_INVALID_PARAMETER;
-                }
-	}
+
+
+	//Check Fan Support
+	ret = CheckFanSupport(id);
+	if (ret != EAPI_STATUS_SUCCESS)
+		return ret;
+
+	if (!is_bmc_board && id == 3)
+		return EAPI_STATUS_ERROR;
+
+
+
 
 	/*Check whether FAN driver is loaded*/
 	fan_no = get_hwmon_num();
 	if (fan_no < 0)
-		return EAPI_STATUS_UNSUPPORTED;
+		return EAPI_STATUS_ERROR;
 
 	sprintf(fan_sysfile, "/sys/class/hwmon/hwmon%d/device/fan%d_auto_channels_temp", fan_no, (id+1));
 	fp = fopen (fan_sysfile, "r");
@@ -459,28 +516,27 @@ uint32_t EApiSmartFanSetTempSrc(int id, int Tempsrc)
 	char buff[256], re_buff[256];
 
 	/*Check inputs are valid*/
-	if(is_bmc_board)
+	if((Tempsrc < 0) || (Tempsrc > 1)  || (id < 0) || (id > 3))
 	{
-		if((Tempsrc < 0) || (Tempsrc > 1)  || (id < 0) || (id >= 4))
-		{
 			errno = EINVAL;
 			return EAPI_STATUS_INVALID_PARAMETER;
-		}
 	}
-	else
-	{
-		if((Tempsrc < 0) || (Tempsrc > 1)  || (id < 0) || (id > 1))
-                {
-                        errno = EINVAL;
-                        return EAPI_STATUS_INVALID_PARAMETER;
-                }
-	}
+
+ 
+	//Check Fan Support
+	ret = CheckFanSupport(id);
+	if (ret != EAPI_STATUS_SUCCESS)
+		return ret;
+
+	if (!is_bmc_board && id == 3)
+		return EAPI_STATUS_ERROR;
+
 
 	/*Check whether FAN driver is loaded*/
 	fan_no = get_hwmon_num();
 	if (fan_no < 0)
 	{
-		return EAPI_STATUS_UNSUPPORTED;
+		return EAPI_STATUS_ERROR;
 	}
 
 

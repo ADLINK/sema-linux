@@ -177,7 +177,7 @@ uint32_t EApiBoardGetValue(uint32_t Id, uint32_t *pValue)
 			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/total_up_time");
 			break;
 		case EAPI_ID_BOARD_LIB_VERSION_VAL:
-			*pValue = EAPI_VER_CREATE(4,4,2);
+			*pValue = EAPI_VER_CREATE(4,4,3);
 			return EAPI_STATUS_SUCCESS;
 		case EAPI_ID_HWMON_CPU_TEMP:
 			sprintf(sysfile, "/sys/class/hwmon/hwmon%d/device/cpu_cur_temp",hwmon_number);
@@ -271,7 +271,7 @@ uint32_t EApiBoardGetValue(uint32_t Id, uint32_t *pValue)
 			sprintf(sysfile, "/sys/bus/platform/devices/adl-bmc-boardinfo/information/voltage_vin");
 			break;
 		case EAPI_SEMA_ID_HWMON_FAN_SYSTEM_2:
-			sprintf(sysfile, "/sys/class/hwmon/hwmon2/device/sys2_fan_speed");
+			sprintf(sysfile, "/sys/class/hwmon/hwmon%d/device/sys2_fan_speed", hwmon_number);
 			break;
 		case EAPI_SEMA_ID_HWMON_FAN_SYSTEM_3:
 			sprintf(sysfile, "/sys/class/hwmon/hwmon2/device/sys3_fan_speed");

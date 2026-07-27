@@ -116,18 +116,16 @@ static ssize_t show_fan_enable_temp_src(struct device *dev, struct device_attrib
 				value = (bmc_conf >> 11) & 0x3;//get bits 12 and 11
 			}
 			
-			if(hwmon_data->adl_dev->con_type == BMC)
-			{
-				if (fan_num == 2) //system fan2
-                        	{
-                                	value = (bmc_conf >> 17) & 0x3;//get bits 18 and 17
-                        	}
+			if (fan_num == 2) //system fan2
+                       	{
+                               	value = (bmc_conf >> 17) & 0x3;//get bits 18 and 17
+                       	}
 
-                        	if (fan_num == 3) //system fan3
-                        	{
-                                	value = (bmc_conf >> 20) & 0x3;//get bits 21 and 20
-                        	}
-			}
+                       	if (fan_num == 3) //system fan3
+                       	{
+                               	value = (bmc_conf >> 20) & 0x3;//get bits 21 and 20
+                       	}
+		
 			break;
 
 		case SHOW_SET_FAN_AUTO_TEMP_SRC:
@@ -143,18 +141,16 @@ static ssize_t show_fan_enable_temp_src(struct device *dev, struct device_attrib
 				value = (bmc_conf >> 13) & 0x1;//get bit 13
 			}
 			
-			if(hwmon_data->adl_dev->con_type == BMC)
-			{
-				if (fan_num == 2) //system fan2
-                        	{
-                                	value = (bmc_conf >> 16) & 0x1;//get bit 16
-                        	}
+			if (fan_num == 2) //system fan2
+            {
+                value = (bmc_conf >> 16) & 0x1;//get bit 16
+             }
 
-                        	if (fan_num == 3) //system fan3
-                        	{
-                                	value = (bmc_conf >> 20) & 0x1;//get bit 19
-                        	}
-			}
+            if (fan_num == 3) //system fan3
+            {
+                value = (bmc_conf >> 20) & 0x1;//get bit 19
+            }
+		
 			break;
 		default:
 			mutex_unlock(&hwmon_data->update_lock);
@@ -242,20 +238,19 @@ static ssize_t set_fan_enable_temp_src(struct device *dev, struct device_attribu
 				bmc_conf |= (val << 11);
 			}
 
-			if(hwmon_data->adl_dev->con_type == BMC)
-			{
-				if (fan_num == 2) //system fan2
-                        	{
-                                	bmc_conf &= ~(0x3 << 17);//clear bits 18 and 17
-                                	bmc_conf |= (val << 17);
-                        	}
+		
+			if (fan_num == 2) //system fan2
+            {
+                bmc_conf &= ~(0x3 << 17);//clear bits 18 and 17
+                bmc_conf |= (val << 17);
+            }
 
-                        	if (fan_num == 3) //system fan3
-                        	{
-                                	bmc_conf &= ~(0x3 << 20);//clear bits 21 and 20
-                                	bmc_conf |= (val << 20);
-                        	}
-			}
+            if (fan_num == 3) //system fan3
+            {
+                bmc_conf &= ~(0x3 << 20);//clear bits 21 and 20
+                bmc_conf |= (val << 20);
+            }
+			
 			break;
 
 		case SHOW_SET_FAN_AUTO_TEMP_SRC:
@@ -278,20 +273,19 @@ static ssize_t set_fan_enable_temp_src(struct device *dev, struct device_attribu
 				bmc_conf |= (val << 13);
 			}
 
-			if(hwmon_data->adl_dev->con_type == BMC)
-			{
-				if (fan_num == 2) //system fan2
-                        	{
-                                	bmc_conf &= ~(0x1 << 16);//clear bit 16
-                                	bmc_conf |= (val << 16);
-                        	}
+			
+			if (fan_num == 2) //system fan2
+            {
+                 bmc_conf &= ~(0x1 << 16);//clear bit 16
+                 bmc_conf |= (val << 16);
+            }
 
-                        	if (fan_num == 3) //system fan3
-                        	{
-                                	bmc_conf &= ~(0x1 << 20);//clear bit 19
-                                	bmc_conf |= (val << 20);
-                        	}
-			}
+            if (fan_num == 3) //system fan3
+            {
+                 bmc_conf &= ~(0x1 << 20);//clear bit 19
+                 bmc_conf |= (val << 20);
+            }
+			
 			break;
 		default:
 			size = -EINVAL;
@@ -362,16 +356,17 @@ static ssize_t show_fan_auto_point_temp(struct device *dev,
 				cmd = ADL_BMC_SYS_FAN1_TEMP_THRE_REG;
 				break;
 			}
-		case 2: //system fan2
+		case 2: //system fan	
 			{
-                        	cmd = ADL_BMC_SYS_FAN2_TEMP_THRE_REG;
-                        	break;
-                	}
-                case 3: //system fan3
-                	{
-                        	cmd = ADL_BMC_SYS_FAN3_TEMP_THRE_REG;
-                        	break;
-                	}
+				cmd_ec = EC_RW_SYS2_TMP_REG;
+                cmd = ADL_BMC_SYS_FAN2_TEMP_THRE_REG;
+                break;
+            }
+        case 3: //system fan3
+            {
+                 cmd = ADL_BMC_SYS_FAN3_TEMP_THRE_REG;
+                 break;
+            }
 		default:
 			return -EINVAL;
 	}
@@ -464,15 +459,17 @@ static ssize_t set_fan_auto_point_temp(struct device *dev,
 				break;
 			}
 		case 2: //system fan2
-                	{
-                        	cmd = ADL_BMC_SYS_FAN2_TEMP_THRE_REG;
-                        	break;
-                	}
-                case 3: //system fan3
-                	{
-                        	cmd = ADL_BMC_SYS_FAN3_TEMP_THRE_REG;
-                        	break;
-                	}
+            {
+
+				cmd_ec = EC_RW_SYS2_TMP_REG;
+                cmd = ADL_BMC_SYS_FAN2_TEMP_THRE_REG;
+                break;
+            }
+        case 3: //system fan3
+            {
+                cmd = ADL_BMC_SYS_FAN3_TEMP_THRE_REG;
+                break;
+            }
 		default:
 			return -EINVAL;
 	}
@@ -559,15 +556,16 @@ static ssize_t show_fan_auto_point_pwm(struct device *dev,
 				break;
 			}
 		case 2: //system fan2
-                	{
-                        	cmd = ADL_BMC_SYS_FAN2_PWM_THRE_REG;
-                        	break;
-                	}
-                case 3: //system fan3
-                	{
-                        	cmd = ADL_BMC_SYS_FAN3_PWM_THRE_REG;
-                        	break;
-                	}
+            {
+			    cmd_ec = EC_RW_SYS2_TMP_REG;
+                cmd = ADL_BMC_SYS_FAN2_PWM_THRE_REG;
+                break;
+            }
+        case 3: //system fan3
+            {
+                cmd = ADL_BMC_SYS_FAN3_PWM_THRE_REG;
+                break;
+            }
 		default:
 			return -EINVAL;
 	}
@@ -654,15 +652,16 @@ static ssize_t set_fan_auto_point_pwm(struct device *dev,
 				break;
 			}
 		case 2: //system fan2
-                	{
-                        	cmd = ADL_BMC_SYS_FAN2_PWM_THRE_REG;
-                        	break;
-                	}
-                case 3: //system fan3
-                	{
-                        	cmd = ADL_BMC_SYS_FAN3_PWM_THRE_REG;
-                        	break;
-                	}
+            {          	
+				cmd_ec = EC_RW_SYS2_TMP_REG;
+				cmd = ADL_BMC_SYS_FAN2_PWM_THRE_REG;
+                break;
+            }
+        case 3: //system fan3
+            {
+                cmd = ADL_BMC_SYS_FAN3_PWM_THRE_REG;
+                break;
+            }
 		default:
 			return -EINVAL;
 	}
@@ -842,7 +841,15 @@ static ssize_t show_fan_input(struct device *dev, struct device_attribute *attr,
 			debug_printk("%s speed %x %x ix %d\n", __func__, buff[0], buff[1], ix);
 			break;
 		case 2:
-			if(hwmon_data->adl_dev->con_type == BMC)
+			
+			
+			if(hwmon_data->adl_dev->con_type == EC)
+			{		
+				ret = adl_bmc_ec_read_device(ADL_BMC_OFS_RD_SYSTEM_FAN_2, (u8*)buff, 2, EC_REGION_1);
+			}
+			
+		
+			else
 			{
                         	ret = adl_bmc_i2c_read_device(hwmon_data->adl_dev, ADL_BMC_CMD_RD_SYSTEM_FAN_2, 0, buff);
                         	if(ret < 0)
@@ -1323,24 +1330,23 @@ static void adl_bmc_hwmon_remove_sysfs(struct platform_device *pdev)
 		}
 	}
 	
-	if(hwmon_data->adl_dev->con_type == BMC)
+	
+	if (hwmon_data->adl_dev->Bmc_Capabilities[0] & ADL_BMC_SYS_FAN2_CAP)
 	{
-		if (hwmon_data->adl_dev->Bmc_Capabilities[0] & ADL_BMC_SYS_FAN2_CAP)
-        	{
-                	for (i = 0; i < ARRAY_SIZE(adl_bmc_sysfs_sys_fan2_pwm); i++) {
+               	for (i = 0; i < ARRAY_SIZE(adl_bmc_sysfs_sys_fan2_pwm); i++) {
                 	        device_remove_file(dev,
                 	                &adl_bmc_sysfs_sys_fan2_pwm[i].dev_attr);
                 	}
-        	}
+       	}
 
-        	if (hwmon_data->adl_dev->Bmc_Capabilities[0] & ADL_BMC_SYS_FAN3_CAP)
-        	{	
-                	for (i = 0; i < ARRAY_SIZE(adl_bmc_sysfs_sys_fan3_pwm); i++) {
+       	if (hwmon_data->adl_dev->Bmc_Capabilities[0] & ADL_BMC_SYS_FAN3_CAP)
+       	{	
+               	for (i = 0; i < ARRAY_SIZE(adl_bmc_sysfs_sys_fan3_pwm); i++) {
                 	        device_remove_file(dev,
                 	                &adl_bmc_sysfs_sys_fan3_pwm[i].dev_attr);
                 	}
-        	}
-	}
+       	}
+	
 
 	/*Remove sysfs entry for temperature*/
 	if (hwmon_data->adl_dev->Bmc_Capabilities[0] & ADL_BMC_CAP_TEMP) 
@@ -1398,24 +1404,22 @@ static void adl_bmc_hwmon_remove_sysfs(struct platform_device *pdev)
 		}
 	}
 
-	if(hwmon_data->adl_dev->con_type == BMC)
-	{
-		if (hwmon_data->adl_dev->Bmc_Capabilities[0] & ADL_BMC_SYS_FAN2_CAP)
-        	{
-                	for (i = 0; i < ARRAY_SIZE(adl_bmc_sysfs_system_fan2); i++)
-                	{
-                        	device_remove_file(&pdev->dev, &adl_bmc_sysfs_system_fan2[i].dev_attr);
-                	}
-        	}
+	if (hwmon_data->adl_dev->Bmc_Capabilities[0] & ADL_BMC_SYS_FAN2_CAP)
+        {
+                for (i = 0; i < ARRAY_SIZE(adl_bmc_sysfs_system_fan2); i++)
+                {
+                        device_remove_file(&pdev->dev, &adl_bmc_sysfs_system_fan2[i].dev_attr);
+                }
+        }
 
-        	if (hwmon_data->adl_dev->Bmc_Capabilities[0] & ADL_BMC_SYS_FAN3_CAP)
-        	{
-                	for (i = 0; i < ARRAY_SIZE(adl_bmc_sysfs_system_fan3); i++)
-                	{
-                        	 device_remove_file(&pdev->dev, &adl_bmc_sysfs_system_fan3[i].dev_attr);
-                	}
-        	}
-	}
+       	if (hwmon_data->adl_dev->Bmc_Capabilities[0] & ADL_BMC_SYS_FAN3_CAP)
+       	{
+               	for (i = 0; i < ARRAY_SIZE(adl_bmc_sysfs_system_fan3); i++)
+               	{
+                       	 device_remove_file(&pdev->dev, &adl_bmc_sysfs_system_fan3[i].dev_attr);
+               	}
+       	}
+	
 }
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,9,0)
@@ -1485,31 +1489,29 @@ static int adl_bmc_hwmon_probe(struct platform_device *pdev)
 		}
 	}
 
-	if(hwmon_data->adl_dev->con_type == BMC)
-	{
-		/*check system fan2 capability for bmc*/
-        	if (hwmon_data->adl_dev->Bmc_Capabilities[0] & ADL_BMC_SYS_FAN2_CAP)
-        	{
-                	debug_printk("System fan2 present\n");
-                	for (i = 0; i < ARRAY_SIZE(adl_bmc_sysfs_sys_fan2_pwm); i++) {
-                        	err = device_create_file(dev,
-                                	&adl_bmc_sysfs_sys_fan2_pwm[i].dev_attr);
-                        	if (err)
-                                	goto EXIT_DEV_REMOVE;
-                	}
-        	}
+	
+	/*check system fan2 capability for bmc*/
+	if (hwmon_data->adl_dev->Bmc_Capabilities[0] & ADL_BMC_SYS_FAN2_CAP)
+        {
+               	debug_printk("System fan2 present\n");
+               	for (i = 0; i < ARRAY_SIZE(adl_bmc_sysfs_sys_fan2_pwm); i++) {
+                       	err = device_create_file(dev,
+                               	&adl_bmc_sysfs_sys_fan2_pwm[i].dev_attr);
+                       	if (err)
+                               	goto EXIT_DEV_REMOVE;
+               	}
+       	}
 
-        	/*check system fan3 capability for bmc*/
-        	if (hwmon_data->adl_dev->Bmc_Capabilities[0] & ADL_BMC_SYS_FAN3_CAP)
-        	{
-                	debug_printk("System fan3 present\n");
-                	for (i = 0; i < ARRAY_SIZE(adl_bmc_sysfs_sys_fan3_pwm); i++) {
-                       		err = device_create_file(dev,
-                               		&adl_bmc_sysfs_sys_fan3_pwm[i].dev_attr);
-                        	if (err)
-                                	goto EXIT_DEV_REMOVE;
-                	}
-        	}
+	/*check system fan3 capability for bmc*/
+       	if (hwmon_data->adl_dev->Bmc_Capabilities[0] & ADL_BMC_SYS_FAN3_CAP)
+       	{
+               	debug_printk("System fan3 present\n");
+               	for (i = 0; i < ARRAY_SIZE(adl_bmc_sysfs_sys_fan3_pwm); i++) {
+                     	err = device_create_file(dev,
+                              	&adl_bmc_sysfs_sys_fan3_pwm[i].dev_attr);
+                        if (err)
+                                goto EXIT_DEV_REMOVE;
+               	}
 	}
 
 	/*check CPU temperature capability and create sysfs entry for CPU tempearature*/
@@ -1605,30 +1607,29 @@ static int adl_bmc_hwmon_probe(struct platform_device *pdev)
 		}
 	}
 
-	if(hwmon_data->adl_dev->con_type == BMC)
-	{
+
 		/*check system fan 2 apability and create sysfs entry for sysyem fan 2*/
-        	if (hwmon_data->adl_dev->Bmc_Capabilities[0] & ADL_BMC_SYS_FAN2_CAP)
-        	{
-                	for (i = 0; i < ARRAY_SIZE(adl_bmc_sysfs_system_fan2); i++)
-                	{
-                        	err = device_create_file(&pdev->dev, &adl_bmc_sysfs_system_fan2[i].dev_attr);
-                        	if (err)
-                               		dev_err(&pdev->dev, "Creation of sysfs entry failed %d\n", err);
-                	}
-        	}
+        if (hwmon_data->adl_dev->Bmc_Capabilities[0] & ADL_BMC_SYS_FAN2_CAP)
+        {
+                for (i = 0; i < ARRAY_SIZE(adl_bmc_sysfs_system_fan2); i++)
+                {
+                       	err = device_create_file(&pdev->dev, &adl_bmc_sysfs_system_fan2[i].dev_attr);
+                        if (err)
+                             dev_err(&pdev->dev, "Creation of sysfs entry failed %d\n", err);
+                }
+        }
 
         	/*check system fan 3 apability and create sysfs entry for sysyem fan 3*/
-        	if (hwmon_data->adl_dev->Bmc_Capabilities[0] & ADL_BMC_SYS_FAN3_CAP)
-        	{
-                	for (i = 0; i < ARRAY_SIZE(adl_bmc_sysfs_system_fan3); i++)
-                	{
-                        	err = device_create_file(&pdev->dev, &adl_bmc_sysfs_system_fan3[i].dev_attr);
-                        	if (err)
-                                	dev_err(&pdev->dev, "Creation of sysfs entry failed %d\n", err);
-                	}
-        	}
-	}
+        if (hwmon_data->adl_dev->Bmc_Capabilities[0] & ADL_BMC_SYS_FAN3_CAP)
+        {
+                for (i = 0; i < ARRAY_SIZE(adl_bmc_sysfs_system_fan3); i++)
+                {
+                        err = device_create_file(&pdev->dev, &adl_bmc_sysfs_system_fan3[i].dev_attr);
+                        if (err)
+                                dev_err(&pdev->dev, "Creation of sysfs entry failed %d\n", err);
+                }
+        }
+	
 	/* Register device */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,9,0)
 	hwmon_data->hwmon_dev = hwmon_device_register_with_info(dev,"adl_ec_hwmon",NULL,&adl_chip_info,NULL);

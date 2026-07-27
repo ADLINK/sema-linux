@@ -60,6 +60,8 @@
 #define ADL_BMC_OFS_SET_PWD             	0x3E            ///< Set/Clear PowerUp Watchdog-timer
 #define EC_RW_CPU_TMP_REG		        0x70   		//CPU Fan
 #define EC_RW_SYS_TMP_REG		        0x78            //System Fan
+#define EC_RW_SYS2_TMP_REG		        0x97            //System Fan 2
+
 #define ADL_BMC_OFS_RD_CPU_TEMP			0x2E		///< Read CPU Temperature
 #define ADL_BMC_OFS_SYSCFG                      0x0C            ///< Get/Set system config register
 #define ADL_BMC_OFS_BRD_NAME                    0xA0            //Board Name
@@ -71,6 +73,8 @@
 #define ADL_BMC_OFS_RD_SYSTEM_TEMP		0x48		///< Read System Temperature
 #define ADL_BMC_OFS_RD_CPU_FAN			0x60		///< Read CPU fan speed
 #define ADL_BMC_OFS_RD_SYSTEM_FAN_1		0x62		///< Read system fan 1 speed
+#define ADL_BMC_OFS_RD_SYSTEM_FAN_2		0xB0		///< Read system fan 2 speed
+
 
 #define ADL_BMC_OFS_RD_MAXCPU_TEMP              0x30            // Maximum CPU Temperature
 #define ADL_BMC_OFS_RD_MINCPU_TEMP              0x31            // Minimum CPU Temperature

@@ -26,7 +26,7 @@
 #include <eapi.h>
 #include <uuid/uuid.h>
 
-#define Version	"ADLINK-SEMA-UNIFIED-LINUX-V4_R4_2_26_05_05"
+#define Version	"ADLINK-SEMA-UNIFIED-LINUX-V4_R4_3_26_07_27"
 
 char* ExeName;
 uint8_t	SetWatchdog, TriggerWatchdog, StopWatchdog, WatchDogCap, IsPwrUpWDogStart, IsPwrUpWDogStop;
@@ -223,7 +223,7 @@ void ShowHelp(int condition)
 		printf("  6. semautil /f get_temp_source [FanID] \n");
 		printf("  7. semautil /f get_mode 	 [FanID] \n");
 		printf("  8. semautil /f set_mode	 [FanID] [Mode]\n");
-		printf("\n     FanID\n     0:CPU fan\n     1:System fan 1\n");
+		printf("\n     FanID\n     0:CPU fan\n     1:System fan 1\n     2:System fan 2\n     3:System fan 3\n");
 		printf("\n     Mode\n     0:Auto\n     1:Off\n     2:On\n     3:Soft\n");
 		FILE* fp = fopen("/sys/bus/platform/devices/adl-bmc-boardinfo/information/board_name", "r");
 		if (fp == NULL)
@@ -607,7 +607,7 @@ int DispatchCMDToSEMA(int argc, char* argv[])
 				return 0;
 			}
 		}
-		else if((Idx == 14 || Idx == 15 || Idx == 31 || Idx == 32) ||
+		else if((Idx == 14 || Idx == 15 || Idx == 32) ||
 			(Idx == 5 || Idx == 6 ||(Idx >= 33 && Idx <= 36)))
 		{
 			if(ret == EAPI_STATUS_READ_ERROR){
@@ -1212,10 +1212,17 @@ int DispatchCMDToSEMA(int argc, char* argv[])
 		Level4 = atoi(argv[7]);
 
 		ret = EApiSmartFanSetTempSetpoints(fid, Level1, Level2, Level3, Level4);
-		if (ret) {
+		if (ret == EAPI_STATUS_UNSUPPORTED)
+		{
+			printf("\nBoard does not support this capability\n\n");
+			exit(-1);
+		}
+		else if (ret != EAPI_STATUS_SUCCESS)
+		{
 			printf("Get EApi information failed\n");
 			errno_exit("EApiSmartFanSetTempSetpoints");
 		}
+
 		printf("Temperature levels set successfully\n");
 	}
 
@@ -1227,7 +1234,13 @@ int DispatchCMDToSEMA(int argc, char* argv[])
 		}
 		fid = atoi(argv[3]);
 		ret = EApiSmartFanGetTempSetpoints(fid, &Level1, &Level2, &Level3, &Level4);
-		if (ret) {
+		if (ret == EAPI_STATUS_UNSUPPORTED)
+		{
+			printf("\nBoard does not support this capability\n\n");
+			exit(-1);
+		}
+		else if (ret != EAPI_STATUS_SUCCESS)
+		{
 			printf("Get EAPI information failed\n");
 			errno_exit("EApiSmartFanGetTempSetpoints");
 		}
@@ -1235,7 +1248,7 @@ int DispatchCMDToSEMA(int argc, char* argv[])
 		if (!is_bmc_board)
 		{
 			if (fid)
-				printf("Fan ID: %d (System fan)\nLevel1: %d\nLevel2: %d\nLevel3: %d\nLevel4: %d\n", fid, Level1, Level2, Level3, Level4);
+				printf("Fan ID: %d (System fan %d)\nLevel1: %d\nLevel2: %d\nLevel3: %d\nLevel4: %d\n", fid,fid, Level1, Level2, Level3, Level4);
 			else
 				printf("Fan ID: %d (CPU fan)\nLevel1: %d\nLevel2: %d\nLevel3: %d\nLevel4: %d\n", fid, Level1, Level2, Level3, Level4);
 		}
@@ -1258,10 +1271,17 @@ int DispatchCMDToSEMA(int argc, char* argv[])
 		Level4 = atoi(argv[7]);
 
 		ret = EApiSmartFanSetPWMSetpoints(fid, Level1, Level2, Level3, Level4);
-		if (ret) {
-			printf("Get EApi information failed\n");
+		if (ret == EAPI_STATUS_UNSUPPORTED)
+		{
+			printf("\nBoard does not support this capability\n\n");
+			exit(-1);
+		}
+		else if (ret != EAPI_STATUS_SUCCESS)
+		{
+			printf("Get EAPI information failed\n");
 			errno_exit("EApiSmartFanSetPWMSetpoints");
 		}
+
 		printf("PWM levels set successfully\n");
 	}
 
@@ -1273,15 +1293,21 @@ int DispatchCMDToSEMA(int argc, char* argv[])
 		}
 		fid = atoi(argv[3]);
 		ret = EApiSmartFanGetPWMSetpoints(fid, &Level1, &Level2, &Level3, &Level4);
-		if (ret) {
-			printf("Get EApi information failed\n");
+		if (ret == EAPI_STATUS_UNSUPPORTED)
+		{
+			printf("\nBoard does not support this capability\n\n");
+			exit(-1);
+		}
+		else if (ret != EAPI_STATUS_SUCCESS)
+		{
+			printf("Get EAPI information failed\n");
 			errno_exit("EApiSmartFanGetPWMSetpoints");
 		}
 
 		if (!is_bmc_board)
 		{
 			if (fid)
-				printf("Fan ID: %d (System fan)\nLevel1: %d\nLevel2: %d\nLevel3: %d\nLevel4: %d\n", fid, Level1, Level2, Level3, Level4);
+				printf("Fan ID: %d (System fan %d)\nLevel1: %d\nLevel2: %d\nLevel3: %d\nLevel4: %d\n", fid,fid, Level1, Level2, Level3, Level4);
 			else
 				printf("Fan ID: %d (CPU fan)\nLevel1: %d\nLevel2: %d\nLevel3: %d\nLevel4: %d\n", fid, Level1, Level2, Level3, Level4);
 		}
@@ -1300,8 +1326,14 @@ int DispatchCMDToSEMA(int argc, char* argv[])
 		fid = atoi(argv[3]);
 		fan_mode = atoi(argv[4]);
 		ret = EApiSmartFanSetMode(fid, fan_mode);
-		if (ret) {
-			printf("get eapi information failed\n");
+		if (ret == EAPI_STATUS_UNSUPPORTED)
+		{
+			printf("\nBoard does not support this capability\n\n");
+			exit(-1);
+		}
+		else if (ret != EAPI_STATUS_SUCCESS)
+		{
+			printf("Get EAPI information failed\n");
 			errno_exit("EApiSmartFanSetMode");
 		}
 		printf("FAN mode set successfully\n");
@@ -1315,11 +1347,14 @@ int DispatchCMDToSEMA(int argc, char* argv[])
 		}
 		fid = atoi(argv[3]);
 		ret = EApiSmartFanGetMode(fid, &fan_mode);
-		if (ret) {
-			if (ret == EAPI_STATUS_UNSUPPORTED)
-				printf("Board does not support this capability\n");
-			else
-				printf("Get EApi information failed\n");
+		if (ret == EAPI_STATUS_UNSUPPORTED)
+		{
+			printf("\nBoard does not support this capability\n\n");
+			exit(-1);
+		}
+		else if (ret != EAPI_STATUS_SUCCESS)
+		{
+			printf("Get EAPI information failed\n");
 			errno_exit("EApiSmartFanGetMode");
 		}
 
@@ -1328,13 +1363,13 @@ int DispatchCMDToSEMA(int argc, char* argv[])
 			if (fid)
 			{
 				if (fan_mode == 0)
-					printf("Fan id: %d (System fan) \nFan Mode: %d(Auto)\n", fid, fan_mode);
+					printf("Fan id: %d (System fan %d) \nFan Mode: %d(Auto)\n", fid,fid, fan_mode);
 				else if (fan_mode == 1)
-					printf("Fan id: %d (System fan) \nFan Mode: %d(Off)\n", fid, fan_mode);
+					printf("Fan id: %d (System fan %d) \nFan Mode: %d(Off)\n", fid, fid, fan_mode);
 				else if (fan_mode == 2)
-					printf("Fan id: %d (System fan) \nFan Mode: %d(On)\n", fid, fan_mode);
+					printf("Fan id: %d (System fan %d) \nFan Mode: %d(On)\n", fid,fid ,fan_mode);
 				else
-					printf("Fan id: %d (System fan) \nFan Mode: %d(Soft)\n", fid, fan_mode);
+					printf("Fan id: %d (System fan %d) \nFan Mode: %d(Soft)\n", fid,fid ,fan_mode);
 			}
 			else
 			{
@@ -1363,11 +1398,14 @@ int DispatchCMDToSEMA(int argc, char* argv[])
 		fid = atoi(argv[3]);
 		Tempsrc = atoi(argv[4]);
 		ret = EApiSmartFanSetTempSrc(fid, Tempsrc);
-		if (ret) {
-			if (ret == EAPI_STATUS_UNSUPPORTED)
-				printf("Board does not support this capability\n");
-			else
-				printf("Get EApi information failed\n");
+		if (ret == EAPI_STATUS_UNSUPPORTED)
+		{
+			printf("\nBoard does not support this capability\n\n");
+			exit(-1);
+		}
+		else if (ret != EAPI_STATUS_SUCCESS)
+		{
+			printf("Get EAPI information failed\n");
 			errno_exit("EApiSmartFanSetTempSrc");
 		}
 
@@ -1406,11 +1444,14 @@ int DispatchCMDToSEMA(int argc, char* argv[])
 		}
 		fid = atoi(argv[3]);
 		ret = EApiSmartFanGetTempSrc(fid, &Tempsrc);
-		if (ret) {
-			if (ret == EAPI_STATUS_UNSUPPORTED)
-				printf("Board does not support this capability\n");
-			else
-				printf("Get EApi information failed\n");
+		if (ret == EAPI_STATUS_UNSUPPORTED)
+		{
+			printf("\nBoard does not support this capability\n\n");
+			exit(-1);
+		}
+		else if (ret != EAPI_STATUS_SUCCESS)
+		{
+			printf("Get EAPI information failed\n");
 			errno_exit("EApiSmartFanGetTempSrc");
 		}
 
@@ -2124,7 +2165,7 @@ int DispatchCMDToSEMA(int argc, char* argv[])
 			}
 		}
 
-		if (Voltage == 0)
+		if ((Voltage == 0) && (strlen(Vmbuf) == 0))
 		{
 			printf("Invalid Channel\n");
 		}
@@ -2582,7 +2623,7 @@ signed int ParseArgs(int argc, char* argv[])
 		}
 		else if (argc == 5 && (strcasecmp(argv[2], "set_temp_source") == 0))
 		{
-			if (argv[4][0] != '0' && argv[4][0] != '1')
+			if ((atoi(argv[4]) != 0) && (atoi(argv[4]) != 1))
 			{
 				printf("Wrong arguments \n");
 				help_condition = 3;
@@ -2595,7 +2636,7 @@ signed int ParseArgs(int argc, char* argv[])
 		}
 		else if (argc == 5 && (strcasecmp(argv[2], "set_mode") == 0))
 		{
-			if (argv[4][0] < '0' || argv[4][0] > '3')
+			if ((atoi(argv[4]) < 0) || (atoi(argv[4]) > 3))
 			{
 				printf("Wrong arguments \n");
 				help_condition = 3;
@@ -2609,7 +2650,7 @@ signed int ParseArgs(int argc, char* argv[])
 		
 		if(argc > 3)
 		{
-			if (argv[3][0] != '0' && argv[3][0] != '1')
+			if ((atoi(argv[3])<0) || (atoi(argv[3])>3))
 			{
 				printf("Wrong arguments \n");
 				help_condition = 3;
