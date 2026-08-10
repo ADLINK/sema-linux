@@ -7,6 +7,7 @@
 #include <linux/fs.h>
 #include <linux/module.h>
 #include <linux/version.h>
+#include <linux/uaccess.h>
 #include "adl-ec.h"
 
 #if __has_include("/etc/redhat-release")
@@ -401,25 +402,25 @@ static long int ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		if (RetVal != 0)
 			return RetVal;
 
-		if (copy_to_user((uint32_t *)arg, &gpio_dir, sizeof(gpio_dir)) != 0)
+		if (copy_to_user((uint32_t __user *)arg, &gpio_dir, sizeof(gpio_dir)) != 0)
 			return -EFAULT;
 		break;
 	}
 	case GET_LEVEL:
 	{
-		if (copy_from_user(&gpionum, (int32_t *)arg, sizeof(gpionum)) != 0)
+		if (copy_from_user(&gpionum, (int32_t __user *)arg, sizeof(gpionum)) != 0)
 			return -EFAULT;
 
 		gpio_ret = adl_gpio_get(NULL, gpionum);
 
-		if (copy_to_user((int32_t *)arg, &gpio_ret, sizeof(gpio_ret)) != 0)
+		if (copy_to_user((int32_t __user *)arg, &gpio_ret, sizeof(gpio_ret)) != 0)
 			return -EFAULT;
 
 		break;
 	}
 	case SET_LEVEL:
 	{
-		if (copy_from_user(&data, (struct gpiostruct *)arg, sizeof(data)) != 0)
+		if (copy_from_user(&data, (struct gpiostruct __user *)arg, sizeof(data)) != 0)
 			return -EFAULT;
 
 		adl_gpio_set(NULL, data.gpio, data.val);
@@ -427,7 +428,7 @@ static long int ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	}
 	case OP_DIRECTION:
 	{
-		if (copy_from_user(&data, (struct gpiostruct *)arg, sizeof(data)) != 0)
+		if (copy_from_user(&data, (struct gpiostruct __user *)arg, sizeof(data)) != 0)
 			return -EFAULT;
 
 		adl_gpio_direction_output(NULL, data.gpio, data.val);
@@ -435,7 +436,7 @@ static long int ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	}
 	case IN_DIRECTION:
 	{
-		if (copy_from_user(&gpionum, (int32_t *)arg, sizeof(gpionum)) != 0)
+		if (copy_from_user(&gpionum, (int32_t  __user*)arg, sizeof(gpionum)) != 0)
 			return -EFAULT;
 
 		adl_gpio_direction_input(NULL, gpionum);

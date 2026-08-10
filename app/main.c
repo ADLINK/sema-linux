@@ -11,7 +11,7 @@
 //
 // * Neither the name of ADLINK Technology nor the names of its contributors may be used
 //   to endorse or promote products derived from this software without specific
-//   prior written permission of ADLINK Technology, Inc.
+///   prior written permission of ADLINK Technology, Inc.
 
 #include <stdint.h>
 #include <stdio.h>

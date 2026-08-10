@@ -467,14 +467,14 @@ static long ioctl(struct file *file, unsigned int cmd, unsigned long data)
 	switch(cmd)
 	{
 		case PROBE_DEV:
-			if(copy_from_user(&buf, (void*)data, sizeof(struct eapi_txn))!=0)
+			if(copy_from_user(&buf, (void __user *)data, sizeof(struct eapi_txn))!=0)
 			{
         			return EFAULT;
 			}
 			mutex_lock(&i2c_lock);
 			if(ProbeDevice(&buf) == 0)
 			{
-				if(copy_to_user((void*)data, &buf, sizeof(struct eapi_txn))!=0)
+				if(copy_to_user((void __user *)data, &buf, sizeof(struct eapi_txn))!=0)
 				{
 					mutex_unlock(&i2c_lock);
 					return EFAULT;
@@ -485,7 +485,7 @@ static long ioctl(struct file *file, unsigned int cmd, unsigned long data)
 			mutex_unlock(&i2c_lock);
 			return -1;
 		case EAPI_TRXN:
-			if(copy_from_user(&buf, (void*)data, sizeof(struct eapi_txn))!=0)
+			if(copy_from_user(&buf, (void __user *)data, sizeof(struct eapi_txn))!=0)
 			{
         			return EFAULT;
 			} 
@@ -515,14 +515,14 @@ static long ioctl(struct file *file, unsigned int cmd, unsigned long data)
 				}
 			}
 
-			if(copy_to_user((void*)data, &buf, sizeof(struct eapi_txn))!=0)
+			if(copy_to_user((void __user *)data, &buf, sizeof(struct eapi_txn))!=0)
 			{
 				mutex_unlock(&i2c_lock);
 				return EFAULT;
 			}
 			break;
 		case BMC_I2C_STS:
-			if(copy_from_user(&buf, (void*)data, sizeof(struct eapi_txn))!=0)
+			if(copy_from_user(&buf, (void __user *)data, sizeof(struct eapi_txn))!=0)
 			{
         			return EFAULT;
 			}
@@ -530,14 +530,14 @@ static long ioctl(struct file *file, unsigned int cmd, unsigned long data)
 			
 			bmc_i2c_status(&buf);
 			
-			if(copy_to_user((void*)data, &buf, sizeof(struct eapi_txn))!=0)
+			if(copy_to_user((void __user *)data, &buf, sizeof(struct eapi_txn))!=0)
 			{
 				mutex_unlock(&i2c_lock);
 				return EFAULT;
 			}
 			break;
 		case SMBUS_IOCTL_TRANS:
-			if(copy_from_user(&sm_buf, (void*)data, sizeof(struct smbus_data))!=0)
+			if(copy_from_user(&sm_buf, (void __user *)data, sizeof(struct smbus_data))!=0)
                         {
                                 return EFAULT;
                         }
@@ -549,7 +549,7 @@ static long ioctl(struct file *file, unsigned int cmd, unsigned long data)
 			{
 				if(sm_buf.type == TT_RBB || sm_buf.type == TT_RBW)
 				{
-					if(copy_to_user((void*)data, &sm_buf, sizeof(struct smbus_data))!=0)
+					if(copy_to_user((void __user *)data, &sm_buf, sizeof(struct smbus_data))!=0)
                         		{
 						mutex_unlock(&i2c_lock);
                                 		return EFAULT;

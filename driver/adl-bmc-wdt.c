@@ -10,6 +10,7 @@
 #include <linux/version.h>
 #include <linux/cdev.h>
 #include <linux/fs.h>
+#include <linux/uaccess.h>
 
 #include "adl-ec.h"
 #include "adl-bmc.h"
@@ -235,7 +236,7 @@ static long int ioctl(struct file* file, unsigned int cmd, unsigned long arg)
 
 	// Only GET_WDT_TIMEOUT should avoid copy_from_user
 	if (cmd != GET_WDT_TIMEOUT) {
-		if ((ret = copy_from_user(&timeout, (uint16_t*)arg, sizeof(timeout))) != 0) {
+		if ((ret = copy_from_user(&timeout, (uint16_t __user *)arg, sizeof(timeout))) != 0) {
 			return -EFAULT;
 		}
 	}
@@ -258,7 +259,7 @@ static long int ioctl(struct file* file, unsigned int cmd, unsigned long arg)
 			return -EIO;
 		}
 
-		if (copy_to_user((uint16_t*)arg, &timeout, sizeof(timeout)) != 0)
+		if (copy_to_user((uint16_t __user *)arg, &timeout, sizeof(timeout)) != 0)
 		{
 			mutex_unlock(&wdt_lock);
 			return -EFAULT;

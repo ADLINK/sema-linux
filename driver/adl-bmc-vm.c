@@ -168,7 +168,7 @@ static long int ioctl(struct file *file, unsigned cmd, unsigned long arg)
 		{
 			int RetVal;
 			// Read input structure from user space
-			if (copy_from_user(&vm, (struct data *)arg, sizeof(vm)) != 0){
+			if (copy_from_user(&vm, (struct data __user *)arg, sizeof(vm)) != 0){
 				mutex_unlock(&vm_lock);
 				return -EFAULT;
 			}
@@ -179,7 +179,7 @@ static long int ioctl(struct file *file, unsigned cmd, unsigned long arg)
 				return RetVal;
 			}
 			// Send updated structure back to user space
-			if (copy_to_user((struct data *)arg, &vm, sizeof(vm)) != 0){
+			if (copy_to_user((struct data __user *)arg, &vm, sizeof(vm)) != 0){
 				mutex_unlock(&vm_lock);
 				return -EFAULT;
 			}
@@ -188,7 +188,7 @@ static long int ioctl(struct file *file, unsigned cmd, unsigned long arg)
 
 		case GET_VOLT_MONITOR_CAP:
 		{
-			if (copy_to_user((uint8_t *)arg, &vm_cap, sizeof(vm_cap)) != 0){
+			if (copy_to_user((uint8_t __user *)arg, &vm_cap, sizeof(vm_cap)) != 0){
 				mutex_unlock(&vm_lock);
 				return -EFAULT;
 			}
