@@ -112,7 +112,6 @@ uint32_t EApiSmartFanSetTempSetpoints(int id, int Level1, int Level2, int Level3
 			Level_val = Level4;
 
 		sprintf(buff, "%d", Level_val);
-		int ret;
 		ret = fwrite(buff, 4, sizeof(char), fp);
 		if (ret)
 			fclose(fp);
@@ -178,7 +177,6 @@ uint32_t EApiSmartFanGetTempSetpoints(int id, int *pLevel1, int *pLevel2, int *p
 		if (fp == NULL)
 			return EAPI_STATUS_ERROR;
 		
-		int ret;
 		ret = fread(buff, sizeof(char), 256, fp);
 		if (ret){
 			fclose(fp);
@@ -235,7 +233,6 @@ uint32_t EApiSmartFanSetPWMSetpoints(int id, int pwm_Level1, int pwm_Level2, int
 	for(i=1;i<=4;i++)
 	{
 		FILE* fp;
-		int ret;
 		sprintf(fan_sysfile, "/sys/class/hwmon/hwmon%d/device/fan%d_auto_point%d_pwm", fan_no, (id+1), i);
 		fp = fopen (fan_sysfile, "w+");
 		if (fp == NULL)
@@ -313,7 +310,6 @@ uint32_t EApiSmartFanGetPWMSetpoints(int id, int *pLevel1, int *pLevel2, int *pL
 	for(i=1;i<=4;i++)
 	{
 		FILE *fp;
-		int ret; 
 		sprintf(fan_sysfile, "/sys/class/hwmon/hwmon%d/device/fan%d_auto_point%d_pwm", fan_no, (id+1), i);
 		fp = fopen (fan_sysfile, "r");
 		if (fp == NULL)
@@ -594,7 +590,7 @@ int get_hwmon_num(void)
 
 	for (uint32_t fan_no=0;fan_no <= max_hwmon; fan_no++)
 	{
-		sprintf(fan_sysfile, "/sys/class/hwmon/hwmon%d/device/driver/adl-bmc-hwmon/", fan_no);
+		sprintf(fan_sysfile, "/sys/class/hwmon/hwmon%u/device/driver/adl-bmc-hwmon/", fan_no);
 		dir = opendir(fan_sysfile);
 		if(dir)
 		{

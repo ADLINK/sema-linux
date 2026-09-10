@@ -36,7 +36,7 @@ static int adl_bmc_nvmem_read(void *context, unsigned int offset, void *val, siz
 		{
 			return -1;
 		}
-		mutex_lock(&adl_dev->mx_nvmem);
+		mutex_lock(&adl_dev->txn_mutex);
 		for(i = 0; size > 0; i += 32)
 		{
 			if(size > 32)
@@ -54,13 +54,13 @@ static int adl_bmc_nvmem_read(void *context, unsigned int offset, void *val, siz
 
 			if (ret < 0)
 			{
-				mutex_unlock(&adl_dev->mx_nvmem);
+				mutex_unlock(&adl_dev->txn_mutex);
 				return ret;
 			}
 
 		}
 
-		mutex_unlock(&adl_dev->mx_nvmem);
+		mutex_unlock(&adl_dev->txn_mutex);
 	}
 	else
 	{
@@ -70,7 +70,7 @@ static int adl_bmc_nvmem_read(void *context, unsigned int offset, void *val, siz
 		int cnt,i;
 		debug_printk("Func :%s offset: %d bytes: %lu\n", __func__, offset, bytes);
 
-		mutex_lock(&adl_dev->mx_nvmem);
+		mutex_lock(&adl_dev->txn_mutex);
 
 		for(addr = offset, i = 0; addr < (offset + bytes); addr += 32, i ++) {
 			int ret;
@@ -104,7 +104,7 @@ static int adl_bmc_nvmem_read(void *context, unsigned int offset, void *val, siz
 
 			ret = adl_bmc_i2c_write_device(NULL, ADL_BMC_CMD_SET_ADDRESS, 3, buf);
 			if (ret < 0){
-				mutex_unlock(&adl_dev->mx_nvmem);
+				mutex_unlock(&adl_dev->txn_mutex);
 				return ret;
 			}
 
@@ -119,12 +119,12 @@ static int adl_bmc_nvmem_read(void *context, unsigned int offset, void *val, siz
 				ret  = adl_bmc_i2c_read_device(NULL, ADL_BMC_CMD_READ_DATA, cnt, &((unsigned char *)val)[0]);
 			}
 			if (ret < 0){
-				mutex_unlock(&adl_dev->mx_nvmem);
+				mutex_unlock(&adl_dev->txn_mutex);
 				return ret;
 			}
 		}
 	}
-	mutex_unlock(&adl_dev->mx_nvmem);
+	mutex_unlock(&adl_dev->txn_mutex);
 	return bytes;
 }
 
@@ -139,7 +139,7 @@ static int adl_bmc_nvmem_write(void *context, unsigned int offset, void *val, si
 			return -EINVAL;
 
 		size = bytes;
-		mutex_lock(&adl_dev->mx_nvmem);
+		mutex_lock(&adl_dev->txn_mutex);
 		for(i = 0; size > 0; i += 32)
 		{
 			if(size > 32)
@@ -157,11 +157,11 @@ static int adl_bmc_nvmem_write(void *context, unsigned int offset, void *val, si
 
 			if (ret < 0)
 			{
-				mutex_unlock(&adl_dev->mx_nvmem);
+				mutex_unlock(&adl_dev->txn_mutex);
 				return ret;
 			}
 		}
-		mutex_unlock(&adl_dev->mx_nvmem);
+		mutex_unlock(&adl_dev->txn_mutex);
 	}
 	else
 	{
@@ -176,7 +176,7 @@ static int adl_bmc_nvmem_write(void *context, unsigned int offset, void *val, si
 			return -EINVAL;	
 		}
 
-		mutex_lock(&adl_dev->mx_nvmem);
+		mutex_lock(&adl_dev->txn_mutex);
 
 		size = bytes;
 		for(addr = offset; addr < (offset + bytes); addr += 32) {
@@ -196,7 +196,7 @@ static int adl_bmc_nvmem_write(void *context, unsigned int offset, void *val, si
 			msleep(30);
 			ret  = adl_bmc_i2c_write_device(NULL, ADL_BMC_CMD_SET_ADDRESS, 3, buf);
 			if (ret < 0){
-				mutex_unlock(&adl_dev->mx_nvmem);
+				mutex_unlock(&adl_dev->txn_mutex);
 				return ret;
 			}
 
@@ -205,12 +205,12 @@ static int adl_bmc_nvmem_write(void *context, unsigned int offset, void *val, si
 
 			ret  = adl_bmc_i2c_write_device(NULL, ADL_BMC_CMD_WRITE_DATA, buf[2], &((unsigned char *)val)[0]);
 			if (ret < 0){
-				mutex_unlock(&adl_dev->mx_nvmem);
+				mutex_unlock(&adl_dev->txn_mutex);
 				return ret;
 			}
 		}
 	}
-	mutex_unlock(&adl_dev->mx_nvmem);
+	mutex_unlock(&adl_dev->txn_mutex);
 	return 0;
 }
 

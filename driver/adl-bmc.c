@@ -933,9 +933,6 @@ static int adl_bmc_acpi_probe(struct platform_device *pdev)
 
 		adl_bmc_dev->CollectCapabilities = CollectCapabilities;
 
-		/* mutex init */
-		mutex_init(&adl_bmc_dev->mx_nvmem);
-
 		CollectCapabilities(adl_bmc_dev->Bmc_Capabilities, 0,  NULL);
 
 		debug_printk("%x %x\n", adl_bmc_dev->Bmc_Capabilities[0], adl_bmc_dev->Bmc_Capabilities[1]);
@@ -982,6 +979,7 @@ static int adl_bmc_acpi_probe(struct platform_device *pdev)
 		//MSB is first
 		CollectCapabilities(adl_bmc_dev->Bmc_Capabilities, ret, buf);
 	}
+	mutex_init(&adl_bmc_dev->txn_mutex);
 	platform_set_drvdata(pdev, adl_bmc_dev);
 
 	return mfd_add_devices(adl_bmc_dev->dev, -1, adl_bmc_devs, ARRAY_SIZE(adl_bmc_devs), NULL, 0, NULL);

@@ -39,7 +39,7 @@ struct adl_bmc_dev {
 	
 	/* lock to sync between drivers */
 	struct mutex adl_mutex;
-	struct mutex mx_nvmem;
+	struct mutex txn_mutex;
 
 	/* Parameters in the BMC */
 	unsigned char *boardid;
