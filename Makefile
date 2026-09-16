@@ -1,3 +1,5 @@
+DESTDIR ?=
+PREFIX ?= /usr
 
 SEMA_OBJS = $(patsubst %.c,%.o,$(wildcard lib/*.c))
 WDOG_OBJS = $(patsubst %.c,%.o,$(wildcard watchdogtest/*.c))
@@ -15,12 +17,14 @@ obj-m := driver/adl-bmc.o \
 
 adl-bmc-nvmem-sec-m := driver/adl-bmc-nvmem-sec.o driver/nvmem-common.o	 
 adl-bmc-nvmem-m := driver/adl-bmc-nvmem.o driver/nvmem-common.o	 
-all: libsema.so semautil wdogtest modules
+all: app_build modules
 
 driver: modules
 
 libsema.so: $(SEMA_OBJS)
-	@gcc -shared -fPIC -g -o lib/$@ $^
+	@$(CC) -shared -fPIC -g -o lib/$@ $^
+
+app_build: libsema.so semautil wdogtest
 
 modules:
 	@make -C /lib/modules/`uname -r`/build M=`pwd` $@
@@ -38,8 +42,9 @@ driver_install:
 	@depmod -a
 
 app_install:
-	@cp lib/libsema.so /usr/lib
-	@cp wdogtest semautil /usr/bin
+	@install -d $(DESTDIR)$(PREFIX)/lib $(DESTDIR)$(PREFIX)/bin
+	@install -m 755 lib/libsema.so $(DESTDIR)$(PREFIX)/lib
+	@install -m 755 wdogtest semautil $(DESTDIR)$(PREFIX)/bin
 
 driver_clean:
 	@make -C /lib/modules/`uname -r`/build M=`pwd` clean
@@ -51,17 +56,17 @@ driver_clean:
 app_clean:
 	@rm -f semautil wdogtest app/*.o lib/*.o lib/*.so
 
-semautil: $(APP_OBJS)
-	@gcc -g -o $@ $^ -Llib -lsema -luuid
+semautil: libsema.so $(APP_OBJS)
+	@$(CC) -g -o $@ $(APP_OBJS) -Llib -lsema -luuid
 
 wdogtest: $(WDOG_OBJS)
-	@gcc $^ -g -o $@
+	@$(CC) $^ -g -o $@
 
 lib/%.o: lib/%.c
-	@gcc -Wall -I lib -g -fPIC -c $< -o $@
+	@$(CC) -Wall -I lib -g -fPIC -c $< -o $@
 
 app/%.o: app/%.c
-	@gcc -Wall -I lib -g -fPIC -c $< -o $@
+	@$(CC) -Wall -I lib -g -fPIC -c $< -o $@
 
 watchdogtest/%.o: watchdogtest/%.c
-	@gcc -Wall -I lib -g -fPIC -c $< -o $@
+	@$(CC) -Wall -I lib -g -fPIC -c $< -o $@
